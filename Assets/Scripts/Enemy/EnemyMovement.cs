@@ -101,7 +101,7 @@ namespace TowerDefense.Enemy
                 Vector3 direction = (targetPosition - currentPos).normalized;
                 if (direction.sqrMagnitude > 0.001f)
                 {
-                    float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.RadDeg;
+                    float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
                     transform.rotation = Quaternion.AngleAxis(angle + spriteAngleOffset, Vector3.forward);
                 }
             }
