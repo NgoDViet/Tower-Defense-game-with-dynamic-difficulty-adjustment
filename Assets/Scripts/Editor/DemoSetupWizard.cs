@@ -407,7 +407,7 @@ namespace TowerDefense.Editor
             }
             if (!found)
             {
-                tagsProp.insertArrayElementAtIndex(0);
+                tagsProp.InsertArrayElementAtIndex(0);
                 tagsProp.GetArrayElementAtIndex(0).stringValue = tagName;
                 tagManager.ApplyModifiedProperties();
                 Debug.Log($"Created tag: {tagName}");
