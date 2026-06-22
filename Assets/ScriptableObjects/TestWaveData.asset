@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: beaa880ace2c48e4e89ad08eb9819dcb, type: 3}
+  m_Name: TestWaveData
+  m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.WaveData
+  spawnGroups:
+  - enemyData: {fileID: 11400000, guid: c3be4e1136ba10f4190e643d9c7105af, type: 2}
+    enemyPrefab: {fileID: 6735359253162547679, guid: 54f2d6a9be79dff46b70142f5eb787fe, type: 3}
+    count: 5
+    spawnInterval: 1.5
+    delayBeforeGroup: 0

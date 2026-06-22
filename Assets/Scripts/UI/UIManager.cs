@@ -27,6 +27,9 @@ namespace TowerDefense.UI
         [Header("Level Data (For Main Menu Play Button)")]
         [SerializeField] private LevelData levelDataToPlay;
 
+        // Properties for editor setup bypass
+        public LevelData LevelDataToPlay { get => levelDataToPlay; set => levelDataToPlay = value; }
+
         private void OnEnable()
         {
             // Subscribe to state and stat events
@@ -139,7 +142,10 @@ namespace TowerDefense.UI
             }
             else
             {
-                Debug.LogError("[UIManager] Play button clicked, but GameManager or LevelData configuration is missing!");
+                string errorMsg = "[UIManager] Play button clicked, but configuration is missing:";
+                if (GameManager.Instance == null) errorMsg += " GameManager.Instance is null!";
+                if (levelDataToPlay == null) errorMsg += " levelDataToPlay (LevelData) is null!";
+                Debug.LogError(errorMsg);
             }
         }
 

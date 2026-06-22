@@ -168,8 +168,9 @@ namespace TowerDefense.Tower
             Vector3 direction = (targetPosition - transform.position).normalized;
             if (direction.sqrMagnitude > 0.001f)
             {
-                float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                transform.rotation = Quaternion.AngleAxis(angle + spriteAngleOffset, Vector3.forward);
+                float targetAngle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                Quaternion targetRotation = Quaternion.AngleAxis(targetAngle + spriteAngleOffset, Vector3.forward);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
             }
         }
 

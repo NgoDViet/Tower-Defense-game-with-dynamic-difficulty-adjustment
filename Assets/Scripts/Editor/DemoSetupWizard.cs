@@ -23,6 +23,15 @@ namespace TowerDefense.Editor
         [MenuItem("Tower Defense/Setup Playable Demo")]
         public static void ShowWindow()
         {
+            if (EditorApplication.isPlaying)
+            {
+                EditorUtility.DisplayDialog(
+                    "Setup Error",
+                    "You cannot setup the playable demo while the editor is in Play Mode. Please exit Play Mode and try again.",
+                    "OK");
+                return;
+            }
+
             if (EditorUtility.DisplayDialog(
                 "Setup Playable Demo",
                 "This script will generate basic placeholder prefabs, create test ScriptableObjects, " +
@@ -32,6 +41,29 @@ namespace TowerDefense.Editor
                 "Cancel"))
             {
                 SetupDemo();
+            }
+        }
+
+        [MenuItem("Tower Defense/Setup LevelDemo Scene")]
+        public static void ShowLevelDemoWindow()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                EditorUtility.DisplayDialog(
+                    "Setup Error",
+                    "You cannot setup the LevelDemo scene while the editor is in Play Mode. Please exit Play Mode and try again.",
+                    "OK");
+                return;
+            }
+
+            if (EditorUtility.DisplayDialog(
+                "Setup LevelDemo Scene",
+                "This script will generate a new interactive test scene (LevelDemo.unity) with buttons to spawn enemies and place towers dynamically.\n\n" +
+                "Do you want to proceed?",
+                "Yes, Setup LevelDemo",
+                "Cancel"))
+            {
+                SetupLevelDemo();
             }
         }
 
@@ -138,10 +170,9 @@ namespace TowerDefense.Editor
             AssetDatabase.CreateAsset(levelData, "Assets/ScriptableObjects/TestLevelData.asset");
 
             AssetDatabase.SaveAssets();
-            Debug.Log("[Setup] Created and saved ScriptableObject assets.");
 
-            // Update prefabs with correct references
-            // Update enemy movement/health default refs
+            // Update prefabs with correct references directly using memory references
+            // to bypass any assembly type casting issues after asset import/reload.
             GameObject loadedEnemy = PrefabUtility.LoadPrefabContents("Assets/Prefabs/Enemy.prefab");
             SerializedObject loadedEnemySO = new SerializedObject(loadedEnemy.GetComponent<EnemyMovement>());
             loadedEnemySO.FindProperty("enemyData").objectReferenceValue = enemyData;
@@ -227,9 +258,9 @@ namespace TowerDefense.Editor
             // Create GameManager
             GameObject gameManagerGO = new GameObject("GameManager");
             GameManager gameManagerComp = gameManagerGO.AddComponent<GameManager>();
-            SerializedObject gameManagerSO = new SerializedObject(gameManagerComp);
-            gameManagerSO.FindProperty("defaultLevelData").objectReferenceValue = levelData;
-            gameManagerSO.ApplyModifiedProperties();
+            gameManagerComp.DefaultLevelData = levelData;
+            EditorUtility.SetDirty(gameManagerComp);
+            Debug.Log($"[Setup] Assigning defaultLevelData. levelData is {(levelData == null ? "NULL" : "not null")}");
 
             // Create UI Manager GO
             GameObject uiManagerGO = new GameObject("UIManager");
@@ -239,7 +270,9 @@ namespace TowerDefense.Editor
             GameObject canvasGO = new GameObject("Canvas", typeof(RectTransform));
             Canvas canvas = canvasGO.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            CanvasScaler canvasScaler = canvasGO.AddComponent<CanvasScaler>();
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = new Vector2(1920, 1080);
             canvasGO.AddComponent<GraphicRaycaster>();
 
             // Create EventSystem if missing
@@ -247,7 +280,7 @@ namespace TowerDefense.Editor
             {
                 GameObject es = new GameObject("EventSystem");
                 es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-                es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
             }
 
             // Create Panels
@@ -313,8 +346,12 @@ namespace TowerDefense.Editor
             uiManagerSO.FindProperty("healthText").objectReferenceValue = healthText;
             uiManagerSO.FindProperty("goldText").objectReferenceValue = goldText;
             uiManagerSO.FindProperty("waveText").objectReferenceValue = waveText;
-            uiManagerSO.FindProperty("levelDataToPlay").objectReferenceValue = levelData;
             uiManagerSO.ApplyModifiedProperties();
+
+            // Set ScriptableObject levelData directly to bypass type-casting bug
+            uiManagerComp.LevelDataToPlay = levelData;
+            EditorUtility.SetDirty(uiManagerComp);
+            Debug.Log($"[Setup] Assigning levelDataToPlay. levelData is {(levelData == null ? "NULL" : "not null")}");
 
             // Place 2 Defensive Towers in the scene near the path
             GameObject tower1 = (GameObject)PrefabUtility.InstantiatePrefab(towerPrefab);
@@ -350,6 +387,255 @@ namespace TowerDefense.Editor
             AssetDatabase.Refresh();
 
             EditorUtility.DisplayDialog("Demo Setup Complete", "All test ScriptableObjects, Prefabs, and the 'Level1' scene have been created successfully!\n\nOpen 'Assets/Scenes/Level1' and click Play to test.", "OK");
+        }
+
+        private static void SetupLevelDemo()
+        {
+            EnsureFolderExists("Assets/Prefabs");
+            EnsureFolderExists("Assets/ScriptableObjects");
+            EnsureFolderExists("Assets/Scenes");
+
+            // Load required prefabs and scriptable objects (load ScriptableObjects directly as their strong types)
+            GameObject projectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Projectile.prefab");
+            GameObject enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy.prefab");
+            GameObject towerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Tower.prefab");
+            EnemyData enemyData = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData.asset");
+            TowerData towerData = AssetDatabase.LoadAssetAtPath<TowerData>("Assets/ScriptableObjects/TestTowerData.asset");
+            LevelData levelData = AssetDatabase.LoadAssetAtPath<LevelData>("Assets/ScriptableObjects/TestLevelData.asset");
+
+            // If any is missing, request to run SetupDemo first
+            if (projectilePrefab == null || enemyPrefab == null || towerPrefab == null || enemyData == null || towerData == null || levelData == null)
+            {
+                if (EditorUtility.DisplayDialog(
+                    "Missing Assets",
+                    "Required prefabs or ScriptableObjects are missing. We need to run the base demo setup first to generate them.\n\nDo you want to run Setup Playable Demo now?",
+                    "Yes, Setup Demo",
+                    "Cancel"))
+                {
+                    SetupDemo();
+
+                    projectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Projectile.prefab");
+                    enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy.prefab");
+                    towerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Tower.prefab");
+                    enemyData = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData.asset");
+                    towerData = AssetDatabase.LoadAssetAtPath<TowerData>("Assets/ScriptableObjects/TestTowerData.asset");
+                    levelData = AssetDatabase.LoadAssetAtPath<LevelData>("Assets/ScriptableObjects/TestLevelData.asset");
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            Debug.Log($"[SetupLevelDemo] Loaded projectilePrefab: {(projectilePrefab == null ? "NULL" : "OK")}");
+            Debug.Log($"[SetupLevelDemo] Loaded enemyPrefab: {(enemyPrefab == null ? "NULL" : "OK")}");
+            Debug.Log($"[SetupLevelDemo] Loaded towerPrefab: {(towerPrefab == null ? "NULL" : "OK")}");
+            Debug.Log($"[SetupLevelDemo] Loaded enemyData: {(enemyData == null ? "NULL" : "OK")}");
+            Debug.Log($"[SetupLevelDemo] Loaded towerData: {(towerData == null ? "NULL" : "OK")}");
+            Debug.Log($"[SetupLevelDemo] Loaded levelData: {(levelData == null ? "NULL" : "OK")}");
+
+            // Create new scene
+            UnityEngine.SceneManagement.Scene demoScene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+
+            // Configure Camera
+            GameObject cameraGO = GameObject.Find("Main Camera");
+            if (cameraGO != null)
+            {
+                Camera cam = cameraGO.GetComponent<Camera>();
+                cam.orthographic = true;
+                cam.orthographicSize = 6f;
+                cam.backgroundColor = new Color(0.15f, 0.15f, 0.2f);
+                cam.clearFlags = CameraClearFlags.SolidColor;
+            }
+
+            // Create Waypoints Path
+            GameObject pathGO = new GameObject("WaypointPath");
+            WaypointPath pathComp = pathGO.AddComponent<WaypointPath>();
+            
+            GameObject wp0 = new GameObject("WP_Start"); wp0.transform.SetParent(pathGO.transform); wp0.transform.position = new Vector3(-8f, 2f, 0f);
+            GameObject wp1 = new GameObject("WP_Mid1");  wp1.transform.SetParent(pathGO.transform); wp1.transform.position = new Vector3(0f, 2f, 0f);
+            GameObject wp2 = new GameObject("WP_Mid2");  wp2.transform.SetParent(pathGO.transform); wp2.transform.position = new Vector3(0f, -2f, 0f);
+            GameObject wp3 = new GameObject("WP_End");   wp3.transform.SetParent(pathGO.transform); wp3.transform.position = new Vector3(8f, -2f, 0f);
+            
+            pathComp.PopulateFromChildren();
+
+            // Create ObjectPooler
+            GameObject poolerGO = new GameObject("ObjectPooler");
+            ObjectPooler poolerComp = poolerGO.AddComponent<ObjectPooler>();
+            SerializedObject poolerSO = new SerializedObject(poolerComp);
+            SerializedProperty prewarmConfigsProp = poolerSO.FindProperty("prewarmConfigs");
+            prewarmConfigsProp.ClearArray();
+            
+            prewarmConfigsProp.InsertArrayElementAtIndex(0);
+            SerializedProperty configEnemy = prewarmConfigsProp.GetArrayElementAtIndex(0);
+            configEnemy.FindPropertyRelative("prefab").objectReferenceValue = enemyPrefab;
+            configEnemy.FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(1);
+            SerializedProperty configProj = prewarmConfigsProp.GetArrayElementAtIndex(1);
+            configProj.FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
+            configProj.FindPropertyRelative("size").intValue = 20;
+            poolerSO.ApplyModifiedProperties();
+
+            // Create WaveManager
+            GameObject waveManagerGO = new GameObject("WaveManager");
+            WaveManager waveManagerComp = waveManagerGO.AddComponent<WaveManager>();
+            SerializedObject waveManagerSO = new SerializedObject(waveManagerComp);
+            waveManagerSO.FindProperty("waypointPath").objectReferenceValue = pathComp;
+            waveManagerSO.FindProperty("autoStartNextWave").boolValue = false;
+            waveManagerSO.ApplyModifiedProperties();
+
+            // Create GameManager
+            GameObject gameManagerGO = new GameObject("GameManager");
+            GameManager gameManagerComp = gameManagerGO.AddComponent<GameManager>();
+            gameManagerComp.DefaultLevelData = levelData;
+            EditorUtility.SetDirty(gameManagerComp);
+
+            // Create DemoTestController
+            GameObject testControllerGO = new GameObject("DemoTestController");
+            DemoTestController testControllerComp = testControllerGO.AddComponent<DemoTestController>();
+            testControllerComp.EnemyPrefab = enemyPrefab;
+            testControllerComp.EnemyData = enemyData;
+            testControllerComp.TowerPrefab = towerPrefab;
+            testControllerComp.TowerData = towerData;
+            testControllerComp.WaypointPath = pathComp;
+            EditorUtility.SetDirty(testControllerComp);
+
+            // Create UI Manager GO
+            GameObject uiManagerGO = new GameObject("UIManager");
+            UIManager uiManagerComp = uiManagerGO.AddComponent<UIManager>();
+
+            // Create Canvas Hierarchy
+            GameObject canvasGO = new GameObject("Canvas", typeof(RectTransform));
+            Canvas canvas = canvasGO.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            CanvasScaler canvasScaler = canvasGO.AddComponent<CanvasScaler>();
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = new Vector2(1920, 1080);
+            canvasGO.AddComponent<GraphicRaycaster>();
+
+            // Create EventSystem
+            if (GameObject.FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
+            {
+                GameObject es = new GameObject("EventSystem");
+                es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+            }
+
+            // Create Panels
+            GameObject mainMenu = CreatePanel("MainMenuPanel", canvasGO.transform, new Color(0, 0, 0, 0.9f), true);
+            GameObject gameplayHUD = CreatePanel("GameplayHUDPanel", canvasGO.transform, Color.clear, false);
+            GameObject pauseOverlay = CreatePanel("PauseOverlayPanel", canvasGO.transform, new Color(0, 0, 0, 0.75f), false);
+            GameObject victoryOverlay = CreatePanel("VictoryOverlayPanel", canvasGO.transform, new Color(0, 0.5f, 0, 0.85f), false);
+            GameObject defeatOverlay = CreatePanel("DefeatOverlayPanel", canvasGO.transform, new Color(0.5f, 0, 0, 0.85f), false);
+
+            // Populate Main Menu
+            CreateText("TitleText", mainMenu.transform, "TOWER DEFENSE SANDBOX", new Vector2(0, 150), 48, Color.white);
+            Button playBtn = CreateButton("PlayButton", mainMenu.transform, "START SANDBOX", new Vector2(0, -50), new Vector2(250, 60), Color.green, null);
+            UnityEventTools.AddVoidPersistentListener(playBtn.onClick, new UnityAction(uiManagerComp.OnPlayButtonClicked));
+
+            // Populate Gameplay HUD
+            TextMeshProUGUI healthText = CreateText("HealthText", gameplayHUD.transform, "HP: 10/10", new Vector2(-700, 480), 28, Color.red, TextAlignmentOptions.Left);
+            TextMeshProUGUI goldText = CreateText("GoldText", gameplayHUD.transform, "Gold: 100", new Vector2(0, 480), 28, Color.yellow, TextAlignmentOptions.Center);
+            TextMeshProUGUI waveText = CreateText("WaveText", gameplayHUD.transform, "Wave: 1/1", new Vector2(700, 480), 28, Color.cyan, TextAlignmentOptions.Right);
+
+            Button startWaveBtn = CreateButton("StartWaveButton", gameplayHUD.transform, "START WAVE", new Vector2(0, -480), new Vector2(220, 50), Color.green, null);
+            UnityEventTools.AddVoidPersistentListener(startWaveBtn.onClick, new UnityAction(waveManagerComp.StartNextWave));
+
+            Button pauseBtn = CreateButton("PauseButton", gameplayHUD.transform, "PAUSE", new Vector2(850, 480), new Vector2(100, 40), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(pauseBtn.onClick, new UnityAction(uiManagerComp.OnPauseButtonClicked));
+
+            // Populate Sandbox Buttons (Appear on demand!)
+            Button spawnEnemyBtn = CreateButton("SpawnEnemyBtn", gameplayHUD.transform, "Spawn Enemy", new Vector2(-220, -480), new Vector2(180, 50), Color.green, null);
+            UnityEventTools.AddVoidPersistentListener(spawnEnemyBtn.onClick, new UnityAction(testControllerComp.SpawnEnemy));
+
+            Button spawnTowerBtn = CreateButton("SpawnTowerBtn", gameplayHUD.transform, "Spawn Tower", new Vector2(220, -480), new Vector2(180, 50), Color.cyan, null);
+            UnityEventTools.AddVoidPersistentListener(spawnTowerBtn.onClick, new UnityAction(testControllerComp.StartTowerPlacement));
+
+            // Populate Pause Overlay
+            CreateText("PauseTitleText", pauseOverlay.transform, "GAME PAUSED", new Vector2(0, 150), 38, Color.white);
+            
+            Button resumeBtn = CreateButton("ResumeButton", pauseOverlay.transform, "RESUME", new Vector2(0, 50), new Vector2(200, 50), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(resumeBtn.onClick, new UnityAction(uiManagerComp.OnResumeButtonClicked));
+
+            Button restartBtnP = CreateButton("RestartButton", pauseOverlay.transform, "RESTART", new Vector2(0, -20), new Vector2(200, 50), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(restartBtnP.onClick, new UnityAction(uiManagerComp.OnRestartButtonClicked));
+
+            Button quitBtnP = CreateButton("QuitToMenuButton", pauseOverlay.transform, "MAIN MENU", new Vector2(0, -90), new Vector2(200, 50), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(quitBtnP.onClick, new UnityAction(uiManagerComp.OnReturnToMainMenuButtonClicked));
+
+            // Populate Victory Overlay
+            CreateText("VicTitleText", victoryOverlay.transform, "VICTORY!", new Vector2(0, 150), 48, Color.white);
+            
+            Button restartBtnV = CreateButton("RestartButton", victoryOverlay.transform, "RESTART LEVEL", new Vector2(0, 0), new Vector2(240, 50), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(restartBtnV.onClick, new UnityAction(uiManagerComp.OnRestartButtonClicked));
+
+            Button quitBtnV = CreateButton("QuitToMenuButton", victoryOverlay.transform, "MAIN MENU", new Vector2(0, -70), new Vector2(240, 50), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(quitBtnV.onClick, new UnityAction(uiManagerComp.OnReturnToMainMenuButtonClicked));
+
+            // Populate Defeat Overlay
+            CreateText("DefTitleText", defeatOverlay.transform, "GAME OVER", new Vector2(0, 150), 48, Color.white);
+
+            Button restartBtnD = CreateButton("RestartButton", defeatOverlay.transform, "TRY AGAIN", new Vector2(0, 0), new Vector2(240, 50), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(restartBtnD.onClick, new UnityAction(uiManagerComp.OnRestartButtonClicked));
+
+            Button quitBtnD = CreateButton("QuitToMenuButton", defeatOverlay.transform, "MAIN MENU", new Vector2(0, -70), new Vector2(240, 50), Color.white, null);
+            UnityEventTools.AddVoidPersistentListener(quitBtnD.onClick, new UnityAction(uiManagerComp.OnReturnToMainMenuButtonClicked));
+
+            // Link UIManager references
+            SerializedObject uiManagerSO = new SerializedObject(uiManagerComp);
+            uiManagerSO.FindProperty("mainMenuPanel").objectReferenceValue = mainMenu;
+            uiManagerSO.FindProperty("gameplayHUDPanel").objectReferenceValue = gameplayHUD;
+            uiManagerSO.FindProperty("pauseOverlayPanel").objectReferenceValue = pauseOverlay;
+            uiManagerSO.FindProperty("victoryOverlayPanel").objectReferenceValue = victoryOverlay;
+            uiManagerSO.FindProperty("defeatOverlayPanel").objectReferenceValue = defeatOverlay;
+            uiManagerSO.FindProperty("healthText").objectReferenceValue = healthText;
+            uiManagerSO.FindProperty("goldText").objectReferenceValue = goldText;
+            uiManagerSO.FindProperty("waveText").objectReferenceValue = waveText;
+            uiManagerSO.ApplyModifiedProperties();
+
+            // Set ScriptableObject levelData directly to bypass type-casting bug
+            uiManagerComp.LevelDataToPlay = levelData;
+            EditorUtility.SetDirty(uiManagerComp);
+
+            // Create instructions overlay
+            GameObject instructionsPanel = CreatePanel("InstructionsPanel", gameplayHUD.transform, Color.clear, true);
+            RectTransform instRect = instructionsPanel.GetComponent<RectTransform>();
+            instRect.anchorMin = new Vector2(0.5f, 0f);
+            instRect.anchorMax = new Vector2(0.5f, 0f);
+            instRect.pivot = new Vector2(0.5f, 0f);
+            instRect.anchoredPosition = new Vector2(0f, 40f);
+            instRect.sizeDelta = new Vector2(800f, 100f);
+
+            CreateText("InstructionsText", instructionsPanel.transform, 
+                "Left-Click to place a tower. Right-Click to cancel tower placement.", 
+                Vector2.zero, 20, Color.yellow);
+
+            // Save Scene
+            EditorSceneManager.SaveScene(demoScene, "Assets/Scenes/LevelDemo.unity");
+            Debug.Log("[Setup] Saved Scene 'Assets/Scenes/LevelDemo.unity'.");
+
+            // Add Scene to build settings if not already there
+            List<EditorBuildSettingsScene> buildScenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
+            bool sceneExistsInBuild = false;
+            foreach (var bScene in buildScenes)
+            {
+                if (bScene.path == "Assets/Scenes/LevelDemo.unity")
+                {
+                    sceneExistsInBuild = true;
+                    break;
+                }
+            }
+            if (!sceneExistsInBuild)
+            {
+                buildScenes.Add(new EditorBuildSettingsScene("Assets/Scenes/LevelDemo.unity", true));
+                EditorBuildSettings.scenes = buildScenes.ToArray();
+                Debug.Log("[Setup] Added LevelDemo scene to Build Settings.");
+            }
+
+            AssetDatabase.Refresh();
+
+            EditorUtility.DisplayDialog("LevelDemo Setup Complete", "The interactive 'LevelDemo' scene has been created successfully!\n\nOpen 'Assets/Scenes/LevelDemo' and click Play to test.", "OK");
         }
 
         private static void EnsureFolderExists(string path)

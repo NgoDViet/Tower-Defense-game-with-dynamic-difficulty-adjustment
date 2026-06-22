@@ -29,6 +29,48 @@ namespace TowerDefense.Enemy
             return waypoints[index];
         }
 
+        private void Start()
+        {
+            SetupLineRenderer();
+        }
+
+        private void SetupLineRenderer()
+        {
+            LineRenderer lineRenderer = GetComponent<LineRenderer>();
+            if (lineRenderer == null)
+            {
+                lineRenderer = gameObject.AddComponent<LineRenderer>();
+            }
+
+            if (lineRenderer != null && waypoints != null && waypoints.Length > 0)
+            {
+                lineRenderer.positionCount = waypoints.Length;
+                for (int i = 0; i < waypoints.Length; i++)
+                {
+                    if (waypoints[i] != null)
+                    {
+                        lineRenderer.SetPosition(i, waypoints[i].position);
+                    }
+                }
+
+                lineRenderer.startWidth = 0.15f;
+                lineRenderer.endWidth = 0.15f;
+                lineRenderer.useWorldSpace = true;
+                lineRenderer.loop = false;
+
+                Shader lineShader = Shader.Find("Sprites/Default");
+                if (lineShader != null)
+                {
+                    lineRenderer.material = new Material(lineShader);
+                }
+                
+                Color pathColor = new Color(0f, 1f, 0.5f, 0.4f);
+                lineRenderer.startColor = pathColor;
+                lineRenderer.endColor = pathColor;
+                lineRenderer.sortingOrder = -1; // Render behind characters
+            }
+        }
+
         /// <summary>
         /// Context menu utility to automatically assign children Transforms as waypoints.
         /// Right-click component in inspector to run this.

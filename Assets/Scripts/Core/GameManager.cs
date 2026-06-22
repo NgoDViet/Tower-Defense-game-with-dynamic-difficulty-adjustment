@@ -23,6 +23,9 @@ namespace TowerDefense.Core
         [Header("Level Settings")]
         [SerializeField] private LevelData defaultLevelData; // Fallback level data if not started dynamically
 
+        // Properties for editor setup bypass
+        public LevelData DefaultLevelData { get => defaultLevelData; set => defaultLevelData = value; }
+
         private GameState _currentState = GameState.MainMenu;
         private LevelData _activeLevelData;
         private int _currentHealth;
