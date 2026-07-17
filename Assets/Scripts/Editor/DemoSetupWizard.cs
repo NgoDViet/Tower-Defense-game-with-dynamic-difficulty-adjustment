@@ -189,6 +189,11 @@ namespace TowerDefense.Editor
             towerSR.sprite = uiSprite;
             towerSR.color = Color.cyan;
 
+            // Add a CircleCollider2D so that towers can detect overlap with each other
+            CircleCollider2D towerCollider = towerTemp.AddComponent<CircleCollider2D>();
+            towerCollider.radius = 0.4f;
+            towerCollider.isTrigger = true;
+
             TowerController towerCtrl = towerTemp.AddComponent<TowerController>();
             GameObject shootPointGO = new GameObject("ShootPoint");
             shootPointGO.transform.SetParent(towerTemp.transform, false);
@@ -351,6 +356,7 @@ namespace TowerDefense.Editor
             // Set ScriptableObject levelData directly to bypass type-casting bug
             uiManagerComp.LevelDataToPlay = levelData;
             EditorUtility.SetDirty(uiManagerComp);
+            SetupTowerPlacementUI(gameplayHUD, towerData, towerPrefab);
             Debug.Log($"[Setup] Assigning levelDataToPlay. levelData is {(levelData == null ? "NULL" : "not null")}");
 
             // Place 2 Defensive Towers in the scene near the path
@@ -597,6 +603,7 @@ namespace TowerDefense.Editor
             // Set ScriptableObject levelData directly to bypass type-casting bug
             uiManagerComp.LevelDataToPlay = levelData;
             EditorUtility.SetDirty(uiManagerComp);
+            SetupTowerPlacementUI(gameplayHUD, towerData, towerPrefab);
 
             // Create instructions overlay
             GameObject instructionsPanel = CreatePanel("InstructionsPanel", gameplayHUD.transform, Color.clear, true);
@@ -775,6 +782,86 @@ namespace TowerDefense.Editor
 
             go.SetActive(active);
             return go;
+        }
+
+        private static void SetupTowerPlacementUI(GameObject gameplayHUD, TowerData towerData, GameObject towerPrefab)
+        {
+            // 1. Create or find TowerPlacementManager in the scene
+            TowerPlacementManager placementManager = GameObject.FindObjectOfType<TowerPlacementManager>();
+            if (placementManager == null)
+            {
+                GameObject managerGO = new GameObject("TowerPlacementManager");
+                placementManager = managerGO.AddComponent<TowerPlacementManager>();
+            }
+
+            SerializedObject managerSO = new SerializedObject(placementManager);
+            managerSO.FindProperty("defaultTowerData").objectReferenceValue = towerData;
+            managerSO.FindProperty("defaultTowerPrefab").objectReferenceValue = towerPrefab;
+            managerSO.ApplyModifiedProperties();
+
+            // 2. Create Left-Hand Side Shop Panel
+            Transform existingShop = gameplayHUD.transform.Find("ShopPanel");
+            if (existingShop != null)
+            {
+                DestroyImmediate(existingShop.gameObject);
+            }
+
+            GameObject shopPanel = CreatePanel("ShopPanel", gameplayHUD.transform, new Color(0.12f, 0.12f, 0.16f, 0.85f), true);
+            RectTransform rect = shopPanel.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(30f, 0f);
+            rect.sizeDelta = new Vector2(220f, 600f);
+
+            // Add Shop Title
+            CreateText("ShopTitle", shopPanel.transform, "TOWERS", new Vector2(0f, 250f), 24, Color.white);
+
+            // Create Slot for Basic Tower
+            GameObject slotGO = new GameObject("TowerSlot_Basic", typeof(RectTransform), typeof(CanvasRenderer));
+            slotGO.transform.SetParent(shopPanel.transform, false);
+
+            Image slotImg = slotGO.AddComponent<Image>();
+            slotImg.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            slotImg.color = Color.white;
+            slotImg.type = Image.Type.Sliced;
+
+            RectTransform slotRect = slotGO.GetComponent<RectTransform>();
+            slotRect.anchoredPosition = new Vector2(0f, 130f);
+            slotRect.sizeDelta = new Vector2(180f, 130f);
+
+            // Add TowerSlot script
+            TowerSlot towerSlot = slotGO.AddComponent<TowerSlot>();
+
+            // Icon Image
+            GameObject iconGO = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
+            iconGO.transform.SetParent(slotGO.transform, false);
+            Image iconImg = iconGO.AddComponent<Image>();
+            iconImg.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            iconImg.color = Color.cyan;
+            RectTransform iconRect = iconGO.GetComponent<RectTransform>();
+            iconRect.anchoredPosition = new Vector2(0f, 20f);
+            iconRect.sizeDelta = new Vector2(60f, 60f);
+
+            // Name text
+            TextMeshProUGUI nameText = CreateText("NameText", slotGO.transform, towerData.TowerName, new Vector2(0f, -25f), 18, Color.white);
+            RectTransform nameRect = nameText.GetComponent<RectTransform>();
+            nameRect.sizeDelta = new Vector2(160f, 30f);
+
+            // Cost text
+            TextMeshProUGUI costText = CreateText("CostText", slotGO.transform, $"{towerData.Cost} G", new Vector2(0f, -50f), 16, Color.yellow);
+            RectTransform costRect = costText.GetComponent<RectTransform>();
+            costRect.sizeDelta = new Vector2(160f, 30f);
+
+            // Hook up fields
+            towerSlot.TowerData = towerData;
+            towerSlot.TowerPrefab = towerPrefab;
+            towerSlot.TowerNameText = nameText;
+            towerSlot.TowerCostText = costText;
+            towerSlot.TowerIcon = iconImg;
+            towerSlot.SlotImage = slotImg;
+
+            EditorUtility.SetDirty(slotGO);
         }
     }
 }
