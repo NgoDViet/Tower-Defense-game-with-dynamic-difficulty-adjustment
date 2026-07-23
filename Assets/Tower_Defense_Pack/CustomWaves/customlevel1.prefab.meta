@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f5b6f5c64c71cf94f8d7433bbafbbb2d
+timeCreated: 1461869726
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/CustomWaves/customlevel1.prefab
+  uploadId: 318368

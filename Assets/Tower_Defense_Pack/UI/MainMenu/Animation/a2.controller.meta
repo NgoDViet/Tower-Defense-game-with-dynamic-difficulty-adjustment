@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4ad2855ee97c0fb4494063e2bb613b80
+timeCreated: 1441360351
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/UI/MainMenu/Animation/a2.controller
+  uploadId: 318368

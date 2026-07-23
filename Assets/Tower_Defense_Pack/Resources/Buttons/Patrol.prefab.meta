@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 18470b9e14455c440ba0a114fa774299
+timeCreated: 1441019702
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Buttons/Patrol.prefab
+  uploadId: 318368

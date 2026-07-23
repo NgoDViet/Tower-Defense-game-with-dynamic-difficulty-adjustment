@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: aeda4de50249f304b99c7e7bab69a209
+timeCreated: 1440578008
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/CP/CP.prefab
+  uploadId: 318368

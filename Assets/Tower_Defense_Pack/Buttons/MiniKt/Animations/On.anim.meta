@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5aaf33f20a348094d83e91742b59e8ab
+timeCreated: 1441015695
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Buttons/MiniKt/Animations/On.anim
+  uploadId: 318368

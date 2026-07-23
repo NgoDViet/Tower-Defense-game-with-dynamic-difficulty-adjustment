@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 616484face8bac34ab1fe3352a261587
+timeCreated: 1439379626
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/AT/Blood/2/Blood.controller
+  uploadId: 318368

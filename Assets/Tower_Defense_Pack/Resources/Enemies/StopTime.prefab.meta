@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fd76e979d08f7764fb5dfcdbc3b15fce
+timeCreated: 1461675677
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Enemies/StopTime.prefab
+  uploadId: 318368

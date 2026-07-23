@@ -1,0 +1,36 @@
+ ___        __       
+|_ _|_ __  / _| ___  
+ | || '_ \| |_ / _ \ 
+ | || | | |  _| (_) |
+|___|_| |_|_|  \___/ 
+
+
+This update includes a Waves_Editor scene for creating your custom waves.
+("IMPORTANT" Remember... you must have the path points created before using the editor)
+
+1º You have 3 inputfield on top, first number of enemies, 2º type of enemy ("enemy1", "enemy2", "enemy3") you must write literally, 3º path name (a, b, c...).
+	-Please see the capture "Waves_Editor_CreateWave.png" into "Tutorials_and_Info/WavesEditorTutorial/" folder.
+
+2º Then click on the left button to add the curren wave.
+	*Right now you can see your custom created wave, if you click on this wave, you can see the enemies into the wave, if you click into an enemy you can see his properties.
+	*Now you can to change the properties of this enemy (type, speed, life and path) then click save to save the properties of this enemey. You can do this with all enemies.
+		-Please see the capture "Edit_Enemies_Properties.png" into "Tutorials_and_Info/WavesEditorTutorial/" folder.
+
+	*Also you can change the wave time delay by clicking into your wave and then you can change "Wave Time Delay" to your value, then click on save. (By default is 20).
+		-"Important", if you set a very short wave time delay, you can affect the previous wave creation.
+		-"If you want 2 waves at once", create a simple wave and alternate the path, example:
+			*Enemy ... path a
+			*Enemy ... path b
+			*Enemy ... path a
+			*Enemy ... path b
+			 ..
+			 ..	
+
+3º When you have your custom waves and enemies edited you must click into "SAVE LEVEL" into top right corner.
+
+"IMPORTANT" REMEMBER CLICK ON SAVE BUTTON (PLACED ON THE RIGHT OF THE PROPERTY) WHEN YOU CHANGE AN ENEMY PROPERTY OR WAVE TIME DELAY.
+
+4º Go to "Tower_Defense_Pack/CustomWaves" here you must have a prefab created called "customlevel", put it into "Example_Scene" (or your custom scene) into "Instance_Point" "Waves_Creator_Controller.cs" "Custom Wave Prefab" 
+		-Please see the capture "Custom_level_prefab.png" into "Tutorials_and_Info/WavesEditorTutorial/" folder.
+
+Otherwise I recommend to see the How to use video here "https://www.youtube.com/watch?v=vPLLUSIcC50"

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a7d53b2289f6a96459287b7502f651ab
+timeCreated: 1440947886
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/MT/Ice/Animations/Ice.controller
+  uploadId: 318368

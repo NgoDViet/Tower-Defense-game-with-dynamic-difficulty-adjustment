@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: c6f3f4f2884baf240a423340ffdef09d
+timeCreated: 1439371088
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scripts/Camera/Ignore_Collisions.cs
+  uploadId: 318368

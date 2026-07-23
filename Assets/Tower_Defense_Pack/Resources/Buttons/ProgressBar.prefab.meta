@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6cac1cd654555624e95529e00fa51b0a
+timeCreated: 1439984452
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Buttons/ProgressBar.prefab
+  uploadId: 318368

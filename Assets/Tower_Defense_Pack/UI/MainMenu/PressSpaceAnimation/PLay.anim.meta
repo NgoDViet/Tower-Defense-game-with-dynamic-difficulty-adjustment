@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 471f1ef5432527b40ac613e7658ca987
+timeCreated: 1441553219
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/UI/MainMenu/PressSpaceAnimation/PLay.anim
+  uploadId: 318368

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b9b95790125dbc2429d22468ece47096
+timeCreated: 1441281398
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Global/BigTree.prefab
+  uploadId: 318368

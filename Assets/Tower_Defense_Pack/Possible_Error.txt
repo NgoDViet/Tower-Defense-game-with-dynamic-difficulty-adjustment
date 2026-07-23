@@ -1,0 +1,22 @@
+ ___        __       
+|_ _|_ __  / _| ___  
+ | || '_ \| |_ / _ \ 
+ | || | | |  _| (_) |
+|___|_| |_|_|  \___/ 
+
+-- #### Before you run version 2.0 .........
+
+I have found an editor problem on v 2019.3.0a5 when build like this:
+
+Multiple managers are loaded of type: InputManager 
+Multiple managers are loaded of type: GraphicsSettings 
+
+..To solve the problem simple run on editor mode and then build.
+
+//-
+
+If "Component MonoBehaviour could not be loaded when loading game object. Cleaning up!" when build and run for Android:
+
+For build to Android target, first at all, add on build settings the phone scenes:
+	(MainMenuPhone, Phone_Example_Scene, .. 2, .. 3.)
+	For build... First open the MainMenuPhone scene on the editor and then build and run

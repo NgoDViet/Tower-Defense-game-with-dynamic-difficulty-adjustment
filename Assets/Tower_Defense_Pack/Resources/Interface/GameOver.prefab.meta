@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 138acd2133839a84ab7324d62e7a4add
+timeCreated: 1441699661
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Interface/GameOver.prefab
+  uploadId: 318368

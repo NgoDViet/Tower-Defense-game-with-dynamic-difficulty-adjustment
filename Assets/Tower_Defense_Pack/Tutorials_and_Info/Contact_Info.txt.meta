@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b3faee48777c1e1489d7b4f305b5dc84
+timeCreated: 1441640944
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Tutorials_and_Info/Contact_Info.txt
+  uploadId: 318368

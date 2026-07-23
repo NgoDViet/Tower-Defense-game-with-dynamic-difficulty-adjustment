@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: a6e8c8a3c2d279441941473b7ed931bc
+timeCreated: 1439375852
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scripts/Enemies/Enemies_Controller.cs
+  uploadId: 318368

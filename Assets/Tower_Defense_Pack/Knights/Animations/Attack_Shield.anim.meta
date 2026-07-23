@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 93e70bd9c766db048b8c8cc0669147b1
+timeCreated: 1440846074
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Knights/Animations/Attack_Shield.anim
+  uploadId: 318368

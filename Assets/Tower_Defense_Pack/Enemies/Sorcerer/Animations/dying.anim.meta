@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 799ad3997c5a9b346ab6c88fed0a3d11
+timeCreated: 1461586772
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Enemies/Sorcerer/Animations/dying.anim
+  uploadId: 318368

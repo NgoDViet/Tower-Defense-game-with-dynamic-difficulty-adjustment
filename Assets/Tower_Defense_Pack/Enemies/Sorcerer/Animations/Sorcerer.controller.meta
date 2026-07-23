@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5998e65bff8619145a4090d23de0ac8f
+timeCreated: 1461585022
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Enemies/Sorcerer/Animations/Sorcerer.controller
+  uploadId: 318368

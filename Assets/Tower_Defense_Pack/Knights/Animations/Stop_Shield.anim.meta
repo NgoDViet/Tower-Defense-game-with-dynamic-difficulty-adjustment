@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 74312a7ed93dbad4c9d976b0bd897b37
+timeCreated: 1440846083
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Knights/Animations/Stop_Shield.anim
+  uploadId: 318368

@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 37541724f80f16e4292d4f6777269202
+timeCreated: 1461435244
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/WavesEditor/enemyContent.cs
+  uploadId: 318368

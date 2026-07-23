@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 466c443f6d5215640b25734689e00407
+timeCreated: 1490776135
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scripts/Global/Audio_Manager.cs
+  uploadId: 318368

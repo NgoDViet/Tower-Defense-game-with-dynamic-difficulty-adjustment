@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a8955a186033a1a4489a3e30e6270af6
+timeCreated: 1440842467
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Knights/Animations/Walking.anim
+  uploadId: 318368

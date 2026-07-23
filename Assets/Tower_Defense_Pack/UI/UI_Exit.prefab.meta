@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5c0e20f799a274e49843c2d8e27a384f
+timeCreated: 1461254200
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/UI/UI_Exit.prefab
+  uploadId: 318368

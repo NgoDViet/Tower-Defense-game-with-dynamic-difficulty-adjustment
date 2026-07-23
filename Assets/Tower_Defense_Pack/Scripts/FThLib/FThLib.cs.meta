@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 2c795e16bd868324bb5cfbdaa1bae32b
+timeCreated: 1441621375
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scripts/FThLib/FThLib.cs
+  uploadId: 318368

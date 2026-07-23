@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4ab9c889728198d40bde5f3483e04e96
+timeCreated: 1440842427
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/KT/Knight.prefab
+  uploadId: 318368

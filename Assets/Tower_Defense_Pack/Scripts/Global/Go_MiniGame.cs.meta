@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: c368f61214e42234da005b65367907eb
+timeCreated: 1461147404
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scripts/Global/Go_MiniGame.cs
+  uploadId: 318368

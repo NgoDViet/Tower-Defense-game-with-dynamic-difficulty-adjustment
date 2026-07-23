@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0a82636f32ebc3747a3c0c84a0c746e1
+timeCreated: 1441360306
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scenes/MainMenu.unity
+  uploadId: 318368

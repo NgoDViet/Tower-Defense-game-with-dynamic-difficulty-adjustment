@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: dbb2ffba66796ed4f85ce9b38ca2425b
+timeCreated: 1440925977
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/MT/MageInTower/Animations/m0.controller
+  uploadId: 318368

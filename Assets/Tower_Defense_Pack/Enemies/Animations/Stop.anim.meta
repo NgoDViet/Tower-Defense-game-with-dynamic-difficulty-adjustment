@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e288a29c45e9a50439662837cc78784d
+timeCreated: 1440856755
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Enemies/Animations/Stop.anim
+  uploadId: 318368

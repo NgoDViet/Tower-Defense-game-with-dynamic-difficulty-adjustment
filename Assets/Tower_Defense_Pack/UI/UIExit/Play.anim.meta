@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bc922527690237b4ba5ef67f8682fec4
+timeCreated: 1461256930
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/UI/UIExit/Play.anim
+  uploadId: 318368

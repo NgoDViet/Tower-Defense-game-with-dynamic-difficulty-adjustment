@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 98bc79e2cab2c97459de419b0bf3a8aa
+timeCreated: 1461748955
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Enemies/enemy3.prefab
+  uploadId: 318368

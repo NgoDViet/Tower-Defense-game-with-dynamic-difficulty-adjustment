@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 569ca2a62993e284b88a380d37d77751
+timeCreated: 1440925985
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/MT/MageInTower/Animations/Attack.anim
+  uploadId: 318368

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3b3463922fd5b09488e6fcd2b8ef5e81
+timeCreated: 1439831378
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Cursor/hand.prefab
+  uploadId: 318368

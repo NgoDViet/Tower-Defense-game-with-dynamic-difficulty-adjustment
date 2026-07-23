@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b7c702f6121f304468296b82eae1e0db
+timeCreated: 1439743350
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/AT/Fire/Fire.controller
+  uploadId: 318368

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6bf38972ba340ba438d0ed9bc9e94129
+timeCreated: 1461832144
+licenseType: Store
+TextScriptImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Tutorials_and_Info/Waves_Editor.txt
+  uploadId: 318368

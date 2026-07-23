@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2d9ed8a0cebb00a488712ff37ef2c488
+timeCreated: 1440856751
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Enemies/Animations/Dying.anim
+  uploadId: 318368

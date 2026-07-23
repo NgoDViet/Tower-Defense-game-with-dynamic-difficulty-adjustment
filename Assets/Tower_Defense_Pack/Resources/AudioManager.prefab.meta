@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 41bee8069d12a944da834e7ddc13e905
+timeCreated: 1490869138
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/AudioManager.prefab
+  uploadId: 318368

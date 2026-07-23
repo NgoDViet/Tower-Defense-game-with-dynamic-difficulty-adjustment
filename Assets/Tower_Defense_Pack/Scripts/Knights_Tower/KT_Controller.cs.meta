@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 00da6df174466794c8e65556839e6d09
+timeCreated: 1439375744
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scripts/Knights_Tower/KT_Controller.cs
+  uploadId: 318368

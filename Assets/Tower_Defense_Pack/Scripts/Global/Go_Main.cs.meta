@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 2a9c4d23655b963448064f28b6e0c50e
+timeCreated: 1441552266
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Scripts/Global/Go_Main.cs
+  uploadId: 318368

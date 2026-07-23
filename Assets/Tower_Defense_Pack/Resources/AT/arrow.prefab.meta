@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b91762ed8f696814484141c68ef95515
+timeCreated: 1439369759
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/AT/arrow.prefab
+  uploadId: 318368

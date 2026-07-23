@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2e3d2cda4b5ad08409e3a921944028ea
+timeCreated: 1440935153
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Resources/Cursor/trap.prefab
+  uploadId: 318368

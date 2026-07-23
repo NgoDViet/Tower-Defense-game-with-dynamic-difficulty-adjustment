@@ -1,0 +1,22 @@
+
+======[UPDATE v 3.0 Summary]======
+
+///////////Finally example sounds are included
+-You can configure your sounds on the scene easily on AudioManager Gameobject / Audio_Manager.cs
+	-Some elements are array, here you can add all sounds that you want, the sound will be selected via random among them.
+	-Sound when click on button is assigned on 'UI' gameobject / AudioSource into the scene.
+	-Music is assigned on AudioManager gameobject / AudioSource into the scene.
+*Also I have added mute button to the scenes.
+*AudioManager Prefab on ./Resources
+
+///////////I Just added a lot of comments to help you with the code
+
+///////////About Android Mobile UI
+-Now the Canvas is ScreenSpace-Camera and Scale with Screen size
+-The UI elements are placed into 2 Panels: 
+	-OnTop
+	-OnBot
+-Now The elements on MainMenuPhone are placed into Canvas/Panel
+
+///////////About Parabolic_shot_Controller
+-A little update.

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8d0b5d2b409921d42b43d82b7fadff0a
+timeCreated: 1439898836
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Buttons/circle/set0.controller
+  uploadId: 318368

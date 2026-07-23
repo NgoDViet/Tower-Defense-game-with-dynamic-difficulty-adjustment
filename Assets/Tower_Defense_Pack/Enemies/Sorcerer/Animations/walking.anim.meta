@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 697f891563fd33a43b89f1302900e0e6
+timeCreated: 1461584653
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Enemies/Sorcerer/Animations/walking.anim
+  uploadId: 318368

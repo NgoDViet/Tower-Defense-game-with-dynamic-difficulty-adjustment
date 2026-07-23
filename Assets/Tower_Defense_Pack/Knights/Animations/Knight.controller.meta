@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ef7cc4f179e7f484297d5f662d123980
+timeCreated: 1440842468
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 45705
+  packageName: Tower Defense Basic Pixel Art Pack
+  packageVersion: 4.0
+  assetPath: Assets/Tower_Defense_Pack/Knights/Animations/Knight.controller
+  uploadId: 318368
