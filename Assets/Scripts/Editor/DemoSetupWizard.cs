@@ -293,6 +293,77 @@ namespace TowerDefense.Editor
             DestroyImmediate(towerTemp);
             Debug.Log("[Setup] Created Tower Prefab.");
 
+            // Create Tower Level 2 Prefab
+            GameObject towerLvl2Temp = new GameObject("TowerLvl2Temp");
+            SpriteRenderer towerSR2 = towerLvl2Temp.AddComponent<SpriteRenderer>();
+            towerSR2.sprite = uiSprite;
+            towerSR2.color = Color.cyan;
+            CircleCollider2D towerCollider2 = towerLvl2Temp.AddComponent<CircleCollider2D>();
+            towerCollider2.radius = 0.4f;
+            towerCollider2.isTrigger = true;
+            TowerController towerCtrl2 = towerLvl2Temp.AddComponent<TowerController>();
+            GameObject shootPointGO2 = new GameObject("ShootPoint");
+            shootPointGO2.transform.SetParent(towerLvl2Temp.transform, false);
+
+            // Add Level 2 inner square
+            GameObject visualLvl2_2 = new GameObject("Visual_Lvl2");
+            visualLvl2_2.transform.SetParent(towerLvl2Temp.transform, false);
+            visualLvl2_2.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
+            SpriteRenderer visualSR2_2 = visualLvl2_2.AddComponent<SpriteRenderer>();
+            visualSR2_2.sprite = uiSprite;
+            visualSR2_2.color = new Color(0.05f, 0.3f, 0.5f, 1f); // Darker blue/slate color
+            visualSR2_2.sortingOrder = 1;
+
+            SerializedObject towerCtrl2SO = new SerializedObject(towerCtrl2);
+            towerCtrl2SO.FindProperty("towerData").objectReferenceValue = persistentTowerData;
+            towerCtrl2SO.FindProperty("shootPoint").objectReferenceValue = shootPointGO2.transform;
+            towerCtrl2SO.FindProperty("enemyLayerMask").intValue = 1 << LayerMask.NameToLayer(ENEMY_LAYER);
+            towerCtrl2SO.ApplyModifiedProperties();
+
+            GameObject towerLvl2Prefab = PrefabUtility.SaveAsPrefabAsset(towerLvl2Temp, "Assets/Prefabs/Tower_Level2.prefab");
+            DestroyImmediate(towerLvl2Temp);
+            Debug.Log("[Setup] Created Tower Level 2 Prefab.");
+
+            // Create Tower Level 3 Prefab
+            GameObject towerLvl3Temp = new GameObject("TowerLvl3Temp");
+            SpriteRenderer towerSR3 = towerLvl3Temp.AddComponent<SpriteRenderer>();
+            towerSR3.sprite = uiSprite;
+            towerSR3.color = Color.cyan;
+            CircleCollider2D towerCollider3 = towerLvl3Temp.AddComponent<CircleCollider2D>();
+            towerCollider3.radius = 0.4f;
+            towerCollider3.isTrigger = true;
+            TowerController towerCtrl3 = towerLvl3Temp.AddComponent<TowerController>();
+            GameObject shootPointGO3 = new GameObject("ShootPoint");
+            shootPointGO3.transform.SetParent(towerLvl3Temp.transform, false);
+
+            // Add Level 2 inner square
+            GameObject visualLvl2_3 = new GameObject("Visual_Lvl2");
+            visualLvl2_3.transform.SetParent(towerLvl3Temp.transform, false);
+            visualLvl2_3.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
+            SpriteRenderer visualSR2_3 = visualLvl2_3.AddComponent<SpriteRenderer>();
+            visualSR2_3.sprite = uiSprite;
+            visualSR2_3.color = new Color(0.05f, 0.3f, 0.5f, 1f); // Darker blue/slate color
+            visualSR2_3.sortingOrder = 1;
+
+            // Add Level 3 inner square
+            GameObject visualLvl3_3 = new GameObject("Visual_Lvl3");
+            visualLvl3_3.transform.SetParent(towerLvl3Temp.transform, false);
+            visualLvl3_3.transform.localScale = new Vector3(0.35f, 0.35f, 1f);
+            SpriteRenderer visualSR3_3 = visualLvl3_3.AddComponent<SpriteRenderer>();
+            visualSR3_3.sprite = uiSprite;
+            visualSR3_3.color = Color.white; // White center color
+            visualSR3_3.sortingOrder = 2;
+
+            SerializedObject towerCtrl3SO = new SerializedObject(towerCtrl3);
+            towerCtrl3SO.FindProperty("towerData").objectReferenceValue = persistentTowerData;
+            towerCtrl3SO.FindProperty("shootPoint").objectReferenceValue = shootPointGO3.transform;
+            towerCtrl3SO.FindProperty("enemyLayerMask").intValue = 1 << LayerMask.NameToLayer(ENEMY_LAYER);
+            towerCtrl3SO.ApplyModifiedProperties();
+
+            GameObject towerLvl3Prefab = PrefabUtility.SaveAsPrefabAsset(towerLvl3Temp, "Assets/Prefabs/Tower_Level3.prefab");
+            DestroyImmediate(towerLvl3Temp);
+            Debug.Log("[Setup] Created Tower Level 3 Prefab.");
+
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
@@ -304,6 +375,8 @@ namespace TowerDefense.Editor
                 TowerController loadedTowerCtrl = loadedTower.GetComponent<TowerController>();
                 SerializedObject loadedTowerCtrlSO = new SerializedObject(loadedTowerCtrl);
                 loadedTowerCtrlSO.FindProperty("towerData").objectReferenceValue = persistentTowerData;
+                loadedTowerCtrlSO.FindProperty("level2Prefab").objectReferenceValue = towerLvl2Prefab;
+                loadedTowerCtrlSO.FindProperty("level3Prefab").objectReferenceValue = towerLvl3Prefab;
                 loadedTowerCtrlSO.ApplyModifiedProperties();
                 PrefabUtility.SaveAsPrefabAsset(loadedTower, "Assets/Prefabs/Tower.prefab");
                 PrefabUtility.UnloadPrefabContents(loadedTower);

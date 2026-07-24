@@ -43,6 +43,9 @@ namespace TowerDefense.UI
         private GameObject _infoPanel;
         private TextMeshProUGUI _infoTitleText;
         private TextMeshProUGUI _infoStatsText;
+        private GameObject _lvlUpBtnGO;
+        private Button _lvlUpBtn;
+        private TextMeshProUGUI _lvlUpBtnText;
 
         private void OnEnable()
         {
@@ -140,6 +143,7 @@ namespace TowerDefense.UI
             {
                 goldText.text = $"Gold: {evt.CurrentGold}";
             }
+            UpdateSelectedStatsDisplay();
         }
 
         private void OnWaveStarted(WaveStartedEvent evt)
@@ -577,16 +581,43 @@ namespace TowerDefense.UI
 
                 TowerData data = _selectedTower.TowerData;
                 string name = data != null ? data.TowerName : "Tower";
-                float range = data != null ? data.Range : 0f;
                 float fireRate = data != null ? data.FireRate : 0f;
-                int damage = data != null ? data.Damage : 0;
 
-                if (_infoTitleText != null) _infoTitleText.text = name.ToUpper();
+                if (_infoTitleText != null) _infoTitleText.text = name.ToUpper() + $" (LVL {_selectedTower.CurrentLevel})";
                 if (_infoStatsText != null)
                 {
-                    _infoStatsText.text = $"DAMAGE: <color=#FFD700>{damage}</color>\n\n" +
+                    _infoStatsText.text = $"DAMAGE: <color=#FFD700>{_selectedTower.CurrentDamage}</color>\n\n" +
                                           $"FIRE RATE: <color=#55FFFF>{fireRate:F1}/s</color>\n\n" +
-                                          $"RANGE: <color=#55FF55>{range:F1}</color>";
+                                          $"RANGE: <color=#55FF55>{_selectedTower.CurrentRange:F1}</color>";
+                }
+
+                if (_lvlUpBtnGO != null)
+                {
+                    if (_selectedTower.CurrentLevel < _selectedTower.MaxLevel)
+                    {
+                        _lvlUpBtnGO.SetActive(true);
+                        int cost = _selectedTower.UpgradeCost;
+                        bool canAfford = GameManager.Instance == null || GameManager.Instance.CurrentGold >= cost;
+
+                        if (_lvlUpBtnText != null)
+                        {
+                            _lvlUpBtnText.text = $"UPGRADE ({cost} G)";
+                        }
+
+                        if (_lvlUpBtn != null)
+                        {
+                            _lvlUpBtn.interactable = canAfford;
+                            Image btnImg = _lvlUpBtnGO.GetComponent<Image>();
+                            if (btnImg != null)
+                            {
+                                btnImg.color = canAfford ? new Color(0.12f, 0.75f, 0.38f, 1f) : new Color(0.4f, 0.4f, 0.4f, 0.8f);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        _lvlUpBtnGO.SetActive(false);
+                    }
                 }
             }
             else if (_selectedEnemy != null)
@@ -612,6 +643,8 @@ namespace TowerDefense.UI
                                           $"ARMOR: <color=#AAAAAA>{armor}</color>\n\n" +
                                           $"DAMAGE TO BASE: <color=#FF5555>{attack}</color>";
                 }
+
+                if (_lvlUpBtnGO != null) _lvlUpBtnGO.SetActive(false);
             }
             else
             {
@@ -711,6 +744,53 @@ namespace TowerDefense.UI
             closeText.fontStyle = FontStyles.Bold;
             closeText.color = Color.white;
             closeText.alignment = TextAlignmentOptions.Center;
+
+            // Create Level Up / Upgrade Button
+            _lvlUpBtnGO = new GameObject("UpgradeButton", typeof(RectTransform), typeof(CanvasRenderer));
+            _lvlUpBtnGO.transform.SetParent(_infoPanel.transform, false);
+            RectTransform lvlUpRect = _lvlUpBtnGO.GetComponent<RectTransform>();
+            lvlUpRect.anchorMin = new Vector2(0.5f, 0f);
+            lvlUpRect.anchorMax = new Vector2(0.5f, 0f);
+            lvlUpRect.pivot = new Vector2(0.5f, 0f);
+            lvlUpRect.anchoredPosition = new Vector2(0f, 15f);
+            lvlUpRect.sizeDelta = new Vector2(240f, 40f);
+
+            Image lvlUpImg = _lvlUpBtnGO.AddComponent<Image>();
+            lvlUpImg.color = new Color(0.12f, 0.75f, 0.38f, 1f); // Sleek green
+
+            _lvlUpBtn = _lvlUpBtnGO.AddComponent<Button>();
+            _lvlUpBtn.onClick.AddListener(OnUpgradeButtonClicked);
+
+            // Add Text
+            GameObject lvlUpTextGO = new GameObject("Text", typeof(RectTransform));
+            lvlUpTextGO.transform.SetParent(_lvlUpBtnGO.transform, false);
+            RectTransform lvlUpTextRect = lvlUpTextGO.GetComponent<RectTransform>();
+            lvlUpTextRect.anchorMin = Vector2.zero;
+            lvlUpTextRect.anchorMax = Vector2.one;
+            lvlUpTextRect.offsetMin = Vector2.zero;
+            lvlUpTextRect.offsetMax = Vector2.zero;
+
+            _lvlUpBtnText = lvlUpTextGO.AddComponent<TextMeshProUGUI>();
+            _lvlUpBtnText.text = "UPGRADE";
+            _lvlUpBtnText.fontSize = 14f;
+            _lvlUpBtnText.fontStyle = FontStyles.Bold;
+            _lvlUpBtnText.color = Color.white;
+            _lvlUpBtnText.alignment = TextAlignmentOptions.Center;
+
+            _lvlUpBtnGO.SetActive(false);
+        }
+
+        private void OnUpgradeButtonClicked()
+        {
+            if (_selectedTower != null && GameManager.Instance != null)
+            {
+                int cost = _selectedTower.UpgradeCost;
+                if (_selectedTower.CurrentLevel < _selectedTower.MaxLevel && GameManager.Instance.TrySpendGold(cost))
+                {
+                    _selectedTower.LevelUp();
+                    UpdateSelectedStatsDisplay();
+                }
+            }
         }
 
         private bool IsPointerOverInteractiveUI(Vector2 screenPos)

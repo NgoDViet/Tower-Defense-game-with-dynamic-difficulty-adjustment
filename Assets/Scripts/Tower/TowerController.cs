@@ -43,6 +43,20 @@ namespace TowerDefense.Tower
         private float _fireCooldownTimer = 0f;
         private float _targetReevaluateTimer = 0f;
 
+        private int _currentLevel = 1;
+        private const int MAX_LEVEL = 3;
+
+        [Header("Upgrade Prefabs")]
+        [SerializeField] private GameObject level2Prefab;
+        [SerializeField] private GameObject level3Prefab;
+
+        public int CurrentLevel => _currentLevel;
+        public int MaxLevel => MAX_LEVEL;
+        public int UpgradeCost => 100 * _currentLevel;
+
+        public int CurrentDamage => towerData != null ? towerData.Damage + (_currentLevel - 1) * 2 : 0;
+        public float CurrentRange => towerData != null ? towerData.Range + (_currentLevel - 1) * 1.0f : 0f;
+
         public EnemyHealth TargetEnemy => _targetEnemy;
         public TowerData TowerData => towerData;
 
@@ -107,11 +121,11 @@ namespace TowerDefense.Tower
 
         private void UpdateTarget()
         {
-            Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, towerData.Range, enemyLayerMask);
+            Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, CurrentRange, enemyLayerMask);
             if (colliders.Length == 0)
             {
                 _targetEnemy = null;
-                Collider2D[] allColliders = Physics2D.OverlapCircleAll(transform.position, towerData.Range);
+                Collider2D[] allColliders = Physics2D.OverlapCircleAll(transform.position, CurrentRange);
                 if (allColliders.Length > 0)
                 {
                     System.Text.StringBuilder sb = new System.Text.StringBuilder();
@@ -180,7 +194,7 @@ namespace TowerDefense.Tower
             
             // Check range
             float dist = Vector3.Distance(transform.position, enemy.transform.position);
-            return dist <= towerData.Range;
+            return dist <= CurrentRange;
         }
 
         private void AimAtTarget(Vector3 targetPosition)
@@ -215,7 +229,7 @@ namespace TowerDefense.Tower
             ProjectileController projectile = projectileObj.GetComponent<ProjectileController>();
             if (projectile != null)
             {
-                projectile.Initialize(_targetEnemy, towerData.Damage, towerData.ProjectileSpeed);
+                projectile.Initialize(_targetEnemy, CurrentDamage, towerData.ProjectileSpeed);
             }
             else
             {
@@ -223,14 +237,49 @@ namespace TowerDefense.Tower
             }
         }
 
+        public void LevelUp()
+        {
+            if (_currentLevel >= MAX_LEVEL) return;
+
+            _currentLevel++;
+
+            // Clean up old visual children
+            foreach (Transform child in transform)
+            {
+                if (child.name.StartsWith("Visual_"))
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            // Apply new visuals
+            GameObject prefabToUse = null;
+            if (_currentLevel == 2) prefabToUse = level2Prefab;
+            else if (_currentLevel == 3) prefabToUse = level3Prefab;
+
+            if (prefabToUse != null)
+            {
+                foreach (Transform child in prefabToUse.transform)
+                {
+                    if (child.name.StartsWith("Visual_"))
+                    {
+                        GameObject instantiated = Instantiate(child.gameObject, transform);
+                        instantiated.name = child.name;
+                    }
+                }
+            }
+
+            Debug.Log($"[TowerController] Upgraded {gameObject.name} to Level {_currentLevel}. Damage: {CurrentDamage}, Range: {CurrentRange}");
+        }
+
         private void OnDrawGizmosSelected()
         {
             // Draw targeting range circle in Scene View
             Gizmos.color = new Color(0f, 1f, 0f, 0.15f);
-            Gizmos.DrawSphere(transform.position, towerData != null ? towerData.Range : 5f);
+            Gizmos.DrawSphere(transform.position, towerData != null ? CurrentRange : 5f);
             
             Gizmos.color = Color.green;
-            Gizmos.DrawWireSphere(transform.position, towerData != null ? towerData.Range : 5f);
+            Gizmos.DrawWireSphere(transform.position, towerData != null ? CurrentRange : 5f);
         }
     }
 }
