@@ -16,4 +16,7 @@ MonoBehaviour:
   startingGold: 300
   baseMaxHealth: 20
   waves:
-  - {fileID: 11400000, guid: cce70d7ddf8d71e458573546fef769a5, type: 2}
+  - {fileID: 11400000, guid: f9d24b42a7731cd4bb7c50f5ab72bc13, type: 2}
+  - {fileID: 11400000, guid: 7ade69c7a25e186448fffb0bcf89ff49, type: 2}
+  - {fileID: 11400000, guid: 9954062ec28852441b2136d197eb7382, type: 2}
+  - {fileID: 11400000, guid: 9d9ffe28f593a7845944629a9ae6590d, type: 2}

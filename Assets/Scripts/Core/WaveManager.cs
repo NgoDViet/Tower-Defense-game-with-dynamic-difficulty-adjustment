@@ -7,8 +7,28 @@ using TowerDefense.Pooling;
 
 namespace TowerDefense.Core
 {
+    [System.Serializable]
+    public struct WaveSetup
+    {
+        [Header("Basic Enemy")]
+        public int basicCount;
+        public float basicSpawnInterval;
+
+        [Header("Fast Enemy")]
+        public int fastCount;
+        public float fastSpawnInterval;
+
+        [Header("Tank Enemy")]
+        public int tankCount;
+        public float tankSpawnInterval;
+
+        [Header("Armor Enemy")]
+        public int armorCount;
+        public float armorSpawnInterval;
+    }
+
     /// <summary>
-    /// Spawns waves of enemies according to the LevelData configuration.
+    /// Spawns waves of enemies configured directly inside this component.
     /// Spawns enemies through the ObjectPooler at the starting waypoint of the path.
     /// </summary>
     public class WaveManager : MonoBehaviour
@@ -37,6 +57,9 @@ namespace TowerDefense.Core
         [Tooltip("Delay in seconds between waves when auto-start is active.")]
         [SerializeField] private float waveInterval = 5f;
 
+        [Header("Waves Setup")]
+        [SerializeField] private List<WaveSetup> waves = new List<WaveSetup>();
+
         private LevelData _levelData;
         private int _currentWaveIndex = -1;
         private bool _isSpawning = false;
@@ -52,6 +75,7 @@ namespace TowerDefense.Core
         public EnemyData FastEnemyData { get => fastEnemyData; set => fastEnemyData = value; }
         public EnemyData TankEnemyData { get => tankEnemyData; set => tankEnemyData = value; }
         public EnemyData ArmorEnemyData { get => armorEnemyData; set => armorEnemyData = value; }
+        public List<WaveSetup> Waves => waves;
 
         private void OnEnable()
         {
@@ -84,17 +108,11 @@ namespace TowerDefense.Core
                 return;
             }
 
-            if (_levelData == null)
-            {
-                Debug.LogError("[WaveManager] LevelData is not loaded yet.");
-                return;
-            }
-
             int nextWaveIndex = _currentWaveIndex + 1;
-            if (nextWaveIndex < _levelData.Waves.Count)
+            if (nextWaveIndex < waves.Count)
             {
                 _currentWaveIndex = nextWaveIndex;
-                _waveSpawnCoroutine = StartCoroutine(SpawnWaveCoroutine(_currentWaveIndex, _levelData.Waves[_currentWaveIndex]));
+                _waveSpawnCoroutine = StartCoroutine(SpawnWaveCoroutine(_currentWaveIndex, waves[_currentWaveIndex]));
             }
             else
             {
@@ -118,25 +136,25 @@ namespace TowerDefense.Core
             }
         }
 
-        private IEnumerator SpawnWaveCoroutine(int waveIndex, WaveData waveData)
+        private IEnumerator SpawnWaveCoroutine(int waveIndex, WaveSetup waveData)
         {
             _isSpawning = true;
             Debug.Log($"[WaveManager] Wave {waveIndex} started spawning.");
             
             // Raise event that wave has started
-            EventBus<WaveStartedEvent>.Raise(new WaveStartedEvent(waveIndex, _levelData.Waves.Count));
+            EventBus<WaveStartedEvent>.Raise(new WaveStartedEvent(waveIndex, waves.Count));
 
-            // Dynamically construct spawn groups from WaveData counts
+            // Dynamically construct spawn groups from WaveSetup counts
             List<DynamicSpawnGroup> groups = new List<DynamicSpawnGroup>();
             
-            if (waveData.BasicCount > 0 && basicEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Basic, basicEnemyData, waveData.BasicCount, waveData.BasicSpawnInterval));
-            if (waveData.FastCount > 0 && fastEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Fast, fastEnemyData, waveData.FastCount, waveData.FastSpawnInterval));
-            if (waveData.TankCount > 0 && tankEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Tank, tankEnemyData, waveData.TankCount, waveData.TankSpawnInterval));
-            if (waveData.ArmorCount > 0 && armorEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Armor, armorEnemyData, waveData.ArmorCount, waveData.ArmorSpawnInterval));
+            if (waveData.basicCount > 0 && basicEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Basic, basicEnemyData, waveData.basicCount, waveData.basicSpawnInterval));
+            if (waveData.fastCount > 0 && fastEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Fast, fastEnemyData, waveData.fastCount, waveData.fastSpawnInterval));
+            if (waveData.tankCount > 0 && tankEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Tank, tankEnemyData, waveData.tankCount, waveData.tankSpawnInterval));
+            if (waveData.armorCount > 0 && armorEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Armor, armorEnemyData, waveData.armorCount, waveData.armorSpawnInterval));
 
             _activeSpawnGroupsCount = groups.Count;
 
@@ -254,7 +272,7 @@ namespace TowerDefense.Core
         private void OnWaveCleared(WaveClearedEvent evt)
         {
             // Auto start next wave if configured and there are more waves left
-            if (autoStartNextWave && _levelData != null && _currentWaveIndex < _levelData.Waves.Count - 1)
+            if (autoStartNextWave && _currentWaveIndex < waves.Count - 1)
             {
                 StartCoroutine(AutoStartNextWaveCoroutine());
             }

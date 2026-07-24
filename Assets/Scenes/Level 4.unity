@@ -2246,16 +2246,49 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Core.WaveManager
   waypointPath: {fileID: 1763489055}
-  basicEnemyPrefab: {fileID: 0}
-  fastEnemyPrefab: {fileID: 0}
-  tankEnemyPrefab: {fileID: 0}
-  armorEnemyPrefab: {fileID: 0}
+  basicEnemyPrefab: {fileID: 8928630810785974071, guid: 523e5eb7dd21ce640838eb13745738c0, type: 3}
+  fastEnemyPrefab: {fileID: 6449124379798956066, guid: d19bfcb2bd4846246b39cd32604c6d8f, type: 3}
+  tankEnemyPrefab: {fileID: 973217164337095005, guid: baf57a5c39b397b48b1f8e56e94690ca, type: 3}
+  armorEnemyPrefab: {fileID: 7539093121017106743, guid: 183bb27401bc42b4f8d7ec4893fa5c20, type: 3}
   basicEnemyData: {fileID: 11400000, guid: 5f5f662aed6254240ba62b3712a88ccb, type: 2}
   fastEnemyData: {fileID: 11400000, guid: 796f64eced0c9a54c9c39924c95fad82, type: 2}
   tankEnemyData: {fileID: 11400000, guid: 11a6d7fa25269114e9f2c870b41d5d85, type: 2}
   armorEnemyData: {fileID: 11400000, guid: 16cab071a0a9ebf4691b18fdbef266f5, type: 2}
   autoStartNextWave: 1
   waveInterval: 4
+  waves:
+  - basicCount: 3
+    basicSpawnInterval: 4
+    fastCount: 4
+    fastSpawnInterval: 3
+    tankCount: 2
+    tankSpawnInterval: 6
+    armorCount: 2
+    armorSpawnInterval: 5
+  - basicCount: 4
+    basicSpawnInterval: 4
+    fastCount: 5
+    fastSpawnInterval: 3
+    tankCount: 3
+    tankSpawnInterval: 6
+    armorCount: 0
+    armorSpawnInterval: 5
+  - basicCount: 5
+    basicSpawnInterval: 3.5
+    fastCount: 6
+    fastSpawnInterval: 2.5
+    tankCount: 4
+    tankSpawnInterval: 5.5
+    armorCount: 1
+    armorSpawnInterval: 4.5
+  - basicCount: 6
+    basicSpawnInterval: 3
+    fastCount: 8
+    fastSpawnInterval: 2
+    tankCount: 5
+    tankSpawnInterval: 5
+    armorCount: 3
+    armorSpawnInterval: 4
 --- !u!4 &456283632
 Transform:
   m_ObjectHideFlags: 0
@@ -5716,13 +5749,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Pooling.ObjectPooler
   prewarmConfigs:
-  - prefab: {fileID: 0}
+  - prefab: {fileID: 8928630810785974071, guid: 523e5eb7dd21ce640838eb13745738c0, type: 3}
     size: 10
-  - prefab: {fileID: 0}
+  - prefab: {fileID: 6449124379798956066, guid: d19bfcb2bd4846246b39cd32604c6d8f, type: 3}
     size: 10
-  - prefab: {fileID: 0}
+  - prefab: {fileID: 973217164337095005, guid: baf57a5c39b397b48b1f8e56e94690ca, type: 3}
     size: 5
-  - prefab: {fileID: 0}
+  - prefab: {fileID: 7539093121017106743, guid: 183bb27401bc42b4f8d7ec4893fa5c20, type: 3}
     size: 10
   - prefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
     size: 20

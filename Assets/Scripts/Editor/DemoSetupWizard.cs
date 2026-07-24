@@ -390,6 +390,7 @@ namespace TowerDefense.Editor
             waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
             waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
             waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
+            PopulateWaveManagerWaves(waveManagerSO.FindProperty("waves"));
             waveManagerSO.ApplyModifiedProperties();
 
             // Create GameManager
@@ -692,6 +693,7 @@ namespace TowerDefense.Editor
             waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
             waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
             waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
+            PopulateWaveManagerWaves(waveManagerSO.FindProperty("waves"));
             waveManagerSO.ApplyModifiedProperties();
 
             // Create GameManager
@@ -1291,6 +1293,7 @@ namespace TowerDefense.Editor
             waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
             waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
             waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
+            PopulateWaveManagerWaves(waveManagerSO.FindProperty("waves"));
             waveManagerSO.ApplyModifiedProperties();
 
             GameManager gameManagerComp = GameObject.FindFirstObjectByType<GameManager>();
@@ -1502,6 +1505,44 @@ namespace TowerDefense.Editor
                 AssetDatabase.CreateAsset(wave, path);
             }
             return wave;
+        }
+
+        private static void PopulateWaveManagerWaves(SerializedProperty wavesProp)
+        {
+            if (wavesProp == null) return;
+            wavesProp.ClearArray();
+            
+            // Wave 1
+            wavesProp.InsertArrayElementAtIndex(0);
+            SerializedProperty w1 = wavesProp.GetArrayElementAtIndex(0);
+            w1.FindPropertyRelative("basicCount").intValue = 3; w1.FindPropertyRelative("basicSpawnInterval").floatValue = 4.0f;
+            w1.FindPropertyRelative("fastCount").intValue = 4; w1.FindPropertyRelative("fastSpawnInterval").floatValue = 3.0f;
+            w1.FindPropertyRelative("tankCount").intValue = 2; w1.FindPropertyRelative("tankSpawnInterval").floatValue = 6.0f;
+            w1.FindPropertyRelative("armorCount").intValue = 2; w1.FindPropertyRelative("armorSpawnInterval").floatValue = 5.0f;
+
+            // Wave 2
+            wavesProp.InsertArrayElementAtIndex(1);
+            SerializedProperty w2 = wavesProp.GetArrayElementAtIndex(1);
+            w2.FindPropertyRelative("basicCount").intValue = 4; w2.FindPropertyRelative("basicSpawnInterval").floatValue = 4.0f;
+            w2.FindPropertyRelative("fastCount").intValue = 5; w2.FindPropertyRelative("fastSpawnInterval").floatValue = 3.0f;
+            w2.FindPropertyRelative("tankCount").intValue = 3; w2.FindPropertyRelative("tankSpawnInterval").floatValue = 6.0f;
+            w2.FindPropertyRelative("armorCount").intValue = 0; w2.FindPropertyRelative("armorSpawnInterval").floatValue = 5.0f;
+
+            // Wave 3
+            wavesProp.InsertArrayElementAtIndex(2);
+            SerializedProperty w3 = wavesProp.GetArrayElementAtIndex(2);
+            w3.FindPropertyRelative("basicCount").intValue = 5; w3.FindPropertyRelative("basicSpawnInterval").floatValue = 3.5f;
+            w3.FindPropertyRelative("fastCount").intValue = 6; w3.FindPropertyRelative("fastSpawnInterval").floatValue = 2.5f;
+            w3.FindPropertyRelative("tankCount").intValue = 4; w3.FindPropertyRelative("tankSpawnInterval").floatValue = 5.5f;
+            w3.FindPropertyRelative("armorCount").intValue = 1; w3.FindPropertyRelative("armorSpawnInterval").floatValue = 4.5f;
+
+            // Wave 4
+            wavesProp.InsertArrayElementAtIndex(3);
+            SerializedProperty w4 = wavesProp.GetArrayElementAtIndex(3);
+            w4.FindPropertyRelative("basicCount").intValue = 6; w4.FindPropertyRelative("basicSpawnInterval").floatValue = 3.0f;
+            w4.FindPropertyRelative("fastCount").intValue = 8; w4.FindPropertyRelative("fastSpawnInterval").floatValue = 2.0f;
+            w4.FindPropertyRelative("tankCount").intValue = 5; w4.FindPropertyRelative("tankSpawnInterval").floatValue = 5.0f;
+            w4.FindPropertyRelative("armorCount").intValue = 3; w4.FindPropertyRelative("armorSpawnInterval").floatValue = 4.0f;
         }
 
         private static GameObject CreateEnemyPrefab(string name, System.Type healthComponentType, Color color, Vector3 scale, Sprite knobSprite)

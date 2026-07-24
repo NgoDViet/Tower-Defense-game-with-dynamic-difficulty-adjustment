@@ -257,8 +257,8 @@ namespace TowerDefense.Core
                 Debug.Log($"[GameManager] Wave {_currentWaveIndex} fully cleared.");
                 EventBus<WaveClearedEvent>.Raise(new WaveClearedEvent(_currentWaveIndex));
 
-                // Check if this was the last wave in the level
-                if (_activeLevelData != null && _currentWaveIndex >= _activeLevelData.Waves.Count - 1)
+                WaveManager waveManager = FindFirstObjectByType<WaveManager>();
+                if (waveManager != null && _currentWaveIndex >= waveManager.Waves.Count - 1)
                 {
                     SetState(GameState.Victory);
                 }
