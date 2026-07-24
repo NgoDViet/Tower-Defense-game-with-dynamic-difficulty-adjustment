@@ -12,9 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: beaa880ace2c48e4e89ad08eb9819dcb, type: 3}
   m_Name: TestWaveData
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.WaveData
-  spawnGroups:
-  - enemyData: {fileID: 11400000, guid: c3be4e1136ba10f4190e643d9c7105af, type: 2}
-    enemyPrefab: {fileID: 6735359253162547679, guid: 54f2d6a9be79dff46b70142f5eb787fe, type: 3}
-    count: 5
-    spawnInterval: 1.5
-    delayBeforeGroup: 0
+  basicCount: 5
+  fastCount: 3
+  tankCount: 1
+  armorCount: 2
+  spawnInterval: 1.5

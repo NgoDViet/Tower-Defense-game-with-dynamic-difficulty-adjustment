@@ -2105,7 +2105,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 9
+  orthographic size: 6
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -4615,6 +4615,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Core.WaveManager
   waypointPath: {fileID: 1444829891}
+  basicEnemyPrefab: {fileID: 0}
+  fastEnemyPrefab: {fileID: 0}
+  tankEnemyPrefab: {fileID: 0}
+  armorEnemyPrefab: {fileID: 0}
+  basicEnemyData: {fileID: 11400000, guid: 5f5f662aed6254240ba62b3712a88ccb, type: 2}
+  fastEnemyData: {fileID: 11400000, guid: 796f64eced0c9a54c9c39924c95fad82, type: 2}
+  tankEnemyData: {fileID: 11400000, guid: 11a6d7fa25269114e9f2c870b41d5d85, type: 2}
+  armorEnemyData: {fileID: 11400000, guid: 16cab071a0a9ebf4691b18fdbef266f5, type: 2}
   autoStartNextWave: 1
   waveInterval: 4
 --- !u!4 &839777384
@@ -4967,7 +4975,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Pooling.ObjectPooler
   prewarmConfigs:
-  - prefab: {fileID: 6735359253162547679, guid: 54f2d6a9be79dff46b70142f5eb787fe, type: 3}
+  - prefab: {fileID: 0}
+    size: 10
+  - prefab: {fileID: 0}
+    size: 10
+  - prefab: {fileID: 0}
+    size: 5
+  - prefab: {fileID: 0}
     size: 10
   - prefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
     size: 20

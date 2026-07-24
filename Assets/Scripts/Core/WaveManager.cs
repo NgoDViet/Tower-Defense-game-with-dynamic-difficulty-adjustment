@@ -17,6 +17,19 @@ namespace TowerDefense.Core
         [Tooltip("The waypoint path enemies will follow.")]
         [SerializeField] private WaypointPath waypointPath;
 
+        [Header("Enemy Prefabs")]
+        [SerializeField] private GameObject basicEnemyPrefab;
+        [SerializeField] private GameObject fastEnemyPrefab;
+        [SerializeField] private GameObject tankEnemyPrefab;
+        [SerializeField] private GameObject armorEnemyPrefab;
+
+        [Header("Enemy Specifications")]
+        [Tooltip("EnemyData configurations for each of the 4 types.")]
+        [SerializeField] private EnemyData basicEnemyData;
+        [SerializeField] private EnemyData fastEnemyData;
+        [SerializeField] private EnemyData tankEnemyData;
+        [SerializeField] private EnemyData armorEnemyData;
+
         [Header("Wave Controls")]
         [Tooltip("If true, the next wave starts automatically after a delay.")]
         [SerializeField] private bool autoStartNextWave = true;
@@ -29,6 +42,16 @@ namespace TowerDefense.Core
         private bool _isSpawning = false;
         private int _activeSpawnGroupsCount = 0;
         private Coroutine _waveSpawnCoroutine;
+
+        // Public properties to allow editor configurations
+        public GameObject BasicEnemyPrefab { get => basicEnemyPrefab; set => basicEnemyPrefab = value; }
+        public GameObject FastEnemyPrefab { get => fastEnemyPrefab; set => fastEnemyPrefab = value; }
+        public GameObject TankEnemyPrefab { get => tankEnemyPrefab; set => tankEnemyPrefab = value; }
+        public GameObject ArmorEnemyPrefab { get => armorEnemyPrefab; set => armorEnemyPrefab = value; }
+        public EnemyData BasicEnemyData { get => basicEnemyData; set => basicEnemyData = value; }
+        public EnemyData FastEnemyData { get => fastEnemyData; set => fastEnemyData = value; }
+        public EnemyData TankEnemyData { get => tankEnemyData; set => tankEnemyData = value; }
+        public EnemyData ArmorEnemyData { get => armorEnemyData; set => armorEnemyData = value; }
 
         private void OnEnable()
         {
@@ -79,6 +102,22 @@ namespace TowerDefense.Core
             }
         }
 
+        public struct DynamicSpawnGroup
+        {
+            public EnemyType enemyType;
+            public EnemyData enemyData;
+            public int count;
+            public float spawnInterval;
+
+            public DynamicSpawnGroup(EnemyType type, EnemyData data, int count, float interval)
+            {
+                this.enemyType = type;
+                this.enemyData = data;
+                this.count = count;
+                this.spawnInterval = interval;
+            }
+        }
+
         private IEnumerator SpawnWaveCoroutine(int waveIndex, WaveData waveData)
         {
             _isSpawning = true;
@@ -87,7 +126,18 @@ namespace TowerDefense.Core
             // Raise event that wave has started
             EventBus<WaveStartedEvent>.Raise(new WaveStartedEvent(waveIndex, _levelData.Waves.Count));
 
-            List<EnemySpawnGroup> groups = waveData.SpawnGroups;
+            // Dynamically construct spawn groups from WaveData counts
+            List<DynamicSpawnGroup> groups = new List<DynamicSpawnGroup>();
+            
+            if (waveData.BasicCount > 0 && basicEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Basic, basicEnemyData, waveData.BasicCount, waveData.SpawnInterval));
+            if (waveData.FastCount > 0 && fastEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Fast, fastEnemyData, waveData.FastCount, waveData.SpawnInterval));
+            if (waveData.TankCount > 0 && tankEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Tank, tankEnemyData, waveData.TankCount, waveData.SpawnInterval));
+            if (waveData.ArmorCount > 0 && armorEnemyData != null)
+                groups.Add(new DynamicSpawnGroup(EnemyType.Armor, armorEnemyData, waveData.ArmorCount, waveData.SpawnInterval));
+
             _activeSpawnGroupsCount = groups.Count;
 
             if (_activeSpawnGroupsCount == 0)
@@ -117,14 +167,8 @@ namespace TowerDefense.Core
             EventBus<WaveCompletedEvent>.Raise(new WaveCompletedEvent(waveIndex));
         }
 
-        private IEnumerator SpawnGroupCoroutine(int waveIndex, EnemySpawnGroup group)
+        private IEnumerator SpawnGroupCoroutine(int waveIndex, DynamicSpawnGroup group)
         {
-            // Delay before this enemy type starts spawning in the current wave
-            if (group.delayBeforeGroup > 0)
-            {
-                yield return new WaitForSeconds(group.delayBeforeGroup);
-            }
-
             Transform startWaypoint = waypointPath != null ? waypointPath.GetWaypoint(0) : null;
             Vector3 spawnPosition = startWaypoint != null ? startWaypoint.position : transform.position;
 
@@ -140,10 +184,19 @@ namespace TowerDefense.Core
                     }
                 }
 
-                if (group.enemyPrefab != null)
+                GameObject prefabToSpawn = null;
+                switch (group.enemyType)
+                {
+                    case EnemyType.Fast: prefabToSpawn = fastEnemyPrefab; break;
+                    case EnemyType.Tank: prefabToSpawn = tankEnemyPrefab; break;
+                    case EnemyType.Armor: prefabToSpawn = armorEnemyPrefab; break;
+                    default: prefabToSpawn = basicEnemyPrefab; break;
+                }
+
+                if (prefabToSpawn != null)
                 {
                     // Retrieve from pool
-                    GameObject enemy = ObjectPooler.Instance.GetPooledObject(group.enemyPrefab, spawnPosition, Quaternion.identity);
+                    GameObject enemy = ObjectPooler.Instance.GetPooledObject(prefabToSpawn, spawnPosition, Quaternion.identity);
 
                     // Initialize movement path and statistics
                     EnemyMovement movement = enemy.GetComponent<EnemyMovement>();

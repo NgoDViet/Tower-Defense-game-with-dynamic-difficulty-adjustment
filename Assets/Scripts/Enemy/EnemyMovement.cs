@@ -6,9 +6,10 @@ using TowerDefense.Pooling;
 namespace TowerDefense.Enemy
 {
     /// <summary>
-    /// Handles moving an enemy along a WaypointPath using speed from EnemyData.
+    /// Handles moving an enemy along a WaypointPath using speed from EnemyHealth.
     /// Raises a reached base event and destroys itself when finishing the path.
     /// </summary>
+    [RequireComponent(typeof(EnemyHealth))]
     public class EnemyMovement : MonoBehaviour
     {
         [Header("References")]
@@ -28,11 +29,22 @@ namespace TowerDefense.Enemy
         [Tooltip("Distance threshold to consider a waypoint reached.")]
         [SerializeField] private float waypointThreshold = 0.05f;
 
+        private EnemyHealth enemyHealth;
         private int _currentWaypointIndex = 0;
         private bool _isInitialized = false;
 
         public int CurrentWaypointIndex => _currentWaypointIndex;
         public WaypointPath ActivePath => waypointPath;
+
+        private void Awake()
+        {
+            enemyHealth = GetComponent<EnemyHealth>();
+            if (enemyHealth == null)
+            {
+                Debug.LogError("[EnemyMovement] EnemyHealth component is required but missing.");
+                enabled = false;
+            }
+        }
 
         private void Start()
         {
@@ -48,6 +60,18 @@ namespace TowerDefense.Enemy
         /// </summary>
         public void Initialize(EnemyData data, WaypointPath path)
         {
+            if (data == null)
+            {
+                Debug.LogError("[EnemyMovement] Cannot initialize movement without EnemyData.");
+                return;
+            }
+
+            if (path == null)
+            {
+                Debug.LogError("[EnemyMovement] Cannot initialize movement without a WaypointPath.");
+                return;
+            }
+
             enemyData = data;
             waypointPath = path;
             _currentWaypointIndex = 0;
@@ -55,12 +79,10 @@ namespace TowerDefense.Enemy
 
             if (waypointPath.WaypointCount > 0)
             {
-                // Snap to the starting waypoint immediately on spawn
                 Transform startWaypoint = waypointPath.GetWaypoint(0);
                 if (startWaypoint != null)
                 {
                     transform.position = startWaypoint.position;
-                    // Move target to the next waypoint
                     _currentWaypointIndex = 1;
                 }
             }
@@ -68,7 +90,7 @@ namespace TowerDefense.Enemy
 
         private void Update()
         {
-            if (!_isInitialized || waypointPath == null || enemyData == null) return;
+            if (!_isInitialized || waypointPath == null || enemyData == null || enemyHealth == null) return;
 
             if (_currentWaypointIndex >= waypointPath.WaypointCount)
             {
@@ -79,7 +101,6 @@ namespace TowerDefense.Enemy
             Transform targetWaypoint = waypointPath.GetWaypoint(_currentWaypointIndex);
             if (targetWaypoint == null)
             {
-                // Move to next if waypoint is missing
                 _currentWaypointIndex++;
                 return;
             }
@@ -89,13 +110,14 @@ namespace TowerDefense.Enemy
 
         private void MoveTowards(Vector3 targetPosition)
         {
-            float step = enemyData.MoveSpeed * Time.deltaTime;
+            if (enemyHealth == null) return;
+
+            // Fetch current speed from EnemyHealth instead of EnemyData
+            float step = enemyHealth.MoveSpeed * Time.deltaTime;
             Vector3 currentPos = transform.position;
 
-            // Perform movement
             transform.position = Vector3.MoveTowards(currentPos, targetPosition, step);
 
-            // Handle 2D rotation towards movement target
             if (rotateTowardsMovement)
             {
                 Vector3 direction = (targetPosition - currentPos).normalized;
@@ -106,7 +128,6 @@ namespace TowerDefense.Enemy
                 }
             }
 
-            // Check if reached waypoint
             if (Vector3.Distance(transform.position, targetPosition) <= waypointThreshold)
             {
                 _currentWaypointIndex++;
@@ -117,14 +138,11 @@ namespace TowerDefense.Enemy
         {
             _isInitialized = false;
 
-            // Raise reached base event via the EventBus
-            int damage = enemyData != null ? enemyData.DamageToBase : 1;
+            int damage = enemyHealth != null ? enemyHealth.Attack : 1;
             EventBus<EnemyReachedBaseEvent>.Raise(new EnemyReachedBaseEvent(gameObject, damage));
 
-            // Log event to console for verification
             Debug.Log($"[EnemyMovement] Enemy {gameObject.name} reached the base and dealt {damage} damage.");
 
-            // Return to object pool or destroy if no pool exists
             if (ObjectPooler.Instance != null)
             {
                 ObjectPooler.Instance.ReturnToPool(gameObject);

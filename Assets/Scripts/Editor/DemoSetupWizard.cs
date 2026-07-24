@@ -94,37 +94,31 @@ namespace TowerDefense.Editor
             DestroyImmediate(projTemp);
             Debug.Log("[Setup] Created Projectile Prefab.");
 
-            // 2. Create Enemy Prefab
-            GameObject enemyTemp = new GameObject("EnemyTemp");
-            enemyTemp.layer = LayerMask.NameToLayer(ENEMY_LAYER);
-            enemyTemp.tag = "Enemy";
-            SpriteRenderer enemySR = enemyTemp.AddComponent<SpriteRenderer>();
-            enemySR.sprite = knobSprite;
-            enemySR.color = Color.red;
-            
-            CircleCollider2D enemyCollider = enemyTemp.AddComponent<CircleCollider2D>();
-            enemyCollider.radius = 0.5f;
-            enemyCollider.isTrigger = true;
+            // 2. Create 4 Enemy Prefabs
+            GameObject enemyBasicPrefab = CreateEnemyPrefab("Enemy_Basic", typeof(BasicEnemy), Color.white, Vector3.one, knobSprite);
+            GameObject enemyFastPrefab = CreateEnemyPrefab("Enemy_Fast", typeof(FastEnemy), Color.yellow, new Vector3(0.8f, 0.8f, 1f), knobSprite);
+            GameObject enemyTankPrefab = CreateEnemyPrefab("Enemy_Tank", typeof(TankEnemy), new Color(0.8f, 0.2f, 0.2f), new Vector3(1.6f, 1.6f, 1f), knobSprite);
+            GameObject enemyArmorPrefab = CreateEnemyPrefab("Enemy_Armor", typeof(ArmorEnemy), new Color(0.5f, 0.6f, 0.7f), new Vector3(1.2f, 1.2f, 1f), knobSprite);
 
-            Rigidbody2D enemyRB = enemyTemp.AddComponent<Rigidbody2D>();
-            enemyRB.bodyType = RigidbodyType2D.Kinematic;
-
-            EnemyMovement enemyMovement = enemyTemp.AddComponent<EnemyMovement>();
-            EnemyHealth enemyHealth = enemyTemp.AddComponent<EnemyHealth>();
-
-            GameObject enemyPrefab = PrefabUtility.SaveAsPrefabAsset(enemyTemp, "Assets/Prefabs/Enemy.prefab");
-            DestroyImmediate(enemyTemp);
-            Debug.Log("[Setup] Created Enemy Prefab.");
+            // Legacy fallback Enemy prefab
+            if (!System.IO.File.Exists("Assets/Prefabs/Enemy.prefab"))
+            {
+                FileUtil.CopyFileOrDirectory("Assets/Prefabs/Enemy_Basic.prefab", "Assets/Prefabs/Enemy.prefab");
+            }
+            GameObject enemyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy.prefab");
 
             // 3. Create ScriptableObjects
-            // Create EnemyData
+            // Create 4 EnemyData configuration assets
+            CreateEnemyDataAsset("TestEnemyData_Basic", EnemyType.Basic, 10);
+            CreateEnemyDataAsset("TestEnemyData_Fast", EnemyType.Fast, 15);
+            CreateEnemyDataAsset("TestEnemyData_Tank", EnemyType.Tank, 30);
+            CreateEnemyDataAsset("TestEnemyData_Armor", EnemyType.Armor, 20);
+
+            // Legacy fallback TestEnemyData
             EnemyData enemyData = ScriptableObject.CreateInstance<EnemyData>();
             SerializedObject enemyDataSO = new SerializedObject(enemyData);
-            enemyDataSO.FindProperty("enemyName").stringValue = "Basic Enemy";
-            enemyDataSO.FindProperty("moveSpeed").floatValue = 2.0f;
-            enemyDataSO.FindProperty("maxHealth").intValue = 10;
-            enemyDataSO.FindProperty("goldReward").intValue = 15;
-            enemyDataSO.FindProperty("damageToBase").intValue = 1;
+            enemyDataSO.FindProperty("enemyType").enumValueIndex = (int)EnemyType.Basic;
+            enemyDataSO.FindProperty("goldReward").intValue = 10;
             enemyDataSO.ApplyModifiedProperties();
             AssetDatabase.CreateAsset(enemyData, "Assets/ScriptableObjects/TestEnemyData.asset");
 
@@ -144,15 +138,11 @@ namespace TowerDefense.Editor
             // Create WaveData
             WaveData waveData = ScriptableObject.CreateInstance<WaveData>();
             SerializedObject waveDataSO = new SerializedObject(waveData);
-            SerializedProperty spawnGroupsProp = waveDataSO.FindProperty("spawnGroups");
-            spawnGroupsProp.ClearArray();
-            spawnGroupsProp.InsertArrayElementAtIndex(0);
-            SerializedProperty groupProp = spawnGroupsProp.GetArrayElementAtIndex(0);
-            groupProp.FindPropertyRelative("enemyData").objectReferenceValue = enemyData;
-            groupProp.FindPropertyRelative("enemyPrefab").objectReferenceValue = enemyPrefab;
-            groupProp.FindPropertyRelative("count").intValue = 5;
-            groupProp.FindPropertyRelative("spawnInterval").floatValue = 1.5f;
-            groupProp.FindPropertyRelative("delayBeforeGroup").floatValue = 0f;
+            waveDataSO.FindProperty("basicCount").intValue = 5;
+            waveDataSO.FindProperty("fastCount").intValue = 3;
+            waveDataSO.FindProperty("tankCount").intValue = 1;
+            waveDataSO.FindProperty("armorCount").intValue = 2;
+            waveDataSO.FindProperty("spawnInterval").floatValue = 1.5f;
             waveDataSO.ApplyModifiedProperties();
             AssetDatabase.CreateAsset(waveData, "Assets/ScriptableObjects/TestWaveData.asset");
 
@@ -216,17 +206,12 @@ namespace TowerDefense.Editor
                 persistentTowerDataSO.ApplyModifiedProperties();
             }
 
-            // Update WaveData enemyPrefab and enemyData reference
+            // Update WaveData
             if (persistentWaveData != null)
             {
                 SerializedObject persistentWaveDataSO = new SerializedObject(persistentWaveData);
-                SerializedProperty persistentGroupsProp = persistentWaveDataSO.FindProperty("spawnGroups");
-                if (persistentGroupsProp.arraySize > 0)
-                {
-                    SerializedProperty persistentGroupProp = persistentGroupsProp.GetArrayElementAtIndex(0);
-                    persistentGroupProp.FindPropertyRelative("enemyData").objectReferenceValue = persistentEnemyData;
-                    persistentGroupProp.FindPropertyRelative("enemyPrefab").objectReferenceValue = persistentEnemyPrefab;
-                }
+                persistentWaveDataSO.FindProperty("basicCount").intValue = 5;
+                persistentWaveDataSO.FindProperty("spawnInterval").floatValue = 1.5f;
                 persistentWaveDataSO.ApplyModifiedProperties();
             }
 
@@ -357,15 +342,30 @@ namespace TowerDefense.Editor
             SerializedProperty prewarmConfigsProp = poolerSO.FindProperty("prewarmConfigs");
             prewarmConfigsProp.ClearArray();
             
+            GameObject basicPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Basic.prefab");
+            GameObject fastPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Fast.prefab");
+            GameObject tankPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Tank.prefab");
+            GameObject armorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Armor.prefab");
+
             prewarmConfigsProp.InsertArrayElementAtIndex(0);
-            SerializedProperty configEnemy = prewarmConfigsProp.GetArrayElementAtIndex(0);
-            configEnemy.FindPropertyRelative("prefab").objectReferenceValue = enemyPrefab;
-            configEnemy.FindPropertyRelative("size").intValue = 10;
+            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("prefab").objectReferenceValue = basicPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("size").intValue = 10;
 
             prewarmConfigsProp.InsertArrayElementAtIndex(1);
-            SerializedProperty configProj = prewarmConfigsProp.GetArrayElementAtIndex(1);
-            configProj.FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
-            configProj.FindPropertyRelative("size").intValue = 20;
+            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("prefab").objectReferenceValue = fastPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(2);
+            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("prefab").objectReferenceValue = tankPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("size").intValue = 5;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(3);
+            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("prefab").objectReferenceValue = armorPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(4);
+            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("size").intValue = 20;
             poolerSO.ApplyModifiedProperties();
 
             // Create WaveManager
@@ -375,6 +375,14 @@ namespace TowerDefense.Editor
             waveManagerSO.FindProperty("waypointPath").objectReferenceValue = pathComp;
             waveManagerSO.FindProperty("autoStartNextWave").boolValue = true;
             waveManagerSO.FindProperty("waveInterval").floatValue = 4.0f;
+            waveManagerSO.FindProperty("basicEnemyPrefab").objectReferenceValue = basicPrefab;
+            waveManagerSO.FindProperty("fastEnemyPrefab").objectReferenceValue = fastPrefab;
+            waveManagerSO.FindProperty("tankEnemyPrefab").objectReferenceValue = tankPrefab;
+            waveManagerSO.FindProperty("armorEnemyPrefab").objectReferenceValue = armorPrefab;
+            waveManagerSO.FindProperty("basicEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Basic.asset");
+            waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
+            waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
+            waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
             waveManagerSO.ApplyModifiedProperties();
 
             // Create GameManager
@@ -636,16 +644,31 @@ namespace TowerDefense.Editor
             SerializedObject poolerSO = new SerializedObject(poolerComp);
             SerializedProperty prewarmConfigsProp = poolerSO.FindProperty("prewarmConfigs");
             prewarmConfigsProp.ClearArray();
-            
+
+            GameObject basicPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Basic.prefab");
+            GameObject fastPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Fast.prefab");
+            GameObject tankPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Tank.prefab");
+            GameObject armorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Armor.prefab");
+
             prewarmConfigsProp.InsertArrayElementAtIndex(0);
-            SerializedProperty configEnemy = prewarmConfigsProp.GetArrayElementAtIndex(0);
-            configEnemy.FindPropertyRelative("prefab").objectReferenceValue = enemyPrefab;
-            configEnemy.FindPropertyRelative("size").intValue = 10;
+            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("prefab").objectReferenceValue = basicPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("size").intValue = 10;
 
             prewarmConfigsProp.InsertArrayElementAtIndex(1);
-            SerializedProperty configProj = prewarmConfigsProp.GetArrayElementAtIndex(1);
-            configProj.FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
-            configProj.FindPropertyRelative("size").intValue = 20;
+            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("prefab").objectReferenceValue = fastPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(2);
+            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("prefab").objectReferenceValue = tankPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("size").intValue = 5;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(3);
+            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("prefab").objectReferenceValue = armorPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(4);
+            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("size").intValue = 20;
             poolerSO.ApplyModifiedProperties();
 
             // Create WaveManager
@@ -654,6 +677,14 @@ namespace TowerDefense.Editor
             SerializedObject waveManagerSO = new SerializedObject(waveManagerComp);
             waveManagerSO.FindProperty("waypointPath").objectReferenceValue = pathComp;
             waveManagerSO.FindProperty("autoStartNextWave").boolValue = false;
+            waveManagerSO.FindProperty("basicEnemyPrefab").objectReferenceValue = basicPrefab;
+            waveManagerSO.FindProperty("fastEnemyPrefab").objectReferenceValue = fastPrefab;
+            waveManagerSO.FindProperty("tankEnemyPrefab").objectReferenceValue = tankPrefab;
+            waveManagerSO.FindProperty("armorEnemyPrefab").objectReferenceValue = armorPrefab;
+            waveManagerSO.FindProperty("basicEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Basic.asset");
+            waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
+            waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
+            waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
             waveManagerSO.ApplyModifiedProperties();
 
             // Create GameManager
@@ -1190,33 +1221,58 @@ namespace TowerDefense.Editor
             {
                 GameObject poolerGO = new GameObject("ObjectPooler");
                 poolerComp = poolerGO.AddComponent<ObjectPooler>();
-                SerializedObject poolerSO = new SerializedObject(poolerComp);
-                SerializedProperty prewarmConfigsProp = poolerSO.FindProperty("prewarmConfigs");
-                prewarmConfigsProp.ClearArray();
-                
-                prewarmConfigsProp.InsertArrayElementAtIndex(0);
-                SerializedProperty configEnemy = prewarmConfigsProp.GetArrayElementAtIndex(0);
-                configEnemy.FindPropertyRelative("prefab").objectReferenceValue = enemyPrefab;
-                configEnemy.FindPropertyRelative("size").intValue = 10;
-
-                prewarmConfigsProp.InsertArrayElementAtIndex(1);
-                SerializedProperty configProj = prewarmConfigsProp.GetArrayElementAtIndex(1);
-                configProj.FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
-                configProj.FindPropertyRelative("size").intValue = 20;
-                poolerSO.ApplyModifiedProperties();
             }
+            SerializedObject poolerSO = new SerializedObject(poolerComp);
+            SerializedProperty prewarmConfigsProp = poolerSO.FindProperty("prewarmConfigs");
+            prewarmConfigsProp.ClearArray();
+
+            GameObject basicPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Basic.prefab");
+            GameObject fastPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Fast.prefab");
+            GameObject tankPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Tank.prefab");
+            GameObject armorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Armor.prefab");
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(0);
+            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("prefab").objectReferenceValue = basicPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(1);
+            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("prefab").objectReferenceValue = fastPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(2);
+            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("prefab").objectReferenceValue = tankPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("size").intValue = 5;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(3);
+            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("prefab").objectReferenceValue = armorPrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("size").intValue = 10;
+
+            prewarmConfigsProp.InsertArrayElementAtIndex(4);
+            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
+            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("size").intValue = 20;
+            poolerSO.ApplyModifiedProperties();
 
             WaveManager waveManagerComp = GameObject.FindFirstObjectByType<WaveManager>();
             if (waveManagerComp == null)
             {
                 GameObject waveManagerGO = new GameObject("WaveManager");
                 waveManagerComp = waveManagerGO.AddComponent<WaveManager>();
-                SerializedObject waveManagerSO = new SerializedObject(waveManagerComp);
-                waveManagerSO.FindProperty("waypointPath").objectReferenceValue = pathComp;
-                waveManagerSO.FindProperty("autoStartNextWave").boolValue = true;
-                waveManagerSO.FindProperty("waveInterval").floatValue = 4.0f;
-                waveManagerSO.ApplyModifiedProperties();
             }
+            SerializedObject waveManagerSO = new SerializedObject(waveManagerComp);
+            waveManagerSO.FindProperty("waypointPath").objectReferenceValue = pathComp;
+            waveManagerSO.FindProperty("autoStartNextWave").boolValue = true;
+            waveManagerSO.FindProperty("waveInterval").floatValue = 4.0f;
+
+            waveManagerSO.FindProperty("basicEnemyPrefab").objectReferenceValue = basicPrefab;
+            waveManagerSO.FindProperty("fastEnemyPrefab").objectReferenceValue = fastPrefab;
+            waveManagerSO.FindProperty("tankEnemyPrefab").objectReferenceValue = tankPrefab;
+            waveManagerSO.FindProperty("armorEnemyPrefab").objectReferenceValue = armorPrefab;
+
+            waveManagerSO.FindProperty("basicEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Basic.asset");
+            waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
+            waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
+            waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
+            waveManagerSO.ApplyModifiedProperties();
 
             GameManager gameManagerComp = GameObject.FindFirstObjectByType<GameManager>();
             if (gameManagerComp == null)
@@ -1400,6 +1456,55 @@ namespace TowerDefense.Editor
 
             EditorSceneManager.SaveScene(mainMenuScene, "Assets/Scenes/MainMenu.unity");
             Debug.Log("[Setup] Created and saved Main Menu scene.");
+        }
+
+        private static GameObject CreateEnemyPrefab(string name, System.Type healthComponentType, Color color, Vector3 scale, Sprite knobSprite)
+        {
+            string path = $"Assets/Prefabs/{name}.prefab";
+            GameObject existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            GameObject enemyTemp = new GameObject(name);
+            enemyTemp.layer = LayerMask.NameToLayer(ENEMY_LAYER);
+            enemyTemp.tag = "Enemy";
+            SpriteRenderer enemySR = enemyTemp.AddComponent<SpriteRenderer>();
+            enemySR.sprite = knobSprite;
+            enemySR.color = color;
+            enemyTemp.transform.localScale = scale;
+
+            CircleCollider2D enemyCollider = enemyTemp.AddComponent<CircleCollider2D>();
+            enemyCollider.radius = 0.5f;
+            enemyCollider.isTrigger = true;
+
+            Rigidbody2D enemyRB = enemyTemp.AddComponent<Rigidbody2D>();
+            enemyRB.bodyType = RigidbodyType2D.Kinematic;
+
+            enemyTemp.AddComponent<EnemyMovement>();
+            enemyTemp.AddComponent(healthComponentType);
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(enemyTemp, path);
+            DestroyImmediate(enemyTemp);
+            Debug.Log($"[Setup] Created Prefab: {path}");
+            return prefab;
+        }
+
+        private static EnemyData CreateEnemyDataAsset(string name, EnemyType type, int goldReward)
+        {
+            string path = $"Assets/ScriptableObjects/{name}.asset";
+            EnemyData data = AssetDatabase.LoadAssetAtPath<EnemyData>(path);
+            if (data == null)
+            {
+                data = ScriptableObject.CreateInstance<EnemyData>();
+                SerializedObject so = new SerializedObject(data);
+                so.FindProperty("enemyType").enumValueIndex = (int)type;
+                so.FindProperty("goldReward").intValue = goldReward;
+                so.ApplyModifiedProperties();
+                AssetDatabase.CreateAsset(data, path);
+            }
+            return data;
         }
     }
 }

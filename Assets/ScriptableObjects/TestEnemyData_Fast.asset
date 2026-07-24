@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 996e55130a4ca424cb41206da4bb6689, type: 3}
-  m_Name: TestEnemyData
+  m_Name: TestEnemyData_Fast
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.EnemyData
-  enemyType: 0
-  goldReward: 10
+  enemyType: 1
+  goldReward: 15

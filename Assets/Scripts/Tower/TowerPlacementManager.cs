@@ -337,13 +337,26 @@ namespace TowerDefense.Tower
             if (!_isPlacing || _previewInstance == null) return;
 
             Vector3 finalPos = new Vector3(worldPosition.x, worldPosition.y, 0f);
-            Collider2D hit = Physics2D.OverlapPoint(finalPos);
-            BuildSite site = hit != null ? hit.GetComponent<BuildSite>() : null;
+            
+            // Find closest build site within snap radius
+            BuildSite closestSite = null;
+            float minDistance = 1.2f; // Snap radius threshold
+            BuildSite[] sites = FindObjectsByType<BuildSite>(FindObjectsSortMode.None);
+            foreach (var site in sites)
+            {
+                if (site == null) continue;
+                float dist = Vector2.Distance(finalPos, site.transform.position);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    closestSite = site;
+                }
+            }
 
             bool isValid = false;
-            if (site != null && !site.IsOccupied)
+            if (closestSite != null && !closestSite.IsOccupied)
             {
-                _previewInstance.transform.position = site.transform.position;
+                _previewInstance.transform.position = closestSite.transform.position;
                 isValid = (GameManager.Instance == null || GameManager.Instance.CurrentGold >= _activeTowerData.Cost);
             }
             else
@@ -363,8 +376,21 @@ namespace TowerDefense.Tower
             if (!_isPlacing) return;
 
             Vector3 finalPos = new Vector3(worldPosition.x, worldPosition.y, 0f);
-            Collider2D hit = Physics2D.OverlapPoint(finalPos);
-            BuildSite targetSite = hit != null ? hit.GetComponent<BuildSite>() : null;
+            
+            // Find closest build site within snap radius
+            BuildSite targetSite = null;
+            float minDistance = 1.2f; // Snap radius threshold
+            BuildSite[] sites = FindObjectsByType<BuildSite>(FindObjectsSortMode.None);
+            foreach (var site in sites)
+            {
+                if (site == null) continue;
+                float dist = Vector2.Distance(finalPos, site.transform.position);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    targetSite = site;
+                }
+            }
 
             if (targetSite != null)
             {

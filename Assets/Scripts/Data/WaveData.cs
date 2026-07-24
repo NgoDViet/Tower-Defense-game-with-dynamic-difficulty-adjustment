@@ -1,32 +1,32 @@
 using UnityEngine;
-using System.Collections.Generic;
 
 namespace TowerDefense.Data
 {
-    [System.Serializable]
-    public struct EnemySpawnGroup
-    {
-        [Tooltip("ScriptableObject containing enemy stats.")]
-        public EnemyData enemyData;
-        
-        [Tooltip("Prefab of the enemy corresponding to this data.")]
-        public GameObject enemyPrefab;
-        
-        [Tooltip("How many enemies of this type to spawn in this wave group.")]
-        public int count;
-        
-        [Tooltip("Time between spawns in seconds.")]
-        public float spawnInterval;
-        
-        [Tooltip("Delay in seconds before starting to spawn this group in the wave.")]
-        public float delayBeforeGroup;
-    }
-
     [CreateAssetMenu(fileName = "NewWaveData", menuName = "Tower Defense/Wave Data", order = 3)]
     public class WaveData : ScriptableObject
     {
-        [SerializeField] private List<EnemySpawnGroup> spawnGroups = new List<EnemySpawnGroup>();
+        [Header("Enemy Counts")]
+        [Tooltip("Number of Basic enemies to spawn in this wave.")]
+        [SerializeField] private int basicCount = 5;
 
-        public List<EnemySpawnGroup> SpawnGroups => spawnGroups;
+        [Tooltip("Number of Fast enemies to spawn in this wave.")]
+        [SerializeField] private int fastCount = 0;
+
+        [Tooltip("Number of Tank enemies to spawn in this wave.")]
+        [SerializeField] private int tankCount = 0;
+
+        [Tooltip("Number of Armor enemies to spawn in this wave.")]
+        [SerializeField] private int armorCount = 0;
+
+        [Header("Spawn Settings")]
+        [Tooltip("Time between spawns in seconds for this wave.")]
+        [SerializeField] private float spawnInterval = 1.0f;
+
+        // Public Getters
+        public int BasicCount => basicCount;
+        public int FastCount => fastCount;
+        public int TankCount => tankCount;
+        public int ArmorCount => armorCount;
+        public float SpawnInterval => spawnInterval;
     }
 }
