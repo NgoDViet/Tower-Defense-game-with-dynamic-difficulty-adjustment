@@ -130,13 +130,13 @@ namespace TowerDefense.Core
             List<DynamicSpawnGroup> groups = new List<DynamicSpawnGroup>();
             
             if (waveData.BasicCount > 0 && basicEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Basic, basicEnemyData, waveData.BasicCount, waveData.SpawnInterval));
+                groups.Add(new DynamicSpawnGroup(EnemyType.Basic, basicEnemyData, waveData.BasicCount, waveData.BasicSpawnInterval));
             if (waveData.FastCount > 0 && fastEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Fast, fastEnemyData, waveData.FastCount, waveData.SpawnInterval));
+                groups.Add(new DynamicSpawnGroup(EnemyType.Fast, fastEnemyData, waveData.FastCount, waveData.FastSpawnInterval));
             if (waveData.TankCount > 0 && tankEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Tank, tankEnemyData, waveData.TankCount, waveData.SpawnInterval));
+                groups.Add(new DynamicSpawnGroup(EnemyType.Tank, tankEnemyData, waveData.TankCount, waveData.TankSpawnInterval));
             if (waveData.ArmorCount > 0 && armorEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Armor, armorEnemyData, waveData.ArmorCount, waveData.SpawnInterval));
+                groups.Add(new DynamicSpawnGroup(EnemyType.Armor, armorEnemyData, waveData.ArmorCount, waveData.ArmorSpawnInterval));
 
             _activeSpawnGroupsCount = groups.Count;
 

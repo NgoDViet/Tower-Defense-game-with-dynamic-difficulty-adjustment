@@ -5,28 +5,33 @@ namespace TowerDefense.Data
     [CreateAssetMenu(fileName = "NewWaveData", menuName = "Tower Defense/Wave Data", order = 3)]
     public class WaveData : ScriptableObject
     {
-        [Header("Enemy Counts")]
-        [Tooltip("Number of Basic enemies to spawn in this wave.")]
+        [Header("Basic Enemy Setup")]
         [SerializeField] private int basicCount = 5;
+        [SerializeField] private float basicSpawnInterval = 1.0f;
 
-        [Tooltip("Number of Fast enemies to spawn in this wave.")]
+        [Header("Fast Enemy Setup")]
         [SerializeField] private int fastCount = 0;
+        [SerializeField] private float fastSpawnInterval = 1.0f;
 
-        [Tooltip("Number of Tank enemies to spawn in this wave.")]
+        [Header("Tank Enemy Setup")]
         [SerializeField] private int tankCount = 0;
+        [SerializeField] private float tankSpawnInterval = 1.0f;
 
-        [Tooltip("Number of Armor enemies to spawn in this wave.")]
+        [Header("Armor Enemy Setup")]
         [SerializeField] private int armorCount = 0;
+        [SerializeField] private float armorSpawnInterval = 1.0f;
 
-        [Header("Spawn Settings")]
-        [Tooltip("Time between spawns in seconds for this wave.")]
-        [SerializeField] private float spawnInterval = 1.0f;
+        // Public Getters and Setters
+        public int BasicCount { get => basicCount; set => basicCount = value; }
+        public float BasicSpawnInterval { get => basicSpawnInterval; set => basicSpawnInterval = value; }
 
-        // Public Getters
-        public int BasicCount => basicCount;
-        public int FastCount => fastCount;
-        public int TankCount => tankCount;
-        public int ArmorCount => armorCount;
-        public float SpawnInterval => spawnInterval;
+        public int FastCount { get => fastCount; set => fastCount = value; }
+        public float FastSpawnInterval { get => fastSpawnInterval; set => fastSpawnInterval = value; }
+
+        public int TankCount { get => tankCount; set => tankCount = value; }
+        public float TankSpawnInterval { get => tankSpawnInterval; set => tankSpawnInterval = value; }
+
+        public int ArmorCount { get => armorCount; set => armorCount = value; }
+        public float ArmorSpawnInterval { get => armorSpawnInterval; set => armorSpawnInterval = value; }
     }
 }

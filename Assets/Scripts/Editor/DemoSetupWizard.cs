@@ -135,18 +135,20 @@ namespace TowerDefense.Editor
             towerDataSO.ApplyModifiedProperties();
             AssetDatabase.CreateAsset(towerData, "Assets/ScriptableObjects/TestTowerData.asset");
 
-            // Create WaveData
+            // Create WaveData 1 to 4 with user example setups
+            WaveData w1 = CreateWaveAsset("TestWaveData_W1", 3, 4.0f, 4, 3.0f, 2, 6.0f, 2, 5.0f);
+            WaveData w2 = CreateWaveAsset("TestWaveData_W2", 4, 4.0f, 5, 3.0f, 3, 6.0f, 0, 5.0f);
+            WaveData w3 = CreateWaveAsset("TestWaveData_W3", 5, 3.5f, 6, 2.5f, 4, 5.5f, 1, 4.5f);
+            WaveData w4 = CreateWaveAsset("TestWaveData_W4", 6, 3.0f, 8, 2.0f, 5, 5.0f, 3, 4.0f);
+
+            // Legacy fallback TestWaveData asset
             WaveData waveData = ScriptableObject.CreateInstance<WaveData>();
-            SerializedObject waveDataSO = new SerializedObject(waveData);
-            waveDataSO.FindProperty("basicCount").intValue = 5;
-            waveDataSO.FindProperty("fastCount").intValue = 3;
-            waveDataSO.FindProperty("tankCount").intValue = 1;
-            waveDataSO.FindProperty("armorCount").intValue = 2;
-            waveDataSO.FindProperty("spawnInterval").floatValue = 1.5f;
-            waveDataSO.ApplyModifiedProperties();
+            waveData.BasicCount = 5;
+            waveData.BasicSpawnInterval = 1.5f;
+            EditorUtility.SetDirty(waveData);
             AssetDatabase.CreateAsset(waveData, "Assets/ScriptableObjects/TestWaveData.asset");
 
-            // Create LevelData
+            // Create LevelData 1
             LevelData levelData = ScriptableObject.CreateInstance<LevelData>();
             SerializedObject levelDataSO = new SerializedObject(levelData);
             levelDataSO.FindProperty("levelName").stringValue = "Level 1";
@@ -154,8 +156,10 @@ namespace TowerDefense.Editor
             levelDataSO.FindProperty("baseMaxHealth").intValue = 10;
             SerializedProperty wavesProp = levelDataSO.FindProperty("waves");
             wavesProp.ClearArray();
-            wavesProp.InsertArrayElementAtIndex(0);
-            wavesProp.GetArrayElementAtIndex(0).objectReferenceValue = waveData;
+            wavesProp.InsertArrayElementAtIndex(0); wavesProp.GetArrayElementAtIndex(0).objectReferenceValue = w1;
+            wavesProp.InsertArrayElementAtIndex(1); wavesProp.GetArrayElementAtIndex(1).objectReferenceValue = w2;
+            wavesProp.InsertArrayElementAtIndex(2); wavesProp.GetArrayElementAtIndex(2).objectReferenceValue = w3;
+            wavesProp.InsertArrayElementAtIndex(3); wavesProp.GetArrayElementAtIndex(3).objectReferenceValue = w4;
             levelDataSO.ApplyModifiedProperties();
             AssetDatabase.CreateAsset(levelData, "Assets/ScriptableObjects/TestLevelData.asset");
 
@@ -167,8 +171,10 @@ namespace TowerDefense.Editor
             levelData2SO.FindProperty("baseMaxHealth").intValue = 15;
             SerializedProperty wavesProp2 = levelData2SO.FindProperty("waves");
             wavesProp2.ClearArray();
-            wavesProp2.InsertArrayElementAtIndex(0);
-            wavesProp2.GetArrayElementAtIndex(0).objectReferenceValue = waveData;
+            wavesProp2.InsertArrayElementAtIndex(0); wavesProp2.GetArrayElementAtIndex(0).objectReferenceValue = w1;
+            wavesProp2.InsertArrayElementAtIndex(1); wavesProp2.GetArrayElementAtIndex(1).objectReferenceValue = w2;
+            wavesProp2.InsertArrayElementAtIndex(2); wavesProp2.GetArrayElementAtIndex(2).objectReferenceValue = w3;
+            wavesProp2.InsertArrayElementAtIndex(3); wavesProp2.GetArrayElementAtIndex(3).objectReferenceValue = w4;
             levelData2SO.ApplyModifiedProperties();
             AssetDatabase.CreateAsset(levelData2, "Assets/ScriptableObjects/TestLevelData2.asset");
 
@@ -180,8 +186,10 @@ namespace TowerDefense.Editor
             levelData3SO.FindProperty("baseMaxHealth").intValue = 20;
             SerializedProperty wavesProp3 = levelData3SO.FindProperty("waves");
             wavesProp3.ClearArray();
-            wavesProp3.InsertArrayElementAtIndex(0);
-            wavesProp3.GetArrayElementAtIndex(0).objectReferenceValue = waveData;
+            wavesProp3.InsertArrayElementAtIndex(0); wavesProp3.GetArrayElementAtIndex(0).objectReferenceValue = w1;
+            wavesProp3.InsertArrayElementAtIndex(1); wavesProp3.GetArrayElementAtIndex(1).objectReferenceValue = w2;
+            wavesProp3.InsertArrayElementAtIndex(2); wavesProp3.GetArrayElementAtIndex(2).objectReferenceValue = w3;
+            wavesProp3.InsertArrayElementAtIndex(3); wavesProp3.GetArrayElementAtIndex(3).objectReferenceValue = w4;
             levelData3SO.ApplyModifiedProperties();
             AssetDatabase.CreateAsset(levelData3, "Assets/ScriptableObjects/TestLevelData3.asset");
 
@@ -209,10 +217,9 @@ namespace TowerDefense.Editor
             // Update WaveData
             if (persistentWaveData != null)
             {
-                SerializedObject persistentWaveDataSO = new SerializedObject(persistentWaveData);
-                persistentWaveDataSO.FindProperty("basicCount").intValue = 5;
-                persistentWaveDataSO.FindProperty("spawnInterval").floatValue = 1.5f;
-                persistentWaveDataSO.ApplyModifiedProperties();
+                persistentWaveData.BasicCount = 5;
+                persistentWaveData.BasicSpawnInterval = 1.5f;
+                EditorUtility.SetDirty(persistentWaveData);
             }
 
             // Update LevelData wave reference
@@ -1123,26 +1130,38 @@ namespace TowerDefense.Editor
             int[] startingGolds = { 100, 200, 200, 300, 300, 400 };
             int[] baseHealths = { 10, 12, 15, 18, 20, 25 };
 
+            // Force w1 to w4 wave references on all 6 levels
+            WaveData w1_all = CreateWaveAsset("TestWaveData_W1", 3, 4.0f, 4, 3.0f, 2, 6.0f, 2, 5.0f);
+            WaveData w2_all = CreateWaveAsset("TestWaveData_W2", 4, 4.0f, 5, 3.0f, 3, 6.0f, 0, 5.0f);
+            WaveData w3_all = CreateWaveAsset("TestWaveData_W3", 5, 3.5f, 6, 2.5f, 4, 5.5f, 1, 4.5f);
+            WaveData w4_all = CreateWaveAsset("TestWaveData_W4", 6, 3.0f, 8, 2.0f, 5, 5.0f, 3, 4.0f);
+
             for (int i = 1; i <= 6; i++)
             {
                 string assetPath = $"Assets/ScriptableObjects/TestLevelData{i}.asset";
                 if (i == 1) assetPath = "Assets/ScriptableObjects/TestLevelData.asset";
-
+ 
                 LevelData lvl = AssetDatabase.LoadAssetAtPath<LevelData>(assetPath);
                 if (lvl == null)
                 {
                     lvl = ScriptableObject.CreateInstance<LevelData>();
-                    SerializedObject lvlSO = new SerializedObject(lvl);
-                    lvlSO.FindProperty("levelName").stringValue = $"Level {i}";
-                    lvlSO.FindProperty("startingGold").intValue = startingGolds[i - 1];
-                    lvlSO.FindProperty("baseMaxHealth").intValue = baseHealths[i - 1];
-                    SerializedProperty wavesProp = lvlSO.FindProperty("waves");
-                    wavesProp.ClearArray();
-                    wavesProp.InsertArrayElementAtIndex(0);
-                    wavesProp.GetArrayElementAtIndex(0).objectReferenceValue = waveData;
-                    lvlSO.ApplyModifiedProperties();
                     AssetDatabase.CreateAsset(lvl, assetPath);
                 }
+                
+                SerializedObject lvlSO = new SerializedObject(lvl);
+                lvlSO.FindProperty("levelName").stringValue = $"Level {i}";
+                lvlSO.FindProperty("startingGold").intValue = startingGolds[i - 1];
+                lvlSO.FindProperty("baseMaxHealth").intValue = baseHealths[i - 1];
+                
+                SerializedProperty wavesProp = lvlSO.FindProperty("waves");
+                wavesProp.ClearArray();
+                wavesProp.InsertArrayElementAtIndex(0); wavesProp.GetArrayElementAtIndex(0).objectReferenceValue = w1_all;
+                wavesProp.InsertArrayElementAtIndex(1); wavesProp.GetArrayElementAtIndex(1).objectReferenceValue = w2_all;
+                wavesProp.InsertArrayElementAtIndex(2); wavesProp.GetArrayElementAtIndex(2).objectReferenceValue = w3_all;
+                wavesProp.InsertArrayElementAtIndex(3); wavesProp.GetArrayElementAtIndex(3).objectReferenceValue = w4_all;
+                
+                lvlSO.ApplyModifiedProperties();
+                EditorUtility.SetDirty(lvl);
                 allLevels.Add(lvl);
             }
 
@@ -1456,6 +1475,33 @@ namespace TowerDefense.Editor
 
             EditorSceneManager.SaveScene(mainMenuScene, "Assets/Scenes/MainMenu.unity");
             Debug.Log("[Setup] Created and saved Main Menu scene.");
+        }
+
+        private static WaveData CreateWaveAsset(string name, int basic, float basicInt, int fast, float fastInt, int tank, float tankInt, int armor, float armorInt)
+        {
+            string path = $"Assets/ScriptableObjects/{name}.asset";
+            WaveData wave = AssetDatabase.LoadAssetAtPath<WaveData>(path);
+            if (wave == null)
+            {
+                wave = ScriptableObject.CreateInstance<WaveData>();
+            }
+
+            wave.BasicCount = basic;
+            wave.BasicSpawnInterval = basicInt;
+            wave.FastCount = fast;
+            wave.FastSpawnInterval = fastInt;
+            wave.TankCount = tank;
+            wave.TankSpawnInterval = tankInt;
+            wave.ArmorCount = armor;
+            wave.ArmorSpawnInterval = armorInt;
+
+            EditorUtility.SetDirty(wave);
+
+            if (!AssetDatabase.Contains(wave))
+            {
+                AssetDatabase.CreateAsset(wave, path);
+            }
+            return wave;
         }
 
         private static GameObject CreateEnemyPrefab(string name, System.Type healthComponentType, Color color, Vector3 scale, Sprite knobSprite)
