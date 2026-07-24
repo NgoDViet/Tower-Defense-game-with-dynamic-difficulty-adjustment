@@ -45,16 +45,25 @@ namespace TowerDefense.Tower
 
         public EnemyHealth TargetEnemy => _targetEnemy;
 
+        private bool _hasLoggedUpdate = false;
+
         private void Start()
         {
             if (shootPoint == null)
             {
                 shootPoint = transform;
             }
+            Debug.Log($"[TowerController Start] {gameObject.name} initialized. towerData: {(towerData != null ? towerData.name : "NULL")}, enemyLayerMask: {enemyLayerMask.value}, shootPoint: {shootPoint.name}, enabled: {enabled}");
         }
 
         private void Update()
         {
+            if (!_hasLoggedUpdate)
+            {
+                _hasLoggedUpdate = true;
+                Debug.Log($"[TowerController Update FirstFrame] {gameObject.name} Update executing. State: {(GameManager.Instance != null ? GameManager.Instance.CurrentState.ToString() : "NULL GameManager")}, towerData: {(towerData != null ? towerData.name : "NULL")}");
+            }
+
             // Only execute logic if game is actively running
             if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
             if (towerData == null) return;
@@ -101,6 +110,16 @@ namespace TowerDefense.Tower
             if (colliders.Length == 0)
             {
                 _targetEnemy = null;
+                Collider2D[] allColliders = Physics2D.OverlapCircleAll(transform.position, towerData.Range);
+                if (allColliders.Length > 0)
+                {
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                    foreach (var c in allColliders)
+                    {
+                        sb.Append(c.gameObject.name).Append(" (Layer ").Append(c.gameObject.layer).Append("), ");
+                    }
+                    Debug.Log($"[TowerController Debug] {gameObject.name} found NO enemies (LayerMask={enemyLayerMask.value}), but found other colliders in range: {sb.ToString()}");
+                }
                 return;
             }
 
@@ -181,6 +200,8 @@ namespace TowerDefense.Tower
                 Debug.LogError($"[TowerController] {gameObject.name} is missing a Projectile Prefab configuration!");
                 return;
             }
+
+            Debug.Log($"[TowerController Debug] {gameObject.name} is shooting at {(_targetEnemy != null ? _targetEnemy.name : "null")}");
 
             // Spawn projectile from pool
             GameObject projectileObj = ObjectPooler.Instance.GetPooledObject(

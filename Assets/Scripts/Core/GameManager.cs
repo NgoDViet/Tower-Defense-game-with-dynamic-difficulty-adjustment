@@ -1,5 +1,6 @@
 using UnityEngine;
 using TowerDefense.Data;
+using TowerDefense.Pooling;
 
 namespace TowerDefense.Core
 {
@@ -130,6 +131,11 @@ namespace TowerDefense.Core
             {
                 Debug.LogError("[GameManager] Cannot start level with null LevelData!");
                 return;
+            }
+
+            if (ObjectPooler.Instance != null)
+            {
+                ObjectPooler.Instance.ReturnAllActiveToPool();
             }
 
             _activeLevelData = levelData;

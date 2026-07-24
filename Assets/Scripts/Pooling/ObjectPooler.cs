@@ -176,5 +176,20 @@ namespace TowerDefense.Pooling
                 Destroy(obj);
             }
         }
+
+        /// <summary>
+        /// Returns all active pooled objects back to their respective pools and deactivates them.
+        /// </summary>
+        public void ReturnAllActiveToPool()
+        {
+            List<GameObject> activeObjects = new List<GameObject>(_activeObjectsMap.Keys);
+            foreach (var obj in activeObjects)
+            {
+                if (obj != null)
+                {
+                    ReturnToPool(obj);
+                }
+            }
+        }
     }
 }

@@ -47,8 +47,17 @@ namespace TowerDefense.UI
                     Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(new Vector3(mouseScreenPos.x, mouseScreenPos.y, Camera.main.nearClipPlane));
                     mouseWorldPos.z = 0f;
 
-                    // Update position of the preview ghost
-                    _activeTowerPreview.transform.position = mouseWorldPos;
+                    // Try to snap to a BuildSite if hovering over a valid one
+                    Collider2D hit = Physics2D.OverlapPoint(mouseWorldPos);
+                    BuildSite site = hit != null ? hit.GetComponent<BuildSite>() : null;
+                    if (site != null && !site.IsOccupied)
+                    {
+                        _activeTowerPreview.transform.position = site.transform.position;
+                    }
+                    else
+                    {
+                        _activeTowerPreview.transform.position = mouseWorldPos;
+                    }
                 }
 
                 // Left click places the tower
@@ -130,11 +139,13 @@ namespace TowerDefense.UI
                 controller.enabled = false;
             }
 
-            // Set visual to semi-transparent cyan
+            // Set visual to semi-transparent version of original prefab color
             SpriteRenderer sr = _activeTowerPreview.GetComponent<SpriteRenderer>();
             if (sr != null)
             {
-                sr.color = new Color(0f, 1f, 1f, 0.5f);
+                SpriteRenderer prefabSR = towerPrefab.GetComponent<SpriteRenderer>();
+                Color originalColor = prefabSR != null ? prefabSR.color : Color.white;
+                sr.color = new Color(originalColor.r, originalColor.g, originalColor.b, 0.5f);
             }
 
             Debug.Log("[DemoTestController] Tower placement preview started. Left-click to place, Right-click to cancel.");
@@ -142,28 +153,49 @@ namespace TowerDefense.UI
 
         /// <summary>
         /// Finalizes placement of the tower, enabling target shooting and restoring color.
+        /// Requires placement on a valid, unoccupied BuildSite.
         /// </summary>
         private void PlaceTower()
         {
             if (_activeTowerPreview == null) return;
 
-            TowerController controller = _activeTowerPreview.GetComponent<TowerController>();
-            if (controller != null)
+            Vector3 finalPos = _activeTowerPreview.transform.position;
+            Collider2D hit = Physics2D.OverlapPoint(finalPos);
+            BuildSite site = hit != null ? hit.GetComponent<BuildSite>() : null;
+
+            if (site != null && !site.IsOccupied)
             {
-                controller.enabled = true;
-            }
+                _activeTowerPreview.transform.position = site.transform.position;
 
-            SpriteRenderer sr = _activeTowerPreview.GetComponent<SpriteRenderer>();
-            if (sr != null)
+                TowerController controller = _activeTowerPreview.GetComponent<TowerController>();
+                if (controller != null)
+                {
+                    controller.enabled = true;
+                }
+
+                SpriteRenderer sr = _activeTowerPreview.GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    SpriteRenderer prefabSR = towerPrefab.GetComponent<SpriteRenderer>();
+                    sr.color = prefabSR != null ? prefabSR.color : Color.white;
+                }
+
+                site.SetOccupied(_activeTowerPreview);
+
+                _activeTowerPreview.name = $"PlacedTower_{System.Guid.NewGuid().ToString().Substring(0, 4)}";
+                _activeTowerPreview = null;
+                _isPlacingTower = false;
+
+                Debug.Log("[DemoTestController] Tower placed successfully.");
+            }
+            else
             {
-                sr.color = Color.cyan; // basic tower cyan color
+                if (TowerPlacementManager.Instance != null)
+                {
+                    TowerPlacementManager.Instance.ShowWarningMessage("can only build towers on sites");
+                }
+                Debug.LogWarning("[DemoTestController] can only build towers on sites");
             }
-
-            _activeTowerPreview.name = $"PlacedTower_{System.Guid.NewGuid().ToString().Substring(0, 4)}";
-            _activeTowerPreview = null;
-            _isPlacingTower = false;
-
-            Debug.Log("[DemoTestController] Tower placed successfully.");
         }
 
         /// <summary>

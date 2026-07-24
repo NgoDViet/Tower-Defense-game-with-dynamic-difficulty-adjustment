@@ -72,6 +72,7 @@ namespace TowerDefense.Tower
         private void OnLevelStarted(LevelStartedEvent evt)
         {
             ClearPlacedTowers();
+            ClearBuildSites();
             
             // Recache waypoint path for the new scene
             _cachedPath = FindObjectOfType<WaypointPath>();
@@ -92,6 +93,18 @@ namespace TowerDefense.Tower
                     }
                 }
                 _placedTowers.Clear();
+            }
+        }
+
+        private void ClearBuildSites()
+        {
+            BuildSite[] sites = FindObjectsByType<BuildSite>(FindObjectsSortMode.None);
+            foreach (var site in sites)
+            {
+                if (site != null)
+                {
+                    site.ClearOccupied();
+                }
             }
         }
 
@@ -148,7 +161,18 @@ namespace TowerDefense.Tower
             GameObject iconGO = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
             iconGO.transform.SetParent(slotGO.transform, false);
             Image iconImg = iconGO.AddComponent<Image>();
-            iconImg.color = Color.cyan; // Cyan color representing Basic Tower
+            
+            SpriteRenderer prefabSR = defaultTowerPrefab.GetComponent<SpriteRenderer>();
+            if (prefabSR != null && prefabSR.sprite != null)
+            {
+                iconImg.sprite = prefabSR.sprite;
+                iconImg.color = prefabSR.color;
+            }
+            else
+            {
+                iconImg.color = Color.cyan; // Fallback
+            }
+
             RectTransform iconRect = iconGO.GetComponent<RectTransform>();
             iconRect.anchoredPosition = new Vector2(0f, 20f);
             iconRect.sizeDelta = new Vector2(60f, 60f);
@@ -245,16 +269,89 @@ namespace TowerDefense.Tower
             UpdatePreviewVisuals(false);
         }
 
+        private TextMeshProUGUI _warningTextInstance;
+
+        /// <summary>
+        /// Displays a warning message on the UI.
+        /// </summary>
+        public void ShowWarningMessage(string message)
+        {
+            if (_warningTextInstance == null)
+            {
+                Canvas canvas = FindFirstObjectByType<Canvas>();
+                if (canvas != null)
+                {
+                    Transform gameplayHUD = canvas.transform.Find("GameplayHUDPanel");
+                    if (gameplayHUD != null)
+                    {
+                        Transform existing = gameplayHUD.Find("PlacementWarningText");
+                        if (existing != null)
+                        {
+                            _warningTextInstance = existing.GetComponent<TextMeshProUGUI>();
+                        }
+                        else
+                        {
+                            GameObject warningGO = new GameObject("PlacementWarningText", typeof(RectTransform));
+                            warningGO.transform.SetParent(gameplayHUD, false);
+                            
+                            _warningTextInstance = warningGO.AddComponent<TextMeshProUGUI>();
+                            _warningTextInstance.fontSize = 32;
+                            _warningTextInstance.color = Color.red;
+                            _warningTextInstance.alignment = TextAlignmentOptions.Center;
+                            _warningTextInstance.font = TMP_Settings.defaultFontAsset;
+
+                            RectTransform rect = warningGO.GetComponent<RectTransform>();
+                            rect.anchorMin = new Vector2(0.5f, 0.5f);
+                            rect.anchorMax = new Vector2(0.5f, 0.5f);
+                            rect.pivot = new Vector2(0.5f, 0.5f);
+                            rect.anchoredPosition = new Vector2(0f, -150f);
+                            rect.sizeDelta = new Vector2(800f, 100f);
+                        }
+                    }
+                }
+            }
+
+            if (_warningTextInstance != null)
+            {
+                _warningTextInstance.text = message;
+                _warningTextInstance.gameObject.SetActive(true);
+                CancelInvoke(nameof(HideWarningMessage));
+                Invoke(nameof(HideWarningMessage), 2.0f);
+            }
+        }
+
+        private void HideWarningMessage()
+        {
+            if (_warningTextInstance != null)
+            {
+                _warningTextInstance.gameObject.SetActive(false);
+            }
+        }
+
         /// <summary>
         /// Updates the position of the visual preview and evaluates placement validity.
+        /// Snaps the preview to the BuildSite center if hover is valid.
         /// </summary>
         public void UpdatePlacement(Vector3 worldPosition)
         {
             if (!_isPlacing || _previewInstance == null) return;
 
-            _previewInstance.transform.position = new Vector3(worldPosition.x, worldPosition.y, 0f);
-            
-            bool isValid = IsPositionValid(_previewInstance.transform.position);
+            Vector3 finalPos = new Vector3(worldPosition.x, worldPosition.y, 0f);
+            Collider2D hit = Physics2D.OverlapPoint(finalPos);
+            BuildSite site = hit != null ? hit.GetComponent<BuildSite>() : null;
+
+            bool isValid = false;
+            if (site != null && !site.IsOccupied)
+            {
+                _previewInstance.transform.position = site.transform.position;
+                isValid = (GameManager.Instance == null || GameManager.Instance.CurrentGold >= _activeTowerData.Cost);
+            }
+            else
+            {
+                _previewInstance.transform.position = finalPos;
+                isValid = false;
+            }
+
             UpdatePreviewVisuals(isValid);
         }
 
@@ -266,32 +363,52 @@ namespace TowerDefense.Tower
             if (!_isPlacing) return;
 
             Vector3 finalPos = new Vector3(worldPosition.x, worldPosition.y, 0f);
-            
-            if (IsPositionValid(finalPos))
+            Collider2D hit = Physics2D.OverlapPoint(finalPos);
+            BuildSite targetSite = hit != null ? hit.GetComponent<BuildSite>() : null;
+
+            if (targetSite != null)
             {
-                if (GameManager.Instance != null && GameManager.Instance.TrySpendGold(_activeTowerData.Cost))
+                if (targetSite.IsOccupied)
                 {
-                    GameObject newTower = Instantiate(_towerPrefab, finalPos, Quaternion.identity);
-                    newTower.name = $"{_activeTowerData.TowerName}_{System.Guid.NewGuid().ToString().Substring(0, 4)}";
-                    _placedTowers.Add(newTower);
-
-                    TowerController controller = newTower.GetComponent<TowerController>();
-                    if (controller != null)
+                    ShowWarningMessage("can only build towers on sites");
+                    Debug.LogWarning("[TowerPlacementManager] Site is already occupied!");
+                }
+                else if (GameManager.Instance != null && GameManager.Instance.CurrentGold < _activeTowerData.Cost)
+                {
+                    ShowWarningMessage("Insufficient gold!");
+                    Debug.LogWarning("[TowerPlacementManager] Insufficient gold.");
+                }
+                else
+                {
+                    Vector3 snapPos = targetSite.transform.position;
+                    if (GameManager.Instance == null || GameManager.Instance.TrySpendGold(_activeTowerData.Cost))
                     {
-                        controller.enabled = true;
-                    }
-                    SpriteRenderer sr = newTower.GetComponent<SpriteRenderer>();
-                    if (sr != null)
-                    {
-                        sr.color = Color.white;
-                    }
+                        GameObject newTower = Instantiate(_towerPrefab, snapPos, Quaternion.identity);
+                        newTower.name = $"{_activeTowerData.TowerName}_{System.Guid.NewGuid().ToString().Substring(0, 4)}";
+                        _placedTowers.Add(newTower);
 
-                    Debug.Log($"[TowerPlacementManager] Placed {_activeTowerData.TowerName} at {finalPos}.");
+                        targetSite.SetOccupied(newTower);
+
+                        TowerController controller = newTower.GetComponent<TowerController>();
+                        if (controller != null)
+                        {
+                            controller.enabled = true;
+                        }
+                        SpriteRenderer sr = newTower.GetComponent<SpriteRenderer>();
+                        if (sr != null)
+                        {
+                            SpriteRenderer prefabSR = _towerPrefab.GetComponent<SpriteRenderer>();
+                            sr.color = prefabSR != null ? prefabSR.color : Color.white;
+                        }
+
+                        Debug.Log($"[TowerPlacementManager] Placed {_activeTowerData.TowerName} on site at {snapPos}.");
+                    }
                 }
             }
             else
             {
-                Debug.LogWarning("[TowerPlacementManager] Cannot place tower: Invalid position or insufficient gold.");
+                ShowWarningMessage("can only build towers on sites");
+                Debug.LogWarning("[TowerPlacementManager] can only build towers on sites");
             }
 
             Cleanup();
@@ -320,7 +437,7 @@ namespace TowerDefense.Tower
         }
 
         /// <summary>
-        /// Performs checks for Gold, Waypoint Path distance, and Collider Overlaps.
+        /// Performs checks for Gold, and BuildSite occupancy.
         /// </summary>
         public bool IsPositionValid(Vector3 position)
         {
@@ -331,41 +448,28 @@ namespace TowerDefense.Tower
                 return false;
             }
 
-            if (_cachedPath != null)
-            {
-                int count = _cachedPath.WaypointCount;
-                for (int i = 0; i < count - 1; i++)
-                {
-                    Transform wpStart = _cachedPath.GetWaypoint(i);
-                    Transform wpEnd = _cachedPath.GetWaypoint(i + 1);
-                    if (wpStart != null && wpEnd != null)
-                    {
-                        float dist = DistanceToSegment(position, wpStart.position, wpEnd.position);
-                        if (dist < pathClearanceRadius)
-                        {
-                            return false;
-                        }
-                    }
-                }
-            }
+            Collider2D hit = Physics2D.OverlapPoint(position);
+            if (hit == null) return false;
 
-            Collider2D[] colliders = Physics2D.OverlapCircleAll(position, towerOverlapRadius);
-            foreach (var col in colliders)
-            {
-                if (col.gameObject != _previewInstance && !col.CompareTag("Enemy") && col.gameObject.name != "WaypointPath")
-                {
-                    return false;
-                }
-            }
+            BuildSite site = hit.GetComponent<BuildSite>();
+            if (site == null || site.IsOccupied) return false;
 
             return true;
         }
 
         private void UpdatePreviewVisuals(bool isValid)
         {
-            if (_previewRenderer != null)
+            if (_previewRenderer != null && _towerPrefab != null)
             {
-                _previewRenderer.color = isValid ? validColor : invalidColor;
+                SpriteRenderer prefabSR = _towerPrefab.GetComponent<SpriteRenderer>();
+                Color originalColor = prefabSR != null ? prefabSR.color : Color.white;
+                Color tint = isValid ? validColor : invalidColor;
+                _previewRenderer.color = new Color(
+                    originalColor.r * tint.r,
+                    originalColor.g * tint.g,
+                    originalColor.b * tint.b,
+                    originalColor.a * tint.a
+                );
             }
         }
 
