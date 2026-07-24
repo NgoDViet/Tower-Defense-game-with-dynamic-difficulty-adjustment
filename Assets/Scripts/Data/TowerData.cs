@@ -26,7 +26,7 @@ namespace TowerDefense.Data
         [SerializeField] private GameObject projectilePrefab;
 
         [Tooltip("Speed of the projectile in units per second.")]
-        [SerializeField] private float projectileSpeed = 8f;
+        [SerializeField] private float projectileSpeed = 7f;
 
         // Getters
         public string TowerName => towerName;

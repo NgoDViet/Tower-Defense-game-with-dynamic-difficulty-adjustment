@@ -28,6 +28,7 @@ namespace TowerDefense.Enemy
         public int CurrentHealth => _currentHealth;
         public int MaxHealth => _maxHealth > 0 ? _maxHealth : (enemyData != null ? enemyData.GetHealth(1) : 10);
         public bool IsDead => _isDead;
+        public EnemyData EnemyData => enemyData;
 
         public void SetCurrentHealth(int health)
         {

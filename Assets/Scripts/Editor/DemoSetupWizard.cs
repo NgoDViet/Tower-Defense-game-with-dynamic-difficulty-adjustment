@@ -131,7 +131,7 @@ namespace TowerDefense.Editor
             towerDataSO.FindProperty("fireRate").floatValue = 1.5f;
             towerDataSO.FindProperty("damage").intValue = 3;
             towerDataSO.FindProperty("projectilePrefab").objectReferenceValue = projectilePrefab;
-            towerDataSO.FindProperty("projectileSpeed").floatValue = 6.0f;
+            towerDataSO.FindProperty("projectileSpeed").floatValue = 7.0f;
             towerDataSO.ApplyModifiedProperties();
             AssetDatabase.CreateAsset(towerData, "Assets/ScriptableObjects/TestTowerData.asset");
 

@@ -44,6 +44,7 @@ namespace TowerDefense.Tower
         private float _targetReevaluateTimer = 0f;
 
         public EnemyHealth TargetEnemy => _targetEnemy;
+        public TowerData TowerData => towerData;
 
         private bool _hasLoggedUpdate = false;
 

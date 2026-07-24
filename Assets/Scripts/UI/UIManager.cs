@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
 using TowerDefense.Core;
 using TowerDefense.Data;
 
@@ -35,6 +36,13 @@ namespace TowerDefense.UI
         public System.Collections.Generic.List<LevelData> Levels { get => levels; set => levels = value; }
 
         private GameObject _levelSelectionPanel;
+
+        // Selection system fields
+        private TowerDefense.Tower.TowerController _selectedTower;
+        private TowerDefense.Enemy.EnemyHealth _selectedEnemy;
+        private GameObject _infoPanel;
+        private TextMeshProUGUI _infoTitleText;
+        private TextMeshProUGUI _infoStatsText;
 
         private void OnEnable()
         {
@@ -430,6 +438,305 @@ namespace TowerDefense.UI
         {
             Debug.Log("[UIManager] Quitting Game...");
             Application.Quit();
+        }
+
+        #endregion
+
+        #region Stats Info Panel System
+
+        private void Update()
+        {
+            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+            {
+                if (_infoPanel != null && _infoPanel.activeSelf)
+                {
+                    _infoPanel.SetActive(false);
+                }
+                return;
+            }
+
+            // Update live stats of selected target if valid
+            UpdateSelectedStatsDisplay();
+
+            // Left click triggers selection overlap point check
+            bool leftClick = false;
+            Vector2 mouseScreenPos = Vector2.zero;
+
+            if (UnityEngine.InputSystem.Mouse.current != null)
+            {
+                if (UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
+                {
+                    leftClick = true;
+                    mouseScreenPos = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+                }
+            }
+            else
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    leftClick = true;
+                    mouseScreenPos = Input.mousePosition;
+                }
+            }
+
+            if (leftClick)
+            {
+                // Check if clicking on interactive UI
+                if (IsPointerOverInteractiveUI(mouseScreenPos))
+                {
+                    return;
+                }
+
+                if (Camera.main == null) return;
+
+                Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(mouseScreenPos.x, mouseScreenPos.y, Camera.main.nearClipPlane));
+                Vector2 worldPos2D = new Vector2(worldPos.x, worldPos.y);
+
+                Collider2D[] hits = Physics2D.OverlapCircleAll(worldPos2D, 0.6f);
+                Collider2D closestHit = null;
+                float closestDist = float.MaxValue;
+                TowerDefense.Tower.TowerController targetTower = null;
+                TowerDefense.Enemy.EnemyHealth targetEnemy = null;
+
+                foreach (var hit in hits)
+                {
+                    if (hit == null) continue;
+                    TowerDefense.Tower.TowerController tower = hit.GetComponent<TowerDefense.Tower.TowerController>();
+                    TowerDefense.Enemy.EnemyHealth enemy = hit.GetComponent<TowerDefense.Enemy.EnemyHealth>();
+
+                    if (tower != null || enemy != null)
+                    {
+                        float dist = Vector2.Distance(worldPos2D, hit.transform.position);
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            closestHit = hit;
+                            targetTower = tower;
+                            targetEnemy = enemy;
+                        }
+                    }
+                }
+
+                if (closestHit != null)
+                {
+                    if (targetTower != null)
+                    {
+                        SelectTower(targetTower);
+                    }
+                    else if (targetEnemy != null)
+                    {
+                        SelectEnemy(targetEnemy);
+                    }
+                }
+                else
+                {
+                    Deselect();
+                }
+            }
+        }
+
+        private void SelectTower(TowerDefense.Tower.TowerController tower)
+        {
+            _selectedTower = tower;
+            _selectedEnemy = null;
+            EnsureInfoPanel();
+            _infoPanel.SetActive(true);
+            UpdateSelectedStatsDisplay();
+        }
+
+        private void SelectEnemy(TowerDefense.Enemy.EnemyHealth enemy)
+        {
+            _selectedEnemy = enemy;
+            _selectedTower = null;
+            EnsureInfoPanel();
+            _infoPanel.SetActive(true);
+            UpdateSelectedStatsDisplay();
+        }
+
+        private void Deselect()
+        {
+            _selectedTower = null;
+            _selectedEnemy = null;
+            if (_infoPanel != null)
+            {
+                _infoPanel.SetActive(false);
+            }
+        }
+
+        private void UpdateSelectedStatsDisplay()
+        {
+            if (_infoPanel == null || !_infoPanel.activeSelf) return;
+
+            if (_selectedTower != null)
+            {
+                if (_selectedTower == null || _selectedTower.gameObject == null)
+                {
+                    Deselect();
+                    return;
+                }
+
+                TowerData data = _selectedTower.TowerData;
+                string name = data != null ? data.TowerName : "Tower";
+                float range = data != null ? data.Range : 0f;
+                float fireRate = data != null ? data.FireRate : 0f;
+                int damage = data != null ? data.Damage : 0;
+
+                if (_infoTitleText != null) _infoTitleText.text = name.ToUpper();
+                if (_infoStatsText != null)
+                {
+                    _infoStatsText.text = $"DAMAGE: <color=#FFD700>{damage}</color>\n\n" +
+                                          $"FIRE RATE: <color=#55FFFF>{fireRate:F1}/s</color>\n\n" +
+                                          $"RANGE: <color=#55FF55>{range:F1}</color>";
+                }
+            }
+            else if (_selectedEnemy != null)
+            {
+                if (_selectedEnemy == null || _selectedEnemy.gameObject == null || _selectedEnemy.IsDead)
+                {
+                    Deselect();
+                    return;
+                }
+
+                string name = _selectedEnemy.EnemyData != null ? _selectedEnemy.EnemyData.EnemyName : "Enemy";
+                int hp = _selectedEnemy.CurrentHealth;
+                int maxHp = _selectedEnemy.MaxHealth;
+                float speed = _selectedEnemy.MoveSpeed;
+                int armor = _selectedEnemy.Armor;
+                int attack = _selectedEnemy.Attack;
+
+                if (_infoTitleText != null) _infoTitleText.text = name.ToUpper();
+                if (_infoStatsText != null)
+                {
+                    _infoStatsText.text = $"HP: <color=#FF5555>{hp}/{maxHp}</color>\n\n" +
+                                          $"SPEED: <color=#55FF55>{speed:F1}</color>\n\n" +
+                                          $"ARMOR: <color=#AAAAAA>{armor}</color>\n\n" +
+                                          $"DAMAGE TO BASE: <color=#FF5555>{attack}</color>";
+                }
+            }
+            else
+            {
+                Deselect();
+            }
+        }
+
+        private void EnsureInfoPanel()
+        {
+            if (_infoPanel != null) return;
+
+            Transform parent = gameplayHUDPanel != null ? gameplayHUDPanel.transform : transform;
+
+            // Create Main Panel
+            _infoPanel = new GameObject("InfoPanel", typeof(RectTransform), typeof(CanvasRenderer));
+            _infoPanel.transform.SetParent(parent, false);
+
+            RectTransform rect = _infoPanel.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.anchoredPosition = new Vector2(-20f, 0f);
+            rect.sizeDelta = new Vector2(280f, 250f);
+
+            Image bgImage = _infoPanel.AddComponent<Image>();
+            bgImage.color = new Color(0.08f, 0.09f, 0.15f, 0.92f); // Sleek dark slate glass style
+
+            // Highlight header bar
+            GameObject topBar = new GameObject("HeaderBar", typeof(RectTransform), typeof(CanvasRenderer));
+            topBar.transform.SetParent(_infoPanel.transform, false);
+            RectTransform topBarRect = topBar.GetComponent<RectTransform>();
+            topBarRect.anchorMin = new Vector2(0f, 1f);
+            topBarRect.anchorMax = new Vector2(1f, 1f);
+            topBarRect.pivot = new Vector2(0.5f, 1f);
+            topBarRect.anchoredPosition = Vector2.zero;
+            topBarRect.sizeDelta = new Vector2(0f, 6f);
+            Image topBarImg = topBar.AddComponent<Image>();
+            topBarImg.color = new Color(0.2f, 0.6f, 1f, 1f); // Sleek blue highlight bar
+
+            // Title Text
+            GameObject titleGO = new GameObject("TitleText", typeof(RectTransform), typeof(CanvasRenderer));
+            titleGO.transform.SetParent(_infoPanel.transform, false);
+            RectTransform titleRect = titleGO.GetComponent<RectTransform>();
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.pivot = new Vector2(0f, 1f);
+            titleRect.anchoredPosition = new Vector2(15f, -15f);
+            titleRect.sizeDelta = new Vector2(-50f, 35f);
+
+            _infoTitleText = titleGO.AddComponent<TextMeshProUGUI>();
+            _infoTitleText.fontSize = 18f;
+            _infoTitleText.fontStyle = FontStyles.Bold;
+            _infoTitleText.color = Color.white;
+            _infoTitleText.alignment = TextAlignmentOptions.Left;
+
+            // Stats Text
+            GameObject statsGO = new GameObject("StatsText", typeof(RectTransform), typeof(CanvasRenderer));
+            statsGO.transform.SetParent(_infoPanel.transform, false);
+            RectTransform statsRect = statsGO.GetComponent<RectTransform>();
+            statsRect.anchorMin = new Vector2(0f, 0f);
+            statsRect.anchorMax = new Vector2(1f, 1f);
+            statsRect.pivot = new Vector2(0.5f, 0.5f);
+            statsRect.anchoredPosition = new Vector2(0f, -30f);
+            statsRect.sizeDelta = new Vector2(-30f, -80f);
+
+            _infoStatsText = statsGO.AddComponent<TextMeshProUGUI>();
+            _infoStatsText.fontSize = 14f;
+            _infoStatsText.color = new Color(0.85f, 0.85f, 0.9f, 1f);
+            _infoStatsText.alignment = TextAlignmentOptions.TopLeft;
+
+            // Close button
+            GameObject closeBtnGO = new GameObject("CloseButton", typeof(RectTransform), typeof(CanvasRenderer));
+            closeBtnGO.transform.SetParent(_infoPanel.transform, false);
+            RectTransform closeRect = closeBtnGO.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 1f);
+            closeRect.anchorMax = new Vector2(1f, 1f);
+            closeRect.pivot = new Vector2(1f, 1f);
+            closeRect.anchoredPosition = new Vector2(-10f, -10f);
+            closeRect.sizeDelta = new Vector2(25f, 25f);
+
+            Image closeImg = closeBtnGO.AddComponent<Image>();
+            closeImg.color = new Color(0.8f, 0.2f, 0.2f, 0.8f);
+
+            Button closeBtn = closeBtnGO.AddComponent<Button>();
+            closeBtn.onClick.AddListener(Deselect);
+
+            // Add text to close button
+            GameObject closeTextGO = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer));
+            closeTextGO.transform.SetParent(closeBtnGO.transform, false);
+            RectTransform closeTextRect = closeTextGO.GetComponent<RectTransform>();
+            closeTextRect.anchorMin = Vector2.zero;
+            closeTextRect.anchorMax = Vector2.one;
+            closeTextRect.sizeDelta = Vector2.zero;
+            TextMeshProUGUI closeText = closeTextGO.AddComponent<TextMeshProUGUI>();
+            closeText.text = "X";
+            closeText.fontSize = 12f;
+            closeText.fontStyle = FontStyles.Bold;
+            closeText.color = Color.white;
+            closeText.alignment = TextAlignmentOptions.Center;
+        }
+
+        private bool IsPointerOverInteractiveUI(Vector2 screenPos)
+        {
+            if (UnityEngine.EventSystems.EventSystem.current == null) return false;
+
+            UnityEngine.EventSystems.PointerEventData eventData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
+            eventData.position = screenPos;
+
+            List<UnityEngine.EventSystems.RaycastResult> results = new List<UnityEngine.EventSystems.RaycastResult>();
+            UnityEngine.EventSystems.EventSystem.current.RaycastAll(eventData, results);
+
+            foreach (var result in results)
+            {
+                if (result.gameObject != null)
+                {
+                    string name = result.gameObject.name;
+                    // Ignore root canvas, gameplay HUD, and EventSystem
+                    if (name == "GameplayHUDPanel" || name == "Canvas" || name == "EventSystem")
+                    {
+                        continue;
+                    }
+                    return true;
+                }
+            }
+            return false;
         }
 
         #endregion
