@@ -27,6 +27,10 @@ namespace TowerDefense.Tower
         [SerializeField] private TowerData defaultTowerData;
         [SerializeField] private GameObject defaultTowerPrefab;
 
+        [Header("Fast Tower Assets")]
+        [SerializeField] private TowerData fastTowerData;
+        [SerializeField] private GameObject fastTowerPrefab;
+
         private GameObject _previewInstance;
         private TowerData _activeTowerData;
         private GameObject _towerPrefab;
@@ -51,6 +55,25 @@ namespace TowerDefense.Tower
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+#if UNITY_EDITOR
+            if (defaultTowerData == null)
+            {
+                defaultTowerData = UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>("Assets/ScriptableObjects/TestTowerData.asset");
+            }
+            if (defaultTowerPrefab == null)
+            {
+                defaultTowerPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Tower.prefab");
+            }
+            if (fastTowerData == null)
+            {
+                fastTowerData = UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>("Assets/ScriptableObjects/FastTowerData.asset");
+            }
+            if (fastTowerPrefab == null)
+            {
+                fastTowerPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/FastTower.prefab");
+            }
+#endif
         }
 
         private void OnEnable()
@@ -94,6 +117,17 @@ namespace TowerDefense.Tower
                 }
                 _placedTowers.Clear();
             }
+
+            // Fallback sweep: Find and destroy all TowerController objects in the scene.
+            // This guarantees that any placed towers of any type (including future custom ones) are cleared.
+            TowerController[] activeTowers = FindObjectsByType<TowerController>(FindObjectsSortMode.None);
+            foreach (var tower in activeTowers)
+            {
+                if (tower != null)
+                {
+                    Destroy(tower.gameObject);
+                }
+            }
         }
 
         private void ClearBuildSites()
@@ -123,12 +157,11 @@ namespace TowerDefense.Tower
             Transform gameplayHUD = canvas.transform.Find("GameplayHUDPanel");
             if (gameplayHUD == null) return;
 
-            // Check if ShopPanel already exists
+            // Check if ShopPanel already exists and destroy it to rebuild with both towers
             Transform shopPanelTrans = gameplayHUD.Find("ShopPanel");
             if (shopPanelTrans != null)
             {
-                shopPanelTrans.gameObject.SetActive(true);
-                return;
+                Destroy(shopPanelTrans.gameObject);
             }
 
             // Create Left-Hand Side Shop Panel
@@ -151,7 +184,7 @@ namespace TowerDefense.Tower
             slotImg.color = new Color(0.2f, 0.2f, 0.25f, 1f); // Dark grey button background
             
             RectTransform slotRect = slotGO.GetComponent<RectTransform>();
-            slotRect.anchoredPosition = new Vector2(0f, 130f);
+            slotRect.anchoredPosition = new Vector2(0f, 120f);
             slotRect.sizeDelta = new Vector2(180f, 130f);
 
             // Add TowerSlot component
@@ -192,6 +225,63 @@ namespace TowerDefense.Tower
             towerSlot.TowerCostText = costText;
             towerSlot.TowerIcon = iconImg;
             towerSlot.SlotImage = slotImg;
+
+            if (fastTowerData != null && fastTowerPrefab != null)
+            {
+                // Fast Tower Slot Container
+                GameObject fastSlotGO = new GameObject("TowerSlot_Fast", typeof(RectTransform), typeof(CanvasRenderer));
+                fastSlotGO.transform.SetParent(shopPanel.transform, false);
+
+                Image fastSlotImg = fastSlotGO.AddComponent<Image>();
+                fastSlotImg.color = new Color(0.2f, 0.2f, 0.25f, 1f); // Dark grey button background
+
+                RectTransform fastSlotRect = fastSlotGO.GetComponent<RectTransform>();
+                fastSlotRect.anchoredPosition = new Vector2(0f, -30f);
+                fastSlotRect.sizeDelta = new Vector2(180f, 130f);
+
+                // Add TowerSlot component
+                TowerSlot fastTowerSlot = fastSlotGO.AddComponent<TowerSlot>();
+
+                // Icon Image
+                GameObject fastIconGO = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
+                fastIconGO.transform.SetParent(fastSlotGO.transform, false);
+                Image fastIconImg = fastIconGO.AddComponent<Image>();
+
+                SpriteRenderer fastPrefabSR = fastTowerPrefab.GetComponent<SpriteRenderer>();
+                if (fastPrefabSR != null && fastPrefabSR.sprite != null)
+                {
+                    fastIconImg.sprite = fastPrefabSR.sprite;
+                    fastIconImg.color = fastPrefabSR.color;
+                }
+                else
+                {
+                    fastIconImg.color = new Color(1f, 0.6f, 0f, 1f); // Fallback
+                }
+
+                RectTransform fastIconRect = fastIconGO.GetComponent<RectTransform>();
+                fastIconRect.anchoredPosition = new Vector2(0f, 20f);
+                fastIconRect.sizeDelta = new Vector2(60f, 60f);
+
+                // Name Text
+                TextMeshProUGUI fastNameText = CreateRuntimeText("NameText", fastSlotGO.transform, fastTowerData.TowerName, new Vector2(0f, -25f), 18, Color.white);
+                fastNameText.GetComponent<RectTransform>().sizeDelta = new Vector2(160f, 30f);
+
+                // Cost Text
+                TextMeshProUGUI fastCostText = CreateRuntimeText("CostText", fastSlotGO.transform, $"{fastTowerData.Cost} G", new Vector2(0f, -50f), 16, Color.yellow);
+                fastCostText.GetComponent<RectTransform>().sizeDelta = new Vector2(160f, 30f);
+
+                // Hook up variables
+                fastTowerSlot.TowerData = fastTowerData;
+                fastTowerSlot.TowerPrefab = fastTowerPrefab;
+                fastTowerSlot.TowerNameText = fastNameText;
+                fastTowerSlot.TowerCostText = fastCostText;
+                fastTowerSlot.TowerIcon = fastIconImg;
+                fastTowerSlot.SlotImage = fastSlotImg;
+            }
+            else
+            {
+                Debug.LogWarning("[TowerPlacementManager] FastTowerData or FastTower prefab is not assigned.");
+            }
         }
 
         private GameObject CreateRuntimePanel(string name, Transform parent, Color bgColor)
@@ -501,13 +591,30 @@ namespace TowerDefense.Tower
 
         private float DistanceToSegment(Vector3 point, Vector3 start, Vector3 end)
         {
-            Vector3 segment = end - start;
+            Vector2 p = point;
+            Vector2 s = start;
+            Vector2 e = end;
+            Vector2 segment = e - s;
             float lengthSq = segment.sqrMagnitude;
-            if (lengthSq < 0.0001f) return Vector3.Distance(point, start);
+            if (lengthSq < 0.0001f) return Vector2.Distance(p, s);
             
-            float t = Mathf.Clamp01(Vector3.Dot(point - start, segment) / lengthSq);
-            Vector3 projection = start + t * segment;
-            return Vector3.Distance(point, projection);
+            float t = Mathf.Clamp01(Vector2.Dot(p - s, segment) / lengthSq);
+            Vector2 projection = s + t * segment;
+            return Vector2.Distance(p, projection);
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (fastTowerData == null)
+            {
+                fastTowerData = UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>("Assets/ScriptableObjects/FastTowerData.asset");
+            }
+            if (fastTowerPrefab == null)
+            {
+                fastTowerPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/FastTower.prefab");
+            }
+        }
+#endif
     }
 }

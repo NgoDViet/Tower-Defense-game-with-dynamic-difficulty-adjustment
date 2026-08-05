@@ -146,6 +146,11 @@ namespace TowerDefense.Tower
                 EnemyHealth enemy = col.GetComponent<EnemyHealth>();
                 if (enemy == null || enemy.IsDead) continue;
 
+                // Validate that the enemy's pivot position is actually within range
+                // to prevent collider-edge-only detections from causing target-flickering
+                float dist = Vector2.Distance(transform.position, enemy.transform.position);
+                if (dist > CurrentRange) continue;
+
                 float metric = 0f;
                 EnemyMovement movement = col.GetComponent<EnemyMovement>();
 
@@ -158,18 +163,18 @@ namespace TowerDefense.Tower
                             // Higher value means further along the path.
                             int wpIndex = movement.CurrentWaypointIndex;
                             Transform targetWp = movement.ActivePath.GetWaypoint(wpIndex);
-                            float distToWp = targetWp != null ? Vector3.Distance(movement.transform.position, targetWp.position) : 0f;
+                            float distToWp = targetWp != null ? Vector2.Distance(movement.transform.position, targetWp.position) : 0f;
                             metric = (wpIndex * 1000f) - distToWp;
                         }
                         else
                         {
                             // Fallback if movement info isn't available: closest to tower
-                            metric = -Vector3.Distance(transform.position, col.transform.position);
+                            metric = -Vector2.Distance(transform.position, col.transform.position);
                         }
                         break;
 
                     case TargetingMode.Closest:
-                        metric = -Vector3.Distance(transform.position, col.transform.position);
+                        metric = -Vector2.Distance(transform.position, col.transform.position);
                         break;
 
                     case TargetingMode.Strongest:
@@ -193,7 +198,7 @@ namespace TowerDefense.Tower
             if (enemy.IsDead || !enemy.gameObject.activeSelf) return false;
             
             // Check range
-            float dist = Vector3.Distance(transform.position, enemy.transform.position);
+            float dist = Vector2.Distance(transform.position, enemy.transform.position);
             return dist <= CurrentRange;
         }
 

@@ -73,7 +73,7 @@ namespace TowerDefense.Projectile
             }
 
             // Check if we hit the target
-            if (Vector3.Distance(transform.position, _lastKnownPosition) <= impactDistanceThreshold)
+            if (Vector2.Distance(transform.position, _lastKnownPosition) <= impactDistanceThreshold)
             {
                 HitTarget();
             }

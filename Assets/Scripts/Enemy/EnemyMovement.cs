@@ -128,7 +128,7 @@ namespace TowerDefense.Enemy
                 }
             }
 
-            if (Vector3.Distance(transform.position, targetPosition) <= waypointThreshold)
+            if (Vector2.Distance(transform.position, targetPosition) <= waypointThreshold)
             {
                 _currentWaypointIndex++;
             }
