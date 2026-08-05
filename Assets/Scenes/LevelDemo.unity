@@ -1055,7 +1055,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -1163,7 +1163,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -4125,7 +4125,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4278190080
   m_fontColor: {r: 0, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -4138,7 +4138,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -6233,8 +6233,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Core.WaveManager
   waypointPath: {fileID: 402289118}
+  basicEnemyPrefab: {fileID: 0}
+  fastEnemyPrefab: {fileID: 0}
+  tankEnemyPrefab: {fileID: 0}
+  armorEnemyPrefab: {fileID: 0}
+  basicEnemyData: {fileID: 0}
+  fastEnemyData: {fileID: 0}
+  tankEnemyData: {fileID: 0}
+  armorEnemyData: {fileID: 0}
   autoStartNextWave: 0
   waveInterval: 5
+  waves: []
 --- !u!4 &1995546239
 Transform:
   m_ObjectHideFlags: 0

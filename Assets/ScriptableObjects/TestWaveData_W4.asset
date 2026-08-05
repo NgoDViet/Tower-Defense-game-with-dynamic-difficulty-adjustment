@@ -16,7 +16,7 @@ MonoBehaviour:
   basicSpawnInterval: 3
   fastCount: 8
   fastSpawnInterval: 2
-  tankCount: 5
+  tankCount: 3
   tankSpawnInterval: 5
-  armorCount: 3
-  armorSpawnInterval: 4
+  armorCount: 0
+  armorSpawnInterval: 0

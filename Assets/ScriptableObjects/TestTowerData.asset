@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.TowerData
   towerName: Basic Tower
   towerSprite: {fileID: 0}
-  cost: 50
-  range: 4
-  fireRate: 1.5
-  damage: 3
+  cost: 100
+  range: 4.5
+  fireRate: 1.2
+  damage: 10
   projectilePrefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
-  projectileSpeed: 7
+  projectileSpeed: 10
