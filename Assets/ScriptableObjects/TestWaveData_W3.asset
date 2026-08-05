@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: beaa880ace2c48e4e89ad08eb9819dcb, type: 3}
   m_Name: TestWaveData_W3
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.WaveData
-  basicCount: 12
+  basicCount: 8
   basicSpawnInterval: 3.5
-  fastCount: 3
+  fastCount: 0
   fastSpawnInterval: 0
-  tankCount: 2
-  tankSpawnInterval: 0
+  tankCount: 4
+  tankSpawnInterval: 10
   armorCount: 0
   armorSpawnInterval: 0

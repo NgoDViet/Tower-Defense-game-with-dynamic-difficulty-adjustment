@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.WaveData
   basicCount: 10
   basicSpawnInterval: 4
-  fastCount: 2
-  fastSpawnInterval: 3
+  fastCount: 4
+  fastSpawnInterval: 6
   tankCount: 0
   tankSpawnInterval: 0
   armorCount: 0
