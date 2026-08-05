@@ -16,7 +16,7 @@ MonoBehaviour:
   towerSprite: {fileID: 0}
   cost: 50
   range: 4
-  fireRate: 1.5
-  damage: 3
+  fireRate: 1
+  damage: 5
   projectilePrefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
-  projectileSpeed: 7
+  projectileSpeed: 10
