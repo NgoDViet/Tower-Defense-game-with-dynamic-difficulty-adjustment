@@ -118,14 +118,20 @@ namespace TowerDefense.Tower
                 _placedTowers.Clear();
             }
 
-            // Fallback sweep: Find and destroy all TowerController objects in the scene.
-            // This guarantees that any placed towers of any type (including future custom ones) are cleared.
+            // Fallback sweep: Find and destroy all non-prebuilt TowerController objects in the scene, or reset prebuilt ones.
             TowerController[] activeTowers = FindObjectsByType<TowerController>(FindObjectsSortMode.None);
             foreach (var tower in activeTowers)
             {
                 if (tower != null)
                 {
-                    Destroy(tower.gameObject);
+                    if (tower.IsPreBuilt)
+                    {
+                        tower.ResetTowerState();
+                    }
+                    else
+                    {
+                        Destroy(tower.gameObject);
+                    }
                 }
             }
         }
@@ -133,11 +139,43 @@ namespace TowerDefense.Tower
         private void ClearBuildSites()
         {
             BuildSite[] sites = FindObjectsByType<BuildSite>(FindObjectsSortMode.None);
+            TowerController[] activeTowers = FindObjectsByType<TowerController>(FindObjectsSortMode.None);
+
             foreach (var site in sites)
             {
                 if (site != null)
                 {
-                    site.ClearOccupied();
+                    bool isOccupiedByPreBuilt = false;
+
+                    // 1. Check if it is currently registered as occupied by a pre-built tower
+                    if (site.IsOccupied && site.OccupyingTower != null)
+                    {
+                        TowerController occupyingTowerController = site.OccupyingTower.GetComponent<TowerController>();
+                        if (occupyingTowerController != null && occupyingTowerController.IsPreBuilt)
+                        {
+                            isOccupiedByPreBuilt = true;
+                        }
+                    }
+
+                    // 2. Perform physical proximity check to automatically pair pre-built towers with sites
+                    if (!isOccupiedByPreBuilt)
+                    {
+                        foreach (var tower in activeTowers)
+                        {
+                            if (tower != null && tower.IsPreBuilt && Vector2.Distance(site.transform.position, tower.transform.position) < 0.2f)
+                            {
+                                site.SetOccupied(tower.gameObject);
+                                isOccupiedByPreBuilt = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 3. Clear occupancy only if it is not occupied by a pre-built tower
+                    if (!isOccupiedByPreBuilt)
+                    {
+                        site.ClearOccupied();
+                    }
                 }
             }
         }

@@ -22,6 +22,13 @@ namespace TowerDefense.Tower
         {
             isOccupied = true;
             occupyingTower = tower;
+
+            // Hide the build site visual when occupied
+            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.enabled = false;
+            }
         }
 
         /// <summary>
@@ -31,6 +38,13 @@ namespace TowerDefense.Tower
         {
             isOccupied = false;
             occupyingTower = null;
+
+            // Show the build site visual when empty
+            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            if (sr != null)
+            {
+                sr.enabled = true;
+            }
         }
     }
 }

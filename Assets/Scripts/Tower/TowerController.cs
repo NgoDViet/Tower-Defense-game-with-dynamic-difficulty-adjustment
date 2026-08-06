@@ -27,6 +27,13 @@ namespace TowerDefense.Tower
         [Tooltip("Optional transform where projectiles are spawned.")]
         [SerializeField] private Transform shootPoint;
 
+        [Tooltip("If checked, this tower exists in the level design and will not be destroyed on level start/reset.")]
+        [SerializeField] private bool isPreBuilt = false;
+
+        public bool IsPreBuilt => isPreBuilt;
+
+        private GameObject _visualTemplateParent;
+
         [Header("Targeting Settings")]
         [SerializeField] private TargetingMode targetingMode = TargetingMode.First;
         [SerializeField] private LayerMask enemyLayerMask;
@@ -60,7 +67,32 @@ namespace TowerDefense.Tower
         public EnemyHealth TargetEnemy => _targetEnemy;
         public TowerData TowerData => towerData;
 
-        private bool _hasLoggedUpdate = false;
+        private void Awake()
+        {
+            EnsureVisualTemplates();
+        }
+
+        private void EnsureVisualTemplates()
+        {
+            if (_visualTemplateParent != null) return;
+
+            // Create a hidden parent to store initial visual templates
+            _visualTemplateParent = new GameObject("TemplatesContainer");
+            _visualTemplateParent.transform.SetParent(transform);
+            _visualTemplateParent.SetActive(false);
+
+            foreach (Transform child in transform)
+            {
+                if (child.name.StartsWith("Visual_"))
+                {
+                    GameObject template = Instantiate(child.gameObject, _visualTemplateParent.transform);
+                    template.name = child.name;
+                    template.transform.localPosition = child.localPosition;
+                    template.transform.localRotation = child.localRotation;
+                    template.transform.localScale = child.localScale;
+                }
+            }
+        }
 
         private void Start()
         {
@@ -73,12 +105,6 @@ namespace TowerDefense.Tower
 
         private void Update()
         {
-            if (!_hasLoggedUpdate)
-            {
-                _hasLoggedUpdate = true;
-                Debug.Log($"[TowerController Update FirstFrame] {gameObject.name} Update executing. State: {(GameManager.Instance != null ? GameManager.Instance.CurrentState.ToString() : "NULL GameManager")}, towerData: {(towerData != null ? towerData.name : "NULL")}");
-            }
-
             // Only execute logic if game is actively running
             if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
             if (towerData == null) return;
@@ -275,6 +301,50 @@ namespace TowerDefense.Tower
             }
 
             Debug.Log($"[TowerController] Upgraded {gameObject.name} to Level {_currentLevel}. Damage: {CurrentDamage}, Range: {CurrentRange}");
+        }
+
+        public void ResetTowerState()
+        {
+            EnsureVisualTemplates();
+
+            // Only reset level and restore visuals if the tower was actually upgraded
+            if (_currentLevel > 1)
+            {
+                _currentLevel = 1;
+                RestoreInitialVisuals();
+            }
+
+            _fireCooldownTimer = 0f;
+            _targetReevaluateTimer = 0f;
+            _targetEnemy = null;
+
+            Debug.Log($"[TowerController] Reset {gameObject.name} state to Level {_currentLevel}");
+        }
+
+        private void RestoreInitialVisuals()
+        {
+            // Clean up current visual children
+            foreach (Transform child in transform)
+            {
+                if (child.name.StartsWith("Visual_"))
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            // Restore from template parent
+            if (_visualTemplateParent != null)
+            {
+                foreach (Transform templateChild in _visualTemplateParent.transform)
+                {
+                    GameObject restoredVisual = Instantiate(templateChild.gameObject, transform);
+                    restoredVisual.name = templateChild.name;
+                    restoredVisual.transform.localPosition = templateChild.localPosition;
+                    restoredVisual.transform.localRotation = templateChild.localRotation;
+                    restoredVisual.transform.localScale = templateChild.localScale;
+                    restoredVisual.SetActive(true);
+                }
+            }
         }
 
         private void OnDrawGizmosSelected()
