@@ -65,6 +65,13 @@ namespace TowerDefense.Core
         private bool _isSpawning = false;
         private int _activeSpawnGroupsCount = 0;
         private Coroutine _waveSpawnCoroutine;
+        private List<WaveSetup> _initialInspectorWaves = new List<WaveSetup>();
+
+        private void Awake()
+        {
+            // Store a copy of waves configured in the inspector at start
+            _initialInspectorWaves = new List<WaveSetup>(waves);
+        }
 
         // Public properties to allow editor configurations
         public GameObject BasicEnemyPrefab { get => basicEnemyPrefab; set => basicEnemyPrefab = value; }
@@ -96,6 +103,8 @@ namespace TowerDefense.Core
         /// </summary>
         public void StartNextWave()
         {
+            Debug.Log($"[WaveManager] StartNextWave called. _isSpawning={_isSpawning}, ActiveEnemies={GameManager.Instance?.ActiveEnemiesCount}, CurrentWave={_currentWaveIndex}, TotalWaves={waves.Count}");
+
             if (_isSpawning)
             {
                 Debug.LogWarning("[WaveManager] Cannot start next wave: A wave is currently spawning.");
@@ -104,7 +113,7 @@ namespace TowerDefense.Core
 
             if (GameManager.Instance != null && GameManager.Instance.ActiveEnemiesCount > 0)
             {
-                Debug.LogWarning("[WaveManager] Cannot start next wave: There are still active enemies on the field.");
+                Debug.LogWarning($"[WaveManager] Cannot start next wave: There are still active {GameManager.Instance.ActiveEnemiesCount} enemies on the field.");
                 return;
             }
 
@@ -112,11 +121,12 @@ namespace TowerDefense.Core
             if (nextWaveIndex < waves.Count)
             {
                 _currentWaveIndex = nextWaveIndex;
+                Debug.Log($"[WaveManager] Transitioning to Wave {nextWaveIndex}. Starting SpawnWaveCoroutine.");
                 _waveSpawnCoroutine = StartCoroutine(SpawnWaveCoroutine(_currentWaveIndex, waves[_currentWaveIndex]));
             }
             else
             {
-                Debug.Log("[WaveManager] All waves completed for this level.");
+                Debug.Log($"[WaveManager] All waves completed for this level. nextWaveIndex={nextWaveIndex}, waves.Count={waves.Count}");
             }
         }
 
@@ -249,6 +259,43 @@ namespace TowerDefense.Core
             {
                 _levelData = GameManager.Instance.ActiveLevelData;
             }
+
+            // Force auto start next wave to true as requested
+            autoStartNextWave = true;
+
+            Debug.Log($"[WaveManager] OnLevelStarted. _levelData={(_levelData != null ? _levelData.name : "null")}, waves count in _levelData={(_levelData != null && _levelData.Waves != null ? _levelData.Waves.Count.ToString() : "null")}, initial inspector waves count={_initialInspectorWaves.Count}");
+
+            // Only sync waves list from LevelData if no waves are configured in the inspector
+            if (_initialInspectorWaves.Count == 0 && _levelData != null && _levelData.Waves != null && _levelData.Waves.Count > 0)
+            {
+                waves.Clear();
+                foreach (var waveData in _levelData.Waves)
+                {
+                    if (waveData == null) continue;
+                    WaveSetup setup = new WaveSetup();
+                    setup.basicCount = waveData.BasicCount;
+                    setup.basicSpawnInterval = waveData.BasicSpawnInterval;
+                    setup.fastCount = waveData.FastCount;
+                    setup.fastSpawnInterval = waveData.FastSpawnInterval;
+                    setup.tankCount = waveData.TankCount;
+                    setup.tankSpawnInterval = waveData.TankSpawnInterval;
+                    setup.armorCount = waveData.ArmorCount;
+                    setup.armorSpawnInterval = waveData.ArmorSpawnInterval;
+                    waves.Add(setup);
+                }
+                Debug.Log($"[WaveManager] Synchronized waves from LevelData. New waves count={waves.Count}");
+            }
+            else if (_initialInspectorWaves.Count > 0)
+            {
+                waves.Clear();
+                waves.AddRange(_initialInspectorWaves);
+                Debug.Log($"[WaveManager] Restored inspector waves (precedence rule). count={waves.Count}");
+            }
+            else
+            {
+                Debug.Log($"[WaveManager] LevelData waves not synced. Fallback to inspector waves. count={waves.Count}");
+            }
+
             _currentWaveIndex = -1;
             _isSpawning = false;
             _activeSpawnGroupsCount = 0;
@@ -271,10 +318,16 @@ namespace TowerDefense.Core
 
         private void OnWaveCleared(WaveClearedEvent evt)
         {
+            Debug.Log($"[WaveManager] OnWaveCleared event handler. evt.WaveIndex={evt.WaveIndex}, _currentWaveIndex={_currentWaveIndex}, autoStartNextWave={autoStartNextWave}, waves.Count={waves.Count}");
             // Auto start next wave if configured and there are more waves left
             if (autoStartNextWave && _currentWaveIndex < waves.Count - 1)
             {
+                Debug.Log($"[WaveManager] Auto-starting next wave in {waveInterval} seconds.");
                 StartCoroutine(AutoStartNextWaveCoroutine());
+            }
+            else
+            {
+                Debug.Log($"[WaveManager] Will not auto-start next wave. autoStartNextWave={autoStartNextWave}, hasMoreWaves={_currentWaveIndex < waves.Count - 1}");
             }
         }
 
@@ -282,6 +335,7 @@ namespace TowerDefense.Core
         {
             yield return new WaitForSeconds(waveInterval);
             
+            Debug.Log($"[WaveManager] AutoStartNextWaveCoroutine timer completed. CurrentState={GameManager.Instance?.CurrentState}");
             // Only start if still in playing state (e.g. didn't pause/quit in between)
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.Playing)
             {
