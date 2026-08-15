@@ -1219,7 +1219,7 @@ MonoBehaviour:
   autoStartNextWave: 0
   waveInterval: 4
   waves:
-  - basicCount: 8
+  - basicCount: 1
     basicSpawnInterval: 4
     fastCount: 0
     fastSpawnInterval: 0

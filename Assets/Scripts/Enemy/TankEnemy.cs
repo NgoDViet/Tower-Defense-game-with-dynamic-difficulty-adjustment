@@ -12,13 +12,13 @@ namespace TowerDefense.Enemy
         {
             base.Initialize(data, difficulty);
             
-            // Base stats: Health = 80, Attack = 6, Armor = 0, Speed = 1.5f
+            // Base stats: Health = 80, Attack = 6, Armor = 0, Speed = 0.75f
             _maxHealth = Mathf.RoundToInt(80f * difficulty);
             _currentHealth = _maxHealth;
             _attack = Mathf.RoundToInt(6f * difficulty);
             _armor = 0;
-            _moveSpeed = 1.5f * Mathf.Pow(1.15f, difficulty - 1);
-            _moveSpeed = Mathf.Clamp(Mathf.Floor(_moveSpeed), 1f, 7f);
+            _moveSpeed = 0.75f * Mathf.Pow(1.15f, difficulty - 1);
+            _moveSpeed = Mathf.Clamp(_moveSpeed, 0.5f, 3.5f);
         }
     }
 }

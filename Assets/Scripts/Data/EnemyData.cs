@@ -46,19 +46,17 @@ namespace TowerDefense.Data
         {
             float speed = GetBaseSpeed() * Mathf.Pow(1.15f, difficulty - 1);
 
-            speed = Mathf.Floor(speed);
-
-            return Mathf.Clamp(speed, 1, 7);
+            return Mathf.Clamp(speed, 0.5f, 3.5f);
         }
 
         float GetBaseSpeed()
         {
             switch (enemyType)
             {
-                case EnemyType.Fast: return 6f;
-                case EnemyType.Tank: return 1.5f;
-                case EnemyType.Armor: return 2.25f;
-                default: return 3f;
+                case EnemyType.Fast: return 3f;
+                case EnemyType.Tank: return 0.75f;
+                case EnemyType.Armor: return 1.125f;
+                default: return 1.5f;
             }
         }
 

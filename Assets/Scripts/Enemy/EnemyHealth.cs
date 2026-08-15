@@ -119,7 +119,7 @@ namespace TowerDefense.Enemy
         public void ModifySpeed(float multiplier)
         {
             _moveSpeed *= multiplier;
-            _moveSpeed = Mathf.Clamp(_moveSpeed, 1f, 7f); // Maintain speed constraints
+            _moveSpeed = Mathf.Clamp(_moveSpeed, 0.5f, 3.5f); // Maintain speed constraints
         }
 
         public void SetCanBeSlowed(bool value)
