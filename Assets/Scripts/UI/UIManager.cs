@@ -194,6 +194,8 @@ namespace TowerDefense.UI
             }
         }
 
+
+
         private void EnsureLevelSelectionUI()
         {
             if (_levelSelectionPanel != null) return;
@@ -302,42 +304,81 @@ namespace TowerDefense.UI
                 LayoutElement spacerLayout = spacer.AddComponent<LayoutElement>();
                 spacerLayout.flexibleHeight = 1f;
 
-                // Play/Select Button
-                GameObject btnGO = new GameObject("PlayButton", typeof(RectTransform), typeof(CanvasRenderer));
-                btnGO.transform.SetParent(card.transform, false);
+                // Buttons Container
+                GameObject buttonsContainer = new GameObject("ButtonsContainer", typeof(RectTransform));
+                buttonsContainer.transform.SetParent(card.transform, false);
+                HorizontalLayoutGroup buttonsLayout = buttonsContainer.AddComponent<HorizontalLayoutGroup>();
+                buttonsLayout.spacing = 10f;
+                buttonsLayout.childAlignment = TextAnchor.MiddleCenter;
+                LayoutElement buttonsLayoutElement = buttonsContainer.AddComponent<LayoutElement>();
+                buttonsLayoutElement.preferredHeight = 50f;
 
-                Image btnImg = btnGO.AddComponent<Image>();
-                Color btnColor = new Color(0.12f, 0.75f, 0.38f, 1f);
-                btnImg.color = btnColor;
+                // Standard Play Button
+                GameObject standardBtnGO = new GameObject("StandardButton", typeof(RectTransform), typeof(CanvasRenderer));
+                standardBtnGO.transform.SetParent(buttonsContainer.transform, false);
 
-                Button playBtn = btnGO.AddComponent<Button>();
-                ColorBlock cb = playBtn.colors;
-                cb.normalColor = btnColor;
-                cb.highlightedColor = new Color(0.15f, 0.85f, 0.45f, 1f);
-                cb.pressedColor = new Color(0.08f, 0.65f, 0.3f, 1f);
-                playBtn.colors = cb;
+                Image standardBtnImg = standardBtnGO.AddComponent<Image>();
+                Color standardBtnColor = new Color(0.12f, 0.75f, 0.38f, 1f);
+                standardBtnImg.color = standardBtnColor;
 
-                LayoutElement btnLayout = btnGO.AddComponent<LayoutElement>();
-                btnLayout.preferredHeight = 50f;
+                Button standardBtn = standardBtnGO.AddComponent<Button>();
+                ColorBlock scb = standardBtn.colors;
+                scb.normalColor = standardBtnColor;
+                scb.highlightedColor = new Color(0.15f, 0.85f, 0.45f, 1f);
+                scb.pressedColor = new Color(0.08f, 0.65f, 0.3f, 1f);
+                standardBtn.colors = scb;
 
-                GameObject btnTxtGO = new GameObject("Text", typeof(RectTransform));
-                btnTxtGO.transform.SetParent(btnGO.transform, false);
-                TextMeshProUGUI btnTxt = btnTxtGO.AddComponent<TextMeshProUGUI>();
-                btnTxt.text = "SELECT LEVEL";
-                btnTxt.fontSize = 18;
-                btnTxt.fontStyle = FontStyles.Bold;
-                btnTxt.color = Color.white;
-                btnTxt.alignment = TextAlignmentOptions.Center;
-                btnTxt.font = TMP_Settings.defaultFontAsset;
+                GameObject standardBtnTxtGO = new GameObject("Text", typeof(RectTransform));
+                standardBtnTxtGO.transform.SetParent(standardBtnGO.transform, false);
+                TextMeshProUGUI standardBtnTxt = standardBtnTxtGO.AddComponent<TextMeshProUGUI>();
+                standardBtnTxt.text = "STANDARD";
+                standardBtnTxt.fontSize = 16;
+                standardBtnTxt.fontStyle = FontStyles.Bold;
+                standardBtnTxt.color = Color.white;
+                standardBtnTxt.alignment = TextAlignmentOptions.Center;
+                standardBtnTxt.font = TMP_Settings.defaultFontAsset;
 
-                RectTransform btnTxtRect = btnTxtGO.GetComponent<RectTransform>();
-                btnTxtRect.anchorMin = Vector2.zero;
-                btnTxtRect.anchorMax = Vector2.one;
-                btnTxtRect.offsetMin = Vector2.zero;
-                btnTxtRect.offsetMax = Vector2.zero;
+                RectTransform standardBtnTxtRect = standardBtnTxtGO.GetComponent<RectTransform>();
+                standardBtnTxtRect.anchorMin = Vector2.zero;
+                standardBtnTxtRect.anchorMax = Vector2.one;
+                standardBtnTxtRect.offsetMin = Vector2.zero;
+                standardBtnTxtRect.offsetMax = Vector2.zero;
 
                 LevelData targetLvl = lvl;
-                playBtn.onClick.AddListener(() => SelectAndPlayLevel(targetLvl));
+                standardBtn.onClick.AddListener(() => SelectAndPlayLevel(targetLvl));
+
+                // Endless Play Button
+                GameObject endlessBtnGO = new GameObject("EndlessButton", typeof(RectTransform), typeof(CanvasRenderer));
+                endlessBtnGO.transform.SetParent(buttonsContainer.transform, false);
+
+                Image endlessBtnImg = endlessBtnGO.AddComponent<Image>();
+                Color endlessBtnColor = new Color(0.8f, 0.2f, 0.2f, 1f);
+                endlessBtnImg.color = endlessBtnColor;
+
+                Button endlessBtn = endlessBtnGO.AddComponent<Button>();
+                ColorBlock ecb = endlessBtn.colors;
+                ecb.normalColor = endlessBtnColor;
+                ecb.highlightedColor = new Color(0.9f, 0.3f, 0.3f, 1f);
+                ecb.pressedColor = new Color(0.7f, 0.1f, 0.1f, 1f);
+                endlessBtn.colors = ecb;
+
+                GameObject endlessBtnTxtGO = new GameObject("Text", typeof(RectTransform));
+                endlessBtnTxtGO.transform.SetParent(endlessBtnGO.transform, false);
+                TextMeshProUGUI endlessBtnTxt = endlessBtnTxtGO.AddComponent<TextMeshProUGUI>();
+                endlessBtnTxt.text = "ENDLESS";
+                endlessBtnTxt.fontSize = 16;
+                endlessBtnTxt.fontStyle = FontStyles.Bold;
+                endlessBtnTxt.color = Color.white;
+                endlessBtnTxt.alignment = TextAlignmentOptions.Center;
+                endlessBtnTxt.font = TMP_Settings.defaultFontAsset;
+
+                RectTransform endlessBtnTxtRect = endlessBtnTxtGO.GetComponent<RectTransform>();
+                endlessBtnTxtRect.anchorMin = Vector2.zero;
+                endlessBtnTxtRect.anchorMax = Vector2.one;
+                endlessBtnTxtRect.offsetMin = Vector2.zero;
+                endlessBtnTxtRect.offsetMax = Vector2.zero;
+
+                endlessBtn.onClick.AddListener(() => SelectAndPlayEndless(targetLvl));
             }
 
             // Back Button at the bottom
@@ -398,6 +439,25 @@ namespace TowerDefense.UI
             else
             {
                 Time.timeScale = 1f;
+                UnityEngine.SceneManagement.SceneManager.LoadScene(levelData.LevelName);
+            }
+        }
+
+        private void SelectAndPlayEndless(LevelData levelData)
+        {
+            if (_levelSelectionPanel != null)
+            {
+                _levelSelectionPanel.SetActive(false);
+            }
+            
+            GameManager.startAsEndless = true;
+            
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.StartEndlessMode(levelData);
+            }
+            else
+            {
                 UnityEngine.SceneManagement.SceneManager.LoadScene(levelData.LevelName);
             }
         }

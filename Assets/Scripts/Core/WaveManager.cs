@@ -83,6 +83,7 @@ namespace TowerDefense.Core
         public EnemyData TankEnemyData { get => tankEnemyData; set => tankEnemyData = value; }
         public EnemyData ArmorEnemyData { get => armorEnemyData; set => armorEnemyData = value; }
         public List<WaveSetup> Waves => waves;
+        public bool isEndlessMode { get; private set; }
 
         private void OnEnable()
         {
@@ -126,8 +127,52 @@ namespace TowerDefense.Core
             }
             else
             {
-                Debug.Log($"[WaveManager] All waves completed for this level. nextWaveIndex={nextWaveIndex}, waves.Count={waves.Count}");
+                if (isEndlessMode)
+                {
+                    GenerateNextWave();
+                    _currentWaveIndex++;
+                    _waveSpawnCoroutine = StartCoroutine(SpawnWaveCoroutine(_currentWaveIndex, waves[_currentWaveIndex]));
+                }
+                else
+                {
+                    Debug.Log($"[WaveManager] All waves completed for this level. nextWaveIndex={nextWaveIndex}, waves.Count={waves.Count}");
+                }
             }
+        }
+
+        private void GenerateNextWave()
+        {
+            WaveSetup newWave = new WaveSetup();
+            int waveNum = _currentWaveIndex + 1; // This is the wave number (0-indexed)
+
+            // Example scaling formulas - can be tweaked for balance
+            // Basic enemies: always present, count grows linearly
+            newWave.basicCount = 10 + waveNum * 2;
+            newWave.basicSpawnInterval = Mathf.Max(0.1f, 0.5f - waveNum * 0.01f);
+
+            // Fast enemies: appear from wave 3, count grows slower
+            if (waveNum >= 2)
+            {
+                newWave.fastCount = 5 + (waveNum - 2) * 2;
+                newWave.fastSpawnInterval = Mathf.Max(0.2f, 0.8f - waveNum * 0.02f);
+            }
+
+            // Tank enemies: appear from wave 5, count grows slowly
+            if (waveNum >= 4)
+            {
+                newWave.tankCount = 2 + (waveNum - 4);
+                newWave.tankSpawnInterval = Mathf.Max(0.5f, 1.5f - waveNum * 0.05f);
+            }
+
+            // Armor enemies: appear from wave 7, also grow slowly
+            if (waveNum >= 6)
+            {
+                newWave.armorCount = 2 + (waveNum - 6);
+                newWave.armorSpawnInterval = Mathf.Max(0.5f, 1.2f - waveNum * 0.04f);
+            }
+            
+            waves.Add(newWave);
+            Debug.Log($"[WaveManager] Generated Endless Wave {waveNum + 1}: Basic({newWave.basicCount}), Fast({newWave.fastCount}), Tank({newWave.tankCount}), Armor({newWave.armorCount})");
         }
 
         public struct DynamicSpawnGroup
@@ -258,6 +303,7 @@ namespace TowerDefense.Core
             if (GameManager.Instance != null)
             {
                 _levelData = GameManager.Instance.ActiveLevelData;
+                isEndlessMode = GameManager.Instance.CurrentState == GameManager.GameState.Playing && evt.LevelName.EndsWith("(Endless)");
             }
 
             // Force auto start next wave to true as requested
@@ -320,10 +366,13 @@ namespace TowerDefense.Core
         {
             Debug.Log($"[WaveManager] OnWaveCleared event handler. evt.WaveIndex={evt.WaveIndex}, _currentWaveIndex={_currentWaveIndex}, autoStartNextWave={autoStartNextWave}, waves.Count={waves.Count}");
             // Auto start next wave if configured and there are more waves left
-            if (autoStartNextWave && _currentWaveIndex < waves.Count - 1)
+            if (autoStartNextWave || isEndlessMode)
             {
-                Debug.Log($"[WaveManager] Auto-starting next wave in {waveInterval} seconds.");
-                StartCoroutine(AutoStartNextWaveCoroutine());
+                if (_currentWaveIndex < waves.Count - 1 || isEndlessMode)
+                {
+                    Debug.Log($"[WaveManager] Auto-starting next wave in {waveInterval} seconds.");
+                    StartCoroutine(AutoStartNextWaveCoroutine());
+                }
             }
             else
             {
