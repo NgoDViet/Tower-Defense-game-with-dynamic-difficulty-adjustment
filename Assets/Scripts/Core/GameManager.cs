@@ -10,6 +10,8 @@ namespace TowerDefense.Core
     /// </summary>
     public class GameManager : MonoBehaviour
     {
+        public static bool startAsEndless = false;
+
         public enum GameState
         {
             MainMenu,
@@ -34,6 +36,7 @@ namespace TowerDefense.Core
         private int _currentWaveIndex = -1;
         private int _activeEnemiesCount = 0;
         private bool _isSpawningWave = false;
+        private bool _isEndlessMode = false;
 
         // Getters
         public GameState CurrentState => _currentState;
@@ -78,7 +81,15 @@ namespace TowerDefense.Core
             // If default level data is specified, start playing immediately (useful for testing scene directly)
             if (defaultLevelData != null)
             {
-                StartLevel(defaultLevelData);
+                if (startAsEndless)
+                {
+                    startAsEndless = false; // Consume the flag
+                    StartEndlessMode(defaultLevelData);
+                }
+                else
+                {
+                    StartLevel(defaultLevelData);
+                }
             }
             else
             {
@@ -144,10 +155,39 @@ namespace TowerDefense.Core
             _currentWaveIndex = -1;
             _activeEnemiesCount = 0;
             _isSpawningWave = false;
+            _isEndlessMode = false;
 
             SetState(GameState.Playing);
 
             EventBus<LevelStartedEvent>.Raise(new LevelStartedEvent(levelData.LevelName));
+            EventBus<BaseHealthChangedEvent>.Raise(new BaseHealthChangedEvent(_currentHealth, levelData.BaseMaxHealth));
+            EventBus<GoldChangedEvent>.Raise(new GoldChangedEvent(_currentGold));
+        }
+
+        public void StartEndlessMode(LevelData levelData)
+        {
+            if (levelData == null)
+            {
+                Debug.LogError("[GameManager] Cannot start endless mode with null LevelData!");
+                return;
+            }
+
+            if (ObjectPooler.Instance != null)
+            {
+                ObjectPooler.Instance.ReturnAllActiveToPool();
+            }
+
+            _activeLevelData = levelData;
+            _currentHealth = levelData.BaseMaxHealth;
+            _currentGold = levelData.StartingGold;
+            _currentWaveIndex = -1;
+            _activeEnemiesCount = 0;
+            _isSpawningWave = false;
+            _isEndlessMode = true;
+
+            SetState(GameState.Playing);
+
+            EventBus<LevelStartedEvent>.Raise(new LevelStartedEvent(levelData.LevelName + " (Endless)"));
             EventBus<BaseHealthChangedEvent>.Raise(new BaseHealthChangedEvent(_currentHealth, levelData.BaseMaxHealth));
             EventBus<GoldChangedEvent>.Raise(new GoldChangedEvent(_currentGold));
         }
@@ -174,7 +214,14 @@ namespace TowerDefense.Core
         {
             if (_activeLevelData != null)
             {
-                StartLevel(_activeLevelData);
+                if (_isEndlessMode)
+                {
+                    StartEndlessMode(_activeLevelData);
+                }
+                else
+                {
+                    StartLevel(_activeLevelData);
+                }
             }
         }
 
@@ -251,20 +298,25 @@ namespace TowerDefense.Core
 
         private void CheckWaveClearStatus()
         {
-            // If the wave is no longer spawning enemies and all spawned enemies are dead/reached base
             if (!_isSpawningWave && _activeEnemiesCount <= 0 && _currentState == GameState.Playing)
             {
                 Debug.Log($"[GameManager] Wave {_currentWaveIndex} fully cleared.");
                 EventBus<WaveClearedEvent>.Raise(new WaveClearedEvent(_currentWaveIndex));
 
                 WaveManager waveManager = FindFirstObjectByType<WaveManager>();
-                if (waveManager != null && _currentWaveIndex >= waveManager.Waves.Count - 1)
+                if (waveManager != null)
                 {
-                    SetState(GameState.Victory);
+                    if (_isEndlessMode)
+                    {
+                        waveManager.StartNextWave();
+                    }
+                    else if (_currentWaveIndex >= waveManager.Waves.Count - 1)
+                    {
+                        SetState(GameState.Victory);
+                    }
                 }
             }
         }
-
         #endregion
     }
 }
