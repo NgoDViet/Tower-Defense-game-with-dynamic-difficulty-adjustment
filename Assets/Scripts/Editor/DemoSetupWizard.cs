@@ -507,14 +507,14 @@ namespace TowerDefense.Editor
             UnityEventTools.AddVoidPersistentListener(playBtn.onClick, new UnityAction(uiManagerComp.OnPlayButtonClicked));
 
             // Populate Gameplay HUD
-            TextMeshProUGUI healthText = CreateText("HealthText", gameplayHUD.transform, "HP: 10/10", new Vector2(-700, 480), 28, Color.red, TextAlignmentOptions.Left);
-            TextMeshProUGUI goldText = CreateText("GoldText", gameplayHUD.transform, "Gold: 100", new Vector2(0, 480), 28, Color.yellow, TextAlignmentOptions.Center);
+            TextMeshProUGUI healthText = CreateText("HealthText", gameplayHUD.transform, "10/10", new Vector2(-700, 480), 28, Color.red, TextAlignmentOptions.Left);
+            TextMeshProUGUI goldText = CreateText("GoldText", gameplayHUD.transform, "100", new Vector2(0, 480), 28, Color.yellow, TextAlignmentOptions.Center);
             TextMeshProUGUI waveText = CreateText("WaveText", gameplayHUD.transform, "Wave: 1/1", new Vector2(700, 480), 28, Color.cyan, TextAlignmentOptions.Right);
 
             Button startWaveBtn = CreateButton("StartWaveButton", gameplayHUD.transform, "START WAVE", new Vector2(0, -480), new Vector2(220, 50), Color.green, null);
             UnityEventTools.AddVoidPersistentListener(startWaveBtn.onClick, new UnityAction(waveManagerComp.StartNextWave));
 
-            Button pauseBtn = CreateButton("PauseButton", gameplayHUD.transform, "PAUSE", new Vector2(850, 480), new Vector2(100, 40), Color.white, null);
+            Button pauseBtn = CreateButton("PauseButton", gameplayHUD.transform, "", new Vector2(850, 480), new Vector2(50, 50), Color.white, null);
             UnityEventTools.AddVoidPersistentListener(pauseBtn.onClick, new UnityAction(uiManagerComp.OnPauseButtonClicked));
 
             // Populate Pause Overlay
@@ -557,7 +557,7 @@ namespace TowerDefense.Editor
             uiManagerSO.FindProperty("healthText").objectReferenceValue = healthText;
             uiManagerSO.FindProperty("goldText").objectReferenceValue = goldText;
             uiManagerSO.FindProperty("waveText").objectReferenceValue = waveText;
-            uiManagerSO.ApplyModifiedProperties();
+            AssignHUDGraphicPrefabs(uiManagerSO);
 
             // Set ScriptableObject levelData directly to bypass type-casting bug
             uiManagerComp.LevelDataToPlay = persistentLevelData;
@@ -819,14 +819,14 @@ namespace TowerDefense.Editor
             UnityEventTools.AddVoidPersistentListener(playBtn.onClick, new UnityAction(uiManagerComp.OnPlayButtonClicked));
 
             // Populate Gameplay HUD
-            TextMeshProUGUI healthText = CreateText("HealthText", gameplayHUD.transform, "HP: 10/10", new Vector2(-700, 480), 28, Color.red, TextAlignmentOptions.Left);
-            TextMeshProUGUI goldText = CreateText("GoldText", gameplayHUD.transform, "Gold: 100", new Vector2(0, 480), 28, Color.yellow, TextAlignmentOptions.Center);
+            TextMeshProUGUI healthText = CreateText("HealthText", gameplayHUD.transform, "10/10", new Vector2(-700, 480), 28, Color.red, TextAlignmentOptions.Left);
+            TextMeshProUGUI goldText = CreateText("GoldText", gameplayHUD.transform, "100", new Vector2(0, 480), 28, Color.yellow, TextAlignmentOptions.Center);
             TextMeshProUGUI waveText = CreateText("WaveText", gameplayHUD.transform, "Wave: 1/1", new Vector2(700, 480), 28, Color.cyan, TextAlignmentOptions.Right);
 
             Button startWaveBtn = CreateButton("StartWaveButton", gameplayHUD.transform, "START WAVE", new Vector2(0, -480), new Vector2(220, 50), Color.green, null);
             UnityEventTools.AddVoidPersistentListener(startWaveBtn.onClick, new UnityAction(waveManagerComp.StartNextWave));
 
-            Button pauseBtn = CreateButton("PauseButton", gameplayHUD.transform, "PAUSE", new Vector2(850, 480), new Vector2(100, 40), Color.white, null);
+            Button pauseBtn = CreateButton("PauseButton", gameplayHUD.transform, "", new Vector2(850, 480), new Vector2(50, 50), Color.white, null);
             UnityEventTools.AddVoidPersistentListener(pauseBtn.onClick, new UnityAction(uiManagerComp.OnPauseButtonClicked));
 
             // Populate Sandbox Buttons (Appear on demand!)
@@ -876,7 +876,7 @@ namespace TowerDefense.Editor
             uiManagerSO.FindProperty("healthText").objectReferenceValue = healthText;
             uiManagerSO.FindProperty("goldText").objectReferenceValue = goldText;
             uiManagerSO.FindProperty("waveText").objectReferenceValue = waveText;
-            uiManagerSO.ApplyModifiedProperties();
+            AssignHUDGraphicPrefabs(uiManagerSO);
 
             // Set ScriptableObject levelData directly to bypass type-casting bug
             uiManagerComp.LevelDataToPlay = levelData;
@@ -1093,12 +1093,12 @@ namespace TowerDefense.Editor
             {
                 GameObject managerGO = new GameObject("TowerPlacementManager");
                 placementManager = managerGO.AddComponent<TowerPlacementManager>();
-            }
 
-            SerializedObject managerSO = new SerializedObject(placementManager);
-            managerSO.FindProperty("defaultTowerData").objectReferenceValue = towerData;
-            managerSO.FindProperty("defaultTowerPrefab").objectReferenceValue = towerPrefab;
-            managerSO.ApplyModifiedProperties();
+                SerializedObject managerSO = new SerializedObject(placementManager);
+                managerSO.FindProperty("defaultTowerData").objectReferenceValue = towerData;
+                managerSO.FindProperty("defaultTowerPrefab").objectReferenceValue = towerPrefab;
+                managerSO.ApplyModifiedProperties();
+            }
 
             // 2. Create Left-Hand Side Shop Panel
             Transform existingShop = gameplayHUD.transform.Find("ShopPanel");
@@ -1287,15 +1287,18 @@ namespace TowerDefense.Editor
             if (cameraGO != null)
             {
                 Camera cam = cameraGO.GetComponent<Camera>();
-                cam.orthographic = true;
-                cam.orthographicSize = 6f;
-                cam.backgroundColor = new Color(0.15f, 0.2f, 0.15f);
-                cam.clearFlags = CameraClearFlags.SolidColor;
-                
-                // Set camera position to Z = -10f to see gameplay elements at Z = 0f
-                Vector3 pos = cameraGO.transform.position;
-                pos.z = -10f;
-                cameraGO.transform.position = pos;
+                if (cam != null && (!cam.orthographic || cam.clearFlags == CameraClearFlags.Skybox))
+                {
+                    cam.orthographic = true;
+                    cam.orthographicSize = 6f;
+                    cam.backgroundColor = new Color(0.15f, 0.2f, 0.15f);
+                    cam.clearFlags = CameraClearFlags.SolidColor;
+                    
+                    // Set camera position to Z = -10f to see gameplay elements at Z = 0f
+                    Vector3 pos = cameraGO.transform.position;
+                    pos.z = -10f;
+                    cameraGO.transform.position = pos;
+                }
             }
 
             WaypointPath pathComp = GameObject.FindFirstObjectByType<WaypointPath>();
@@ -1310,73 +1313,73 @@ namespace TowerDefense.Editor
                 pathComp.PopulateFromChildren();
             }
 
-            ObjectPooler poolerComp = GameObject.FindFirstObjectByType<ObjectPooler>();
-            if (poolerComp == null)
-            {
-                GameObject poolerGO = new GameObject("ObjectPooler");
-                poolerComp = poolerGO.AddComponent<ObjectPooler>();
-            }
-            SerializedObject poolerSO = new SerializedObject(poolerComp);
-            SerializedProperty prewarmConfigsProp = poolerSO.FindProperty("prewarmConfigs");
-            prewarmConfigsProp.ClearArray();
-
             GameObject basicPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Basic.prefab");
             GameObject fastPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Fast.prefab");
             GameObject tankPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Tank.prefab");
             GameObject armorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Enemy_Armor.prefab");
 
-            prewarmConfigsProp.InsertArrayElementAtIndex(0);
-            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("prefab").objectReferenceValue = basicPrefab;
-            prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("size").intValue = 10;
+            ObjectPooler poolerComp = GameObject.FindFirstObjectByType<ObjectPooler>();
+            if (poolerComp == null)
+            {
+                GameObject poolerGO = new GameObject("ObjectPooler");
+                poolerComp = poolerGO.AddComponent<ObjectPooler>();
+                SerializedObject poolerSO = new SerializedObject(poolerComp);
+                SerializedProperty prewarmConfigsProp = poolerSO.FindProperty("prewarmConfigs");
+                prewarmConfigsProp.ClearArray();
 
-            prewarmConfigsProp.InsertArrayElementAtIndex(1);
-            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("prefab").objectReferenceValue = fastPrefab;
-            prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("size").intValue = 10;
+                prewarmConfigsProp.InsertArrayElementAtIndex(0);
+                prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("prefab").objectReferenceValue = basicPrefab;
+                prewarmConfigsProp.GetArrayElementAtIndex(0).FindPropertyRelative("size").intValue = 10;
 
-            prewarmConfigsProp.InsertArrayElementAtIndex(2);
-            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("prefab").objectReferenceValue = tankPrefab;
-            prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("size").intValue = 5;
+                prewarmConfigsProp.InsertArrayElementAtIndex(1);
+                prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("prefab").objectReferenceValue = fastPrefab;
+                prewarmConfigsProp.GetArrayElementAtIndex(1).FindPropertyRelative("size").intValue = 10;
 
-            prewarmConfigsProp.InsertArrayElementAtIndex(3);
-            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("prefab").objectReferenceValue = armorPrefab;
-            prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("size").intValue = 10;
+                prewarmConfigsProp.InsertArrayElementAtIndex(2);
+                prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("prefab").objectReferenceValue = tankPrefab;
+                prewarmConfigsProp.GetArrayElementAtIndex(2).FindPropertyRelative("size").intValue = 5;
 
-            prewarmConfigsProp.InsertArrayElementAtIndex(4);
-            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
-            prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("size").intValue = 20;
-            poolerSO.ApplyModifiedProperties();
+                prewarmConfigsProp.InsertArrayElementAtIndex(3);
+                prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("prefab").objectReferenceValue = armorPrefab;
+                prewarmConfigsProp.GetArrayElementAtIndex(3).FindPropertyRelative("size").intValue = 10;
+
+                prewarmConfigsProp.InsertArrayElementAtIndex(4);
+                prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("prefab").objectReferenceValue = projectilePrefab;
+                prewarmConfigsProp.GetArrayElementAtIndex(4).FindPropertyRelative("size").intValue = 20;
+                poolerSO.ApplyModifiedProperties();
+            }
 
             WaveManager waveManagerComp = GameObject.FindFirstObjectByType<WaveManager>();
             if (waveManagerComp == null)
             {
                 GameObject waveManagerGO = new GameObject("WaveManager");
                 waveManagerComp = waveManagerGO.AddComponent<WaveManager>();
+                SerializedObject waveManagerSO = new SerializedObject(waveManagerComp);
+                waveManagerSO.FindProperty("waypointPath").objectReferenceValue = pathComp;
+                waveManagerSO.FindProperty("autoStartNextWave").boolValue = true;
+                waveManagerSO.FindProperty("waveInterval").floatValue = 4.0f;
+
+                waveManagerSO.FindProperty("basicEnemyPrefab").objectReferenceValue = basicPrefab;
+                waveManagerSO.FindProperty("fastEnemyPrefab").objectReferenceValue = fastPrefab;
+                waveManagerSO.FindProperty("tankEnemyPrefab").objectReferenceValue = tankPrefab;
+                waveManagerSO.FindProperty("armorEnemyPrefab").objectReferenceValue = armorPrefab;
+
+                waveManagerSO.FindProperty("basicEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Basic.asset");
+                waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
+                waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
+                waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
+                PopulateWaveManagerWaves(waveManagerSO.FindProperty("waves"));
+                waveManagerSO.ApplyModifiedProperties();
             }
-            SerializedObject waveManagerSO = new SerializedObject(waveManagerComp);
-            waveManagerSO.FindProperty("waypointPath").objectReferenceValue = pathComp;
-            waveManagerSO.FindProperty("autoStartNextWave").boolValue = true;
-            waveManagerSO.FindProperty("waveInterval").floatValue = 4.0f;
-
-            waveManagerSO.FindProperty("basicEnemyPrefab").objectReferenceValue = basicPrefab;
-            waveManagerSO.FindProperty("fastEnemyPrefab").objectReferenceValue = fastPrefab;
-            waveManagerSO.FindProperty("tankEnemyPrefab").objectReferenceValue = tankPrefab;
-            waveManagerSO.FindProperty("armorEnemyPrefab").objectReferenceValue = armorPrefab;
-
-            waveManagerSO.FindProperty("basicEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Basic.asset");
-            waveManagerSO.FindProperty("fastEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Fast.asset");
-            waveManagerSO.FindProperty("tankEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Tank.asset");
-            waveManagerSO.FindProperty("armorEnemyData").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyData>("Assets/ScriptableObjects/TestEnemyData_Armor.asset");
-            PopulateWaveManagerWaves(waveManagerSO.FindProperty("waves"));
-            waveManagerSO.ApplyModifiedProperties();
 
             GameManager gameManagerComp = GameObject.FindFirstObjectByType<GameManager>();
             if (gameManagerComp == null)
             {
                 GameObject gameManagerGO = new GameObject("GameManager");
                 gameManagerComp = gameManagerGO.AddComponent<GameManager>();
+                gameManagerComp.DefaultLevelData = levelData;
+                EditorUtility.SetDirty(gameManagerComp);
             }
-            gameManagerComp.DefaultLevelData = levelData;
-            EditorUtility.SetDirty(gameManagerComp);
 
             Canvas canvas = GameObject.FindFirstObjectByType<Canvas>();
             UIManager uiManagerComp = GameObject.FindFirstObjectByType<UIManager>();
@@ -1413,14 +1416,14 @@ namespace TowerDefense.Editor
                 Button playBtn = CreateButton("PlayButton", mainMenu.transform, "PLAY LEVEL", new Vector2(0, -50), new Vector2(250, 60), Color.green, null);
                 UnityEventTools.AddVoidPersistentListener(playBtn.onClick, new UnityAction(uiManagerComp.OnPlayButtonClicked));
 
-                TextMeshProUGUI healthText = CreateText("HealthText", gameplayHUD.transform, $"HP: {levelData.BaseMaxHealth}/{levelData.BaseMaxHealth}", new Vector2(-700, 480), 28, Color.red, TextAlignmentOptions.Left);
-                TextMeshProUGUI goldText = CreateText("GoldText", gameplayHUD.transform, $"Gold: {levelData.StartingGold}", new Vector2(0, 480), 28, Color.yellow, TextAlignmentOptions.Center);
+                TextMeshProUGUI healthText = CreateText("HealthText", gameplayHUD.transform, $"{levelData.BaseMaxHealth}/{levelData.BaseMaxHealth}", new Vector2(-700, 480), 28, Color.red, TextAlignmentOptions.Left);
+                TextMeshProUGUI goldText = CreateText("GoldText", gameplayHUD.transform, $"{levelData.StartingGold}", new Vector2(0, 480), 28, Color.yellow, TextAlignmentOptions.Center);
                 TextMeshProUGUI waveText = CreateText("WaveText", gameplayHUD.transform, "Wave: 1/1", new Vector2(700, 480), 28, Color.cyan, TextAlignmentOptions.Right);
 
                 Button startWaveBtn = CreateButton("StartWaveButton", gameplayHUD.transform, "START WAVE", new Vector2(0, -480), new Vector2(220, 50), Color.green, null);
                 UnityEventTools.AddVoidPersistentListener(startWaveBtn.onClick, new UnityAction(waveManagerComp.StartNextWave));
 
-                Button pauseBtn = CreateButton("PauseButton", gameplayHUD.transform, "PAUSE", new Vector2(850, 480), new Vector2(100, 40), Color.white, null);
+                Button pauseBtn = CreateButton("PauseButton", gameplayHUD.transform, "", new Vector2(850, 480), new Vector2(50, 50), Color.white, null);
                 UnityEventTools.AddVoidPersistentListener(pauseBtn.onClick, new UnityAction(uiManagerComp.OnPauseButtonClicked));
 
                 CreateText("PauseTitleText", pauseOverlay.transform, "GAME PAUSED", new Vector2(0, 150), 38, Color.white);
@@ -1459,7 +1462,7 @@ namespace TowerDefense.Editor
                 uiManagerSO.FindProperty("healthText").objectReferenceValue = healthText;
                 uiManagerSO.FindProperty("goldText").objectReferenceValue = goldText;
                 uiManagerSO.FindProperty("waveText").objectReferenceValue = waveText;
-                uiManagerSO.ApplyModifiedProperties();
+                AssignHUDGraphicPrefabs(uiManagerSO);
 
                 uiManagerComp.LevelDataToPlay = levelData;
                 uiManagerComp.Levels = allLevels;
@@ -1665,6 +1668,20 @@ namespace TowerDefense.Editor
                 AssetDatabase.CreateAsset(data, path);
             }
             return data;
+        }
+
+        private static void AssignHUDGraphicPrefabs(SerializedObject uiManagerSO)
+        {
+            GameObject goldP = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/gold.prefab");
+            GameObject healthP = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/health.prefab");
+            GameObject pauseP = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/pause.prefab");
+            Sprite waveS = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Palettes/bound.png");
+
+            uiManagerSO.FindProperty("goldPrefab").objectReferenceValue = goldP;
+            uiManagerSO.FindProperty("healthPrefab").objectReferenceValue = healthP;
+            uiManagerSO.FindProperty("pausePrefab").objectReferenceValue = pauseP;
+            uiManagerSO.FindProperty("waveSprite").objectReferenceValue = waveS;
+            uiManagerSO.ApplyModifiedProperties();
         }
     }
 }
