@@ -10,7 +10,10 @@ namespace TowerDefense.Data
         Armor
     }
 
-    [CreateAssetMenu(fileName = "EnemyData", menuName = "Tower Defense/Enemy Data")]
+    [CreateAssetMenu(
+        fileName = "EnemyData",
+        menuName = "Tower Defense/Enemy Data"
+    )]
     public class EnemyData : ScriptableObject
     {
         [Header("Enemy Type")]
@@ -19,75 +22,172 @@ namespace TowerDefense.Data
         [Header("Reward")]
         public int goldReward = 10;
 
-        // Legacy compatibility getters (force compile/runtime safety)
-        public string EnemyName => enemyType.ToString() + " Enemy";
-        public float MoveSpeed => GetBaseSpeed();
-        public int MaxHealth => GetBaseHealth();
-        public int GoldReward => goldReward;
-        public int DamageToBase => GetBaseAttack();
+        // =========================================================
+        // PUBLIC PROPERTIES
+        // =========================================================
+
+        public string EnemyName
+        {
+            get
+            {
+                return enemyType.ToString() + " Enemy";
+            }
+        }
+
+        public float MoveSpeed
+        {
+            get
+            {
+                return GetBaseSpeedValue();
+            }
+        }
+
+        public int MaxHealth
+        {
+            get
+            {
+                return GetBaseHealthValue();
+            }
+        }
+
+        public int GoldReward
+        {
+            get
+            {
+                return goldReward;
+            }
+        }
+
+        public int DamageToBase
+        {
+            get
+            {
+                return GetBaseAttackValue();
+            }
+        }
+
+        // =========================================================
+        // BASE HEALTH
+        // =========================================================
+
+        public int GetBaseHealthValue()
+        {
+            switch (enemyType)
+            {
+                case EnemyType.Fast:
+                    return 20;
+
+                case EnemyType.Tank:
+                    return 80;
+
+                case EnemyType.Armor:
+                    return 20;
+
+                case EnemyType.Basic:
+                default:
+                    return 40;
+            }
+        }
+
+        // =========================================================
+        // BASE SPEED
+        // =========================================================
+
+        public float GetBaseSpeedValue()
+        {
+            switch (enemyType)
+            {
+                case EnemyType.Fast:
+                    return 3f;
+
+                case EnemyType.Tank:
+                    return 0.75f;
+
+                case EnemyType.Armor:
+                    return 1.125f;
+
+                case EnemyType.Basic:
+                default:
+                    return 1.5f;
+            }
+        }
+
+        // =========================================================
+        // BASE ATTACK
+        // =========================================================
+
+        public int GetBaseAttackValue()
+        {
+            switch (enemyType)
+            {
+                case EnemyType.Fast:
+                    return 1;
+
+                case EnemyType.Tank:
+                    return 6;
+
+                case EnemyType.Armor:
+                    return 4;
+
+                case EnemyType.Basic:
+                default:
+                    return 2;
+            }
+        }
+
+        // =========================================================
+        // BASE ARMOR
+        // =========================================================
+
+        public int GetBaseArmorValue()
+        {
+            return enemyType == EnemyType.Armor ? 1 : 0;
+        }
+
+        // =========================================================
+        // DIFFICULTY HP
+        // =========================================================
+
+        public int GetHealthWithMultiplier(float multiplier)
+        {
+            return Mathf.RoundToInt(
+                GetBaseHealthValue() * multiplier
+            );
+        }
+
+        // =========================================================
+        // DIFFICULTY SPEED
+        // =========================================================
+
+        public float GetSpeedWithMultiplier(float multiplier)
+        {
+            return GetBaseSpeedValue() * multiplier;
+        }
+
+        // =========================================================
+        // OLD COMPATIBILITY METHODS
+        // =========================================================
 
         public int GetHealth(int difficulty)
         {
-            return Mathf.RoundToInt(GetBaseHealth() * difficulty);
+            return Mathf.RoundToInt(
+                GetBaseHealthValue() * difficulty
+            );
         }
 
         public int GetAttack(int difficulty)
         {
-            return Mathf.RoundToInt(GetBaseAttack() * difficulty);
+            return GetBaseAttackValue();
         }
 
         public int GetArmor(int difficulty)
         {
-            float armor = GetBaseArmor() * Mathf.Pow(1.25f, difficulty - 1);
-            return Mathf.FloorToInt(armor);
+            return GetBaseArmorValue();
         }
 
         public float GetSpeed(int difficulty)
         {
-            float speed = GetBaseSpeed() * Mathf.Pow(1.15f, difficulty - 1);
-
-            return Mathf.Clamp(speed, 0.5f, 3.5f);
-        }
-
-        float GetBaseSpeed()
-        {
-            switch (enemyType)
-            {
-                case EnemyType.Fast: return 3f;
-                case EnemyType.Tank: return 0.75f;
-                case EnemyType.Armor: return 1.125f;
-                default: return 1.5f;
-            }
-        }
-
-        int GetBaseHealth()
-        {
-            // Base stats: Basic = 40, multiplied by type factors
-            switch (enemyType)
-            {
-                case EnemyType.Fast: return 20;      // 40 * 0.5
-                case EnemyType.Tank: return 80;      // 40 * 2
-                case EnemyType.Armor: return 20;     // 40 * 0.5
-                default: return 40;                  // Basic
-            }
-        }
-
-        int GetBaseAttack()
-        {
-            // Base stats: Basic = 2, multiplied by type factors
-            switch (enemyType)
-            {
-                case EnemyType.Fast: return 1;       // 2 * 0.5
-                case EnemyType.Tank: return 6;       // 2 * 3
-                case EnemyType.Armor: return 4;      // 2 * 2
-                default: return 2;                   // Basic
-            }
-        }
-
-        int GetBaseArmor()
-        {
-            // Only Armor type has base armor
-            return enemyType == EnemyType.Armor ? 1 : 0;
+            return GetBaseSpeedValue() * difficulty;
         }
     }
 }

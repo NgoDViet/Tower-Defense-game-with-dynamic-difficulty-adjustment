@@ -233,12 +233,16 @@ namespace TowerDefense.Core
                         movement.Initialize(group.enemyData, waypointPath);
                     }
 
-                    EnemyHealth health = enemy.GetComponent<EnemyHealth>();
-                    if (health != null)
-                    {
-                        health.Initialize(group.enemyData);
-                    }
+                  EnemyHealth health = enemy.GetComponent<EnemyHealth>();
 
+                  if (health != null)
+                    {
+                       health.Initialize(
+                       group.enemyData,
+                       DifficultyManager.HealthMultiplier,
+                       DifficultyManager.SpeedMultiplier
+                          );
+                    }
                     // Fire spawned event (tells GameManager to increase active enemy count)
                     EventBus<EnemySpawnedEvent>.Raise(new EnemySpawnedEvent(enemy));
                 }

@@ -9,10 +9,22 @@ namespace TowerDefense.UI
 {
     /// <summary>
     /// Coordinates all UI panels and text overlays.
-    /// Listens to game state and player stat events via the EventBus to update UI dynamically.
+    /// Handles:
+    /// Main Menu
+    /// Difficulty Selection
+    /// Level Selection
+    /// Gameplay HUD
+    /// Pause
+    /// Victory
+    /// Defeat
+    /// Tower / Enemy information
     /// </summary>
     public class UIManager : MonoBehaviour
     {
+        // =========================================================
+        // UI PANELS
+        // =========================================================
+
         [Header("UI Panels")]
         [SerializeField] private GameObject mainMenuPanel;
         [SerializeField] private GameObject gameplayHUDPanel;
@@ -20,382 +32,1408 @@ namespace TowerDefense.UI
         [SerializeField] private GameObject victoryOverlayPanel;
         [SerializeField] private GameObject defeatOverlayPanel;
 
+        // =========================================================
+        // HUD
+        // =========================================================
+
         [Header("HUD Text Elements")]
         [SerializeField] private TextMeshProUGUI healthText;
         [SerializeField] private TextMeshProUGUI goldText;
         [SerializeField] private TextMeshProUGUI waveText;
 
-        [Header("Level Data (For Main Menu Play Button)")]
+        // =========================================================
+        // LEVEL DATA
+        // =========================================================
+
+        [Header("Level Data")]
         [SerializeField] private LevelData levelDataToPlay;
 
         [Header("Level Selection")]
-        [SerializeField] private System.Collections.Generic.List<LevelData> levels = new System.Collections.Generic.List<LevelData>();
+        [SerializeField]
+        private List<LevelData> levels =
+            new List<LevelData>();
 
-        // Properties for editor setup bypass
-        public LevelData LevelDataToPlay { get => levelDataToPlay; set => levelDataToPlay = value; }
-        public System.Collections.Generic.List<LevelData> Levels { get => levels; set => levels = value; }
+        // =========================================================
+        // EDITOR PROPERTIES
+        // =========================================================
 
+        public LevelData LevelDataToPlay
+        {
+            get => levelDataToPlay;
+            set => levelDataToPlay = value;
+        }
+
+        public List<LevelData> Levels
+        {
+            get => levels;
+            set => levels = value;
+        }
+
+        // =========================================================
+        // GENERATED UI
+        // =========================================================
+
+        private GameObject _difficultySelectionPanel;
         private GameObject _levelSelectionPanel;
 
-        // Selection system fields
+        // =========================================================
+        // SELECTED OBJECTS
+        // =========================================================
+
         private TowerDefense.Tower.TowerController _selectedTower;
         private TowerDefense.Enemy.EnemyHealth _selectedEnemy;
+
         private GameObject _infoPanel;
         private TextMeshProUGUI _infoTitleText;
         private TextMeshProUGUI _infoStatsText;
+
         private GameObject _lvlUpBtnGO;
         private Button _lvlUpBtn;
         private TextMeshProUGUI _lvlUpBtnText;
 
+        // =========================================================
+        // UNITY EVENTS
+        // =========================================================
+
         private void OnEnable()
         {
-            // Subscribe to state and stat events
-            EventBus<GameStateChangedEvent>.Subscribe(OnGameStateChanged);
-            EventBus<BaseHealthChangedEvent>.Subscribe(OnBaseHealthChanged);
-            EventBus<GoldChangedEvent>.Subscribe(OnGoldChanged);
-            EventBus<WaveStartedEvent>.Subscribe(OnWaveStarted);
+            EventBus<GameStateChangedEvent>.Subscribe(
+                OnGameStateChanged
+            );
+
+            EventBus<BaseHealthChangedEvent>.Subscribe(
+                OnBaseHealthChanged
+            );
+
+            EventBus<GoldChangedEvent>.Subscribe(
+                OnGoldChanged
+            );
+
+            EventBus<WaveStartedEvent>.Subscribe(
+                OnWaveStarted
+            );
         }
 
         private void OnDisable()
         {
-            // Unsubscribe to avoid memory leaks
-            EventBus<GameStateChangedEvent>.Unsubscribe(OnGameStateChanged);
-            EventBus<BaseHealthChangedEvent>.Unsubscribe(OnBaseHealthChanged);
-            EventBus<GoldChangedEvent>.Unsubscribe(OnGoldChanged);
-            EventBus<WaveStartedEvent>.Unsubscribe(OnWaveStarted);
+            EventBus<GameStateChangedEvent>.Unsubscribe(
+                OnGameStateChanged
+            );
+
+            EventBus<BaseHealthChangedEvent>.Unsubscribe(
+                OnBaseHealthChanged
+            );
+
+            EventBus<GoldChangedEvent>.Unsubscribe(
+                OnGoldChanged
+            );
+
+            EventBus<WaveStartedEvent>.Unsubscribe(
+                OnWaveStarted
+            );
         }
 
         private void Start()
         {
             if (levels == null)
             {
-                levels = new System.Collections.Generic.List<LevelData>();
+                levels = new List<LevelData>();
             }
-            if (levels.Count == 0 && levelDataToPlay != null)
+
+            if (levels.Count == 0 &&
+                levelDataToPlay != null)
             {
                 levels.Add(levelDataToPlay);
             }
 
-            // Set initial UI state based on GameManager
             if (GameManager.Instance != null)
             {
-                UpdatePanelVisibility(GameManager.Instance.CurrentState);
+                UpdatePanelVisibility(
+                    GameManager.Instance.CurrentState
+                );
             }
             else
             {
-                // Fallback UI initialization
-                UpdatePanelVisibility(GameManager.GameState.MainMenu);
+                UpdatePanelVisibility(
+                    GameManager.GameState.MainMenu
+                );
             }
         }
 
-        /// <summary>
-        /// Updates the visibility of overlay panels depending on the active game state.
-        /// </summary>
-        private void UpdatePanelVisibility(GameManager.GameState state)
-        {
-            // Disable all panels first
-            if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-            if (gameplayHUDPanel != null) gameplayHUDPanel.SetActive(false);
-            if (pauseOverlayPanel != null) pauseOverlayPanel.SetActive(false);
-            if (victoryOverlayPanel != null) victoryOverlayPanel.SetActive(false);
-            if (defeatOverlayPanel != null) defeatOverlayPanel.SetActive(false);
+        // =========================================================
+        // GAME STATE UI
+        // =========================================================
 
-            // Enable matching panels
+        private void UpdatePanelVisibility(
+            GameManager.GameState state)
+        {
+            if (mainMenuPanel != null)
+                mainMenuPanel.SetActive(false);
+
+            if (gameplayHUDPanel != null)
+                gameplayHUDPanel.SetActive(false);
+
+            if (pauseOverlayPanel != null)
+                pauseOverlayPanel.SetActive(false);
+
+            if (victoryOverlayPanel != null)
+                victoryOverlayPanel.SetActive(false);
+
+            if (defeatOverlayPanel != null)
+                defeatOverlayPanel.SetActive(false);
+
             switch (state)
             {
                 case GameManager.GameState.MainMenu:
-                    if (mainMenuPanel != null) mainMenuPanel.SetActive(true);
+
+                    if (mainMenuPanel != null)
+                        mainMenuPanel.SetActive(true);
+
                     break;
+
                 case GameManager.GameState.Playing:
-                    if (gameplayHUDPanel != null) gameplayHUDPanel.SetActive(true);
+
+                    if (gameplayHUDPanel != null)
+                        gameplayHUDPanel.SetActive(true);
+
                     break;
+
                 case GameManager.GameState.Pause:
-                    if (gameplayHUDPanel != null) gameplayHUDPanel.SetActive(true);
-                    if (pauseOverlayPanel != null) pauseOverlayPanel.SetActive(true);
+
+                    if (gameplayHUDPanel != null)
+                        gameplayHUDPanel.SetActive(true);
+
+                    if (pauseOverlayPanel != null)
+                        pauseOverlayPanel.SetActive(true);
+
                     break;
+
                 case GameManager.GameState.Victory:
-                    if (victoryOverlayPanel != null) victoryOverlayPanel.SetActive(true);
+
+                    if (victoryOverlayPanel != null)
+                        victoryOverlayPanel.SetActive(true);
+
                     break;
+
                 case GameManager.GameState.Defeat:
-                    if (defeatOverlayPanel != null) defeatOverlayPanel.SetActive(true);
+
+                    if (defeatOverlayPanel != null)
+                        defeatOverlayPanel.SetActive(true);
+
                     break;
             }
         }
 
-        #region Event Subscriptions
+        // =========================================================
+        // EVENT BUS
+        // =========================================================
 
-        private void OnGameStateChanged(GameStateChangedEvent evt)
+        private void OnGameStateChanged(
+            GameStateChangedEvent evt)
         {
             UpdatePanelVisibility(evt.NewState);
         }
 
-        private void OnBaseHealthChanged(BaseHealthChangedEvent evt)
+        private void OnBaseHealthChanged(
+            BaseHealthChangedEvent evt)
         {
             if (healthText != null)
             {
-                healthText.text = $"HP: {evt.CurrentHealth}/{evt.MaxHealth}";
+                healthText.text =
+                    $"HP: {evt.CurrentHealth}/{evt.MaxHealth}";
             }
         }
 
-        private void OnGoldChanged(GoldChangedEvent evt)
+        private void OnGoldChanged(
+            GoldChangedEvent evt)
         {
             if (goldText != null)
             {
-                goldText.text = $"Gold: {evt.CurrentGold}";
+                goldText.text =
+                    $"Gold: {evt.CurrentGold}";
             }
+
             UpdateSelectedStatsDisplay();
         }
 
-        private void OnWaveStarted(WaveStartedEvent evt)
+        private void OnWaveStarted(
+            WaveStartedEvent evt)
         {
             if (waveText != null)
             {
-                waveText.text = $"Wave: {evt.WaveIndex + 1}/{evt.TotalWaves}";
+                waveText.text =
+                    $"Wave: {evt.WaveIndex + 1}/{evt.TotalWaves}";
             }
         }
 
-        #endregion
+        // =========================================================
+        // PLAY BUTTON
+        // =========================================================
 
-        #region Public UI Button Callbacks
-
-        /// <summary>
-        /// Starts the game level. Linked to the Main Menu Play button.
-        /// </summary>
         public void OnPlayButtonClicked()
         {
+            Debug.Log(
+                "[UIManager] PLAY GAME clicked."
+            );
+
+            EnsureDifficultySelectionUI();
+
+            if (_difficultySelectionPanel == null)
+            {
+                Debug.LogError(
+                    "[UIManager] Difficulty Selection Panel could not be created."
+                );
+
+                return;
+            }
+
+            // Hide main menu
+            if (mainMenuPanel != null)
+            {
+                mainMenuPanel.SetActive(false);
+            }
+
+            // Hide level selection
+            if (_levelSelectionPanel != null)
+            {
+                _levelSelectionPanel.SetActive(false);
+            }
+
+            // Show difficulty selection
+            _difficultySelectionPanel.SetActive(true);
+
+            Debug.Log(
+                "[UIManager] Difficulty Selection opened."
+            );
+        }
+
+        // =========================================================
+        // DIFFICULTY SELECTION
+        // =========================================================
+
+        private void EnsureDifficultySelectionUI()
+        {
+            if (_difficultySelectionPanel != null)
+                return;
+
+            Transform parent =
+                mainMenuPanel != null
+                ? mainMenuPanel.transform.parent
+                : transform;
+
+            _difficultySelectionPanel =
+                new GameObject(
+                    "DifficultySelectionPanel",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image)
+                );
+
+            _difficultySelectionPanel.transform.SetParent(
+                parent,
+                false
+            );
+
+            RectTransform panelRect =
+                _difficultySelectionPanel
+                    .GetComponent<RectTransform>();
+
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.offsetMin = Vector2.zero;
+            panelRect.offsetMax = Vector2.zero;
+
+            Image panelImage =
+                _difficultySelectionPanel
+                    .GetComponent<Image>();
+
+            panelImage.color =
+                new Color(
+                    0.05f,
+                    0.05f,
+                    0.08f,
+                    0.98f
+                );
+
+            // -----------------------------------------------------
+            // TITLE
+            // -----------------------------------------------------
+
+            CreateText(
+                _difficultySelectionPanel.transform,
+                "DifficultyTitle",
+                "SELECT DIFFICULTY",
+                46,
+                FontStyles.Bold,
+                Color.white,
+                new Vector2(0.5f, 0.85f),
+                new Vector2(0.5f, 0.85f),
+                new Vector2(700f, 100f)
+            );
+
+            // -----------------------------------------------------
+            // DESCRIPTION
+            // -----------------------------------------------------
+
+            CreateText(
+                _difficultySelectionPanel.transform,
+                "DifficultyDescription",
+                "Choose your challenge",
+                22,
+                FontStyles.Normal,
+                new Color(
+                    0.75f,
+                    0.75f,
+                    0.8f
+                ),
+                new Vector2(0.5f, 0.76f),
+                new Vector2(0.5f, 0.76f),
+                new Vector2(600f, 60f)
+            );
+
+            // -----------------------------------------------------
+            // BUTTON CONTAINER
+            // -----------------------------------------------------
+
+            GameObject container =
+                new GameObject(
+                    "DifficultyButtons",
+                    typeof(RectTransform)
+                );
+
+            container.transform.SetParent(
+                _difficultySelectionPanel.transform,
+                false
+            );
+
+            RectTransform containerRect =
+                container.GetComponent<RectTransform>();
+
+            containerRect.anchorMin =
+                new Vector2(0.5f, 0.35f);
+
+            containerRect.anchorMax =
+                new Vector2(0.5f, 0.65f);
+
+            containerRect.pivot =
+                new Vector2(0.5f, 0.5f);
+
+            containerRect.anchoredPosition =
+                Vector2.zero;
+
+            containerRect.sizeDelta =
+                new Vector2(1100f, 350f);
+
+            HorizontalLayoutGroup layout =
+                container.AddComponent<
+                    HorizontalLayoutGroup
+                >();
+
+            layout.spacing = 25f;
+
+            layout.childAlignment =
+                TextAnchor.MiddleCenter;
+
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            // -----------------------------------------------------
+            // NORMAL
+            // -----------------------------------------------------
+
+            CreateDifficultyButton(
+                container.transform,
+                "NORMAL",
+                "HP ×1\nSPEED ×1",
+                DifficultyMode.Normal
+            );
+
+            // -----------------------------------------------------
+            // NORMAL+
+            // -----------------------------------------------------
+
+            CreateDifficultyButton(
+                container.transform,
+                "NORMAL+",
+                "HP ×1.5\nSPEED ×1.15",
+                DifficultyMode.NormalPlus
+            );
+
+            // -----------------------------------------------------
+            // HARD
+            // -----------------------------------------------------
+
+            CreateDifficultyButton(
+                container.transform,
+                "HARD",
+                "HP ×2.5\nSPEED ×1.3",
+                DifficultyMode.Hard
+            );
+
+            // -----------------------------------------------------
+            // HELL
+            // -----------------------------------------------------
+
+            CreateDifficultyButton(
+                container.transform,
+                "HELL",
+                "HP ×4\nSPEED ×1.5",
+                DifficultyMode.Hell
+            );
+
+            // -----------------------------------------------------
+            // BACK BUTTON
+            // -----------------------------------------------------
+
+            GameObject back =
+                CreateSimpleButton(
+                    _difficultySelectionPanel.transform,
+                    "BACK TO MENU",
+                    new Vector2(
+                        0.5f,
+                        0.12f
+                    ),
+                    new Vector2(220f, 55f)
+                );
+
+            Button backButton =
+                back.GetComponent<Button>();
+
+            backButton.onClick.AddListener(
+                OnDifficultyBackButtonClicked
+            );
+
+            _difficultySelectionPanel.SetActive(false);
+        }
+
+        private void CreateDifficultyButton(
+            Transform parent,
+            string title,
+            string description,
+            DifficultyMode difficulty)
+        {
+            GameObject buttonObject =
+                new GameObject(
+                    title + "Button",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(Button)
+                );
+
+            buttonObject.transform.SetParent(
+                parent,
+                false
+            );
+
+            LayoutElement layoutElement =
+                buttonObject.AddComponent<
+                    LayoutElement
+                >();
+
+            layoutElement.preferredWidth = 240f;
+            layoutElement.preferredHeight = 280f;
+
+            Image image =
+                buttonObject.GetComponent<Image>();
+
+            Color buttonColor =
+                new Color(
+                    0.12f,
+                    0.15f,
+                    0.22f,
+                    1f
+                );
+
+            image.color = buttonColor;
+
+            Button button =
+                buttonObject.GetComponent<Button>();
+
+            ColorBlock colors =
+                button.colors;
+
+            colors.normalColor =
+                buttonColor;
+
+            colors.highlightedColor =
+                new Color(
+                    0.2f,
+                    0.35f,
+                    0.55f,
+                    1f
+                );
+
+            colors.pressedColor =
+                new Color(
+                    0.08f,
+                    0.12f,
+                    0.18f,
+                    1f
+                );
+
+            button.colors = colors;
+
+            // Title
+            GameObject titleObject =
+                new GameObject(
+                    "Title",
+                    typeof(RectTransform)
+                );
+
+            titleObject.transform.SetParent(
+                buttonObject.transform,
+                false
+            );
+
+            TextMeshProUGUI titleText =
+                titleObject.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            titleText.text = title;
+            titleText.fontSize = 28;
+            titleText.fontStyle =
+                FontStyles.Bold;
+
+            titleText.color =
+                Color.white;
+
+            titleText.alignment =
+                TextAlignmentOptions.Center;
+
+            RectTransform titleRect =
+                titleObject.GetComponent<
+                    RectTransform
+                >();
+
+            titleRect.anchorMin =
+                new Vector2(0.05f, 0.55f);
+
+            titleRect.anchorMax =
+                new Vector2(0.95f, 0.9f);
+
+            titleRect.offsetMin = Vector2.zero;
+            titleRect.offsetMax = Vector2.zero;
+
+            // Description
+            GameObject descriptionObject =
+                new GameObject(
+                    "Description",
+                    typeof(RectTransform)
+                );
+
+            descriptionObject.transform.SetParent(
+                buttonObject.transform,
+                false
+            );
+
+            TextMeshProUGUI descriptionText =
+                descriptionObject.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            descriptionText.text =
+                description;
+
+            descriptionText.fontSize = 18;
+
+            descriptionText.color =
+                new Color(
+                    0.8f,
+                    0.8f,
+                    0.85f
+                );
+
+            descriptionText.alignment =
+                TextAlignmentOptions.Center;
+
+            RectTransform descriptionRect =
+                descriptionObject.GetComponent<
+                    RectTransform
+                >();
+
+            descriptionRect.anchorMin =
+                new Vector2(0.05f, 0.15f);
+
+            descriptionRect.anchorMax =
+                new Vector2(0.95f, 0.55f);
+
+            descriptionRect.offsetMin =
+                Vector2.zero;
+
+            descriptionRect.offsetMax =
+                Vector2.zero;
+
+            // Click
+            button.onClick.AddListener(
+                () =>
+                {
+                    SelectDifficulty(
+                        difficulty
+                    );
+                }
+            );
+        }
+
+        private void SelectDifficulty(
+            DifficultyMode difficulty)
+        {
+            DifficultyManager.SetDifficulty(
+                difficulty
+            );
+
+            Debug.Log(
+                $"[UIManager] Selected difficulty: " +
+                $"{DifficultyManager.DifficultyName}"
+            );
+
+            // Hide difficulty screen
+            if (_difficultySelectionPanel != null)
+            {
+                _difficultySelectionPanel.SetActive(false);
+            }
+
+            // Open level selection
             EnsureLevelSelectionUI();
 
-            if (_levelSelectionPanel != null && levels != null && levels.Count > 1)
+            if (_levelSelectionPanel != null)
             {
                 _levelSelectionPanel.SetActive(true);
             }
-            else
+        }
+
+        private void OnDifficultyBackButtonClicked()
+        {
+            if (_difficultySelectionPanel != null)
             {
-                if (GameManager.Instance != null && levelDataToPlay != null)
-                {
-                    GameManager.Instance.StartLevel(levelDataToPlay);
-                }
-                else
-                {
-                    string errorMsg = "[UIManager] Play button clicked, but configuration is missing:";
-                    if (GameManager.Instance == null) errorMsg += " GameManager.Instance is null!";
-                    if (levelDataToPlay == null) errorMsg += " levelDataToPlay (LevelData) is null!";
-                    Debug.LogError(errorMsg);
-                }
+                _difficultySelectionPanel.SetActive(false);
+            }
+
+            if (mainMenuPanel != null)
+            {
+                mainMenuPanel.SetActive(true);
             }
         }
 
+        // =========================================================
+        // LEVEL SELECTION
+        // =========================================================
+
         private void EnsureLevelSelectionUI()
         {
-            if (_levelSelectionPanel != null) return;
+            if (_levelSelectionPanel != null)
+                return;
 
-            if (mainMenuPanel == null) return;
+            if (mainMenuPanel == null)
+            {
+                Debug.LogError(
+                    "[UIManager] Main Menu Panel is missing!"
+                );
 
-            // Create Level Selection Panel
-            _levelSelectionPanel = new GameObject("LevelSelectionPanel", typeof(RectTransform), typeof(CanvasRenderer));
-            _levelSelectionPanel.transform.SetParent(mainMenuPanel.transform, false);
+                return;
+            }
 
-            RectTransform rect = _levelSelectionPanel.GetComponent<RectTransform>();
+            _levelSelectionPanel =
+                new GameObject(
+                    "LevelSelectionPanel",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image)
+                );
+
+            Transform parent =
+                mainMenuPanel.transform.parent;
+
+            _levelSelectionPanel.transform.SetParent(
+                parent,
+                false
+            );
+
+            RectTransform rect =
+                _levelSelectionPanel.GetComponent<
+                    RectTransform
+                >();
+
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
 
-            Image img = _levelSelectionPanel.AddComponent<Image>();
-            img.color = new Color(0.08f, 0.08f, 0.12f, 0.96f);
+            Image img =
+                _levelSelectionPanel.GetComponent<Image>();
 
-            // Title Text
-            GameObject titleGO = new GameObject("TitleText", typeof(RectTransform));
-            titleGO.transform.SetParent(_levelSelectionPanel.transform, false);
-            TextMeshProUGUI titleTxt = titleGO.AddComponent<TextMeshProUGUI>();
-            titleTxt.text = "SELECT LEVEL";
-            titleTxt.fontSize = 46;
-            titleTxt.fontStyle = FontStyles.Bold;
-            titleTxt.color = Color.white;
-            titleTxt.alignment = TextAlignmentOptions.Center;
-            titleTxt.font = TMP_Settings.defaultFontAsset;
+            img.color =
+                new Color(
+                    0.08f,
+                    0.08f,
+                    0.12f,
+                    0.98f
+                );
 
-            RectTransform titleRect = titleGO.GetComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0.5f, 0.9f);
-            titleRect.anchorMax = new Vector2(0.5f, 0.9f);
-            titleRect.pivot = new Vector2(0.5f, 0.5f);
-            titleRect.anchoredPosition = Vector2.zero;
-            titleRect.sizeDelta = new Vector2(600f, 100f);
+            // -----------------------------------------------------
+            // TITLE
+            // -----------------------------------------------------
 
-            // Container for cards
-            GameObject container = new GameObject("LevelsContainer", typeof(RectTransform));
-            container.transform.SetParent(_levelSelectionPanel.transform, false);
-            RectTransform containerRect = container.GetComponent<RectTransform>();
-            containerRect.anchorMin = new Vector2(0.1f, 0.25f);
-            containerRect.anchorMax = new Vector2(0.9f, 0.75f);
-            containerRect.offsetMin = Vector2.zero;
-            containerRect.offsetMax = Vector2.zero;
+            CreateText(
+                _levelSelectionPanel.transform,
+                "TitleText",
+                "SELECT LEVEL",
+                46,
+                FontStyles.Bold,
+                Color.white,
+                new Vector2(0.5f, 0.9f),
+                new Vector2(0.5f, 0.9f),
+                new Vector2(600f, 100f)
+            );
 
-            HorizontalLayoutGroup layout = container.AddComponent<HorizontalLayoutGroup>();
+            // -----------------------------------------------------
+            // CURRENT DIFFICULTY
+            // -----------------------------------------------------
+
+            CreateText(
+                _levelSelectionPanel.transform,
+                "SelectedDifficultyText",
+                "DIFFICULTY: " +
+                DifficultyManager.DifficultyName,
+                24,
+                FontStyles.Bold,
+                new Color(
+                    1f,
+                    0.8f,
+                    0.2f
+                ),
+                new Vector2(0.5f, 0.82f),
+                new Vector2(0.5f, 0.82f),
+                new Vector2(600f, 50f)
+            );
+
+            // -----------------------------------------------------
+            // CONTAINER
+            // -----------------------------------------------------
+
+            GameObject container =
+                new GameObject(
+                    "LevelsContainer",
+                    typeof(RectTransform)
+                );
+
+            container.transform.SetParent(
+                _levelSelectionPanel.transform,
+                false
+            );
+
+            RectTransform containerRect =
+                container.GetComponent<
+                    RectTransform
+                >();
+
+            containerRect.anchorMin =
+                new Vector2(0.1f, 0.25f);
+
+            containerRect.anchorMax =
+                new Vector2(0.9f, 0.75f);
+
+            containerRect.offsetMin =
+                Vector2.zero;
+
+            containerRect.offsetMax =
+                Vector2.zero;
+
+            HorizontalLayoutGroup layout =
+                container.AddComponent<
+                    HorizontalLayoutGroup
+                >();
+
             layout.spacing = 50f;
-            layout.childAlignment = TextAnchor.MiddleCenter;
+
+            layout.childAlignment =
+                TextAnchor.MiddleCenter;
+
             layout.childControlHeight = true;
             layout.childControlWidth = true;
+
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = false;
 
-            // Generate card for each level
-            foreach (var lvl in levels)
+            // -----------------------------------------------------
+            // LEVEL CARDS
+            // -----------------------------------------------------
+
+            foreach (LevelData lvl in levels)
             {
-                if (lvl == null) continue;
+                if (lvl == null)
+                    continue;
 
-                GameObject card = new GameObject($"Card_{lvl.LevelName}", typeof(RectTransform), typeof(CanvasRenderer));
-                card.transform.SetParent(container.transform, false);
-
-                Image cardImg = card.AddComponent<Image>();
-                cardImg.color = new Color(0.14f, 0.14f, 0.2f, 1f);
-
-                Outline cardOutline = card.AddComponent<Outline>();
-                cardOutline.effectColor = new Color(0.2f, 0.6f, 1f, 0.3f);
-                cardOutline.effectDistance = new Vector2(2f, -2f);
-
-                LayoutElement layoutElement = card.AddComponent<LayoutElement>();
-                layoutElement.preferredWidth = 320f;
-                layoutElement.preferredHeight = 420f;
-
-                VerticalLayoutGroup cardLayout = card.AddComponent<VerticalLayoutGroup>();
-                cardLayout.padding = new RectOffset(20, 20, 25, 25);
-                cardLayout.spacing = 15f;
-                cardLayout.childAlignment = TextAnchor.UpperCenter;
-                cardLayout.childControlHeight = false;
-                cardLayout.childControlWidth = true;
-
-                // Level Title
-                GameObject nameGO = new GameObject("NameText", typeof(RectTransform));
-                nameGO.transform.SetParent(card.transform, false);
-                TextMeshProUGUI nameTxt = nameGO.AddComponent<TextMeshProUGUI>();
-                nameTxt.text = lvl.LevelName.ToUpper();
-                nameTxt.fontSize = 24;
-                nameTxt.fontStyle = FontStyles.Bold;
-                nameTxt.color = Color.white;
-                nameTxt.alignment = TextAlignmentOptions.Center;
-                nameTxt.font = TMP_Settings.defaultFontAsset;
-
-                // Stats Text
-                GameObject statsGO = new GameObject("StatsText", typeof(RectTransform));
-                statsGO.transform.SetParent(card.transform, false);
-                TextMeshProUGUI statsTxt = statsGO.AddComponent<TextMeshProUGUI>();
-                statsTxt.text = $"STARTING GOLD\n<color=#FFD700>{lvl.StartingGold} G</color>\n\nBASE HP\n<color=#FF5555>{lvl.BaseMaxHealth} HP</color>\n\nTOTAL WAVES\n<color=#55FFFF>{lvl.Waves.Count}</color>";
-                statsTxt.fontSize = 18;
-                statsTxt.lineSpacing = 8f;
-                statsTxt.color = new Color(0.85f, 0.85f, 0.9f);
-                statsTxt.alignment = TextAlignmentOptions.Center;
-                statsTxt.font = TMP_Settings.defaultFontAsset;
-
-                // Spacer
-                GameObject spacer = new GameObject("Spacer", typeof(RectTransform));
-                spacer.transform.SetParent(card.transform, false);
-                LayoutElement spacerLayout = spacer.AddComponent<LayoutElement>();
-                spacerLayout.flexibleHeight = 1f;
-
-                // Play/Select Button
-                GameObject btnGO = new GameObject("PlayButton", typeof(RectTransform), typeof(CanvasRenderer));
-                btnGO.transform.SetParent(card.transform, false);
-
-                Image btnImg = btnGO.AddComponent<Image>();
-                Color btnColor = new Color(0.12f, 0.75f, 0.38f, 1f);
-                btnImg.color = btnColor;
-
-                Button playBtn = btnGO.AddComponent<Button>();
-                ColorBlock cb = playBtn.colors;
-                cb.normalColor = btnColor;
-                cb.highlightedColor = new Color(0.15f, 0.85f, 0.45f, 1f);
-                cb.pressedColor = new Color(0.08f, 0.65f, 0.3f, 1f);
-                playBtn.colors = cb;
-
-                LayoutElement btnLayout = btnGO.AddComponent<LayoutElement>();
-                btnLayout.preferredHeight = 50f;
-
-                GameObject btnTxtGO = new GameObject("Text", typeof(RectTransform));
-                btnTxtGO.transform.SetParent(btnGO.transform, false);
-                TextMeshProUGUI btnTxt = btnTxtGO.AddComponent<TextMeshProUGUI>();
-                btnTxt.text = "SELECT LEVEL";
-                btnTxt.fontSize = 18;
-                btnTxt.fontStyle = FontStyles.Bold;
-                btnTxt.color = Color.white;
-                btnTxt.alignment = TextAlignmentOptions.Center;
-                btnTxt.font = TMP_Settings.defaultFontAsset;
-
-                RectTransform btnTxtRect = btnTxtGO.GetComponent<RectTransform>();
-                btnTxtRect.anchorMin = Vector2.zero;
-                btnTxtRect.anchorMax = Vector2.one;
-                btnTxtRect.offsetMin = Vector2.zero;
-                btnTxtRect.offsetMax = Vector2.zero;
-
-                LevelData targetLvl = lvl;
-                playBtn.onClick.AddListener(() => SelectAndPlayLevel(targetLvl));
+                CreateLevelCard(
+                    container.transform,
+                    lvl
+                );
             }
 
-            // Back Button at the bottom
-            GameObject backBtnGO = new GameObject("BackButton", typeof(RectTransform), typeof(CanvasRenderer));
-            backBtnGO.transform.SetParent(_levelSelectionPanel.transform, false);
+            // -----------------------------------------------------
+            // BACK BUTTON
+            // -----------------------------------------------------
 
-            Image backBtnImg = backBtnGO.AddComponent<Image>();
-            Color backBtnColor = new Color(0.35f, 0.35f, 0.4f, 1f);
-            backBtnImg.color = backBtnColor;
+            GameObject back =
+                CreateSimpleButton(
+                    _levelSelectionPanel.transform,
+                    "BACK",
+                    new Vector2(
+                        0.5f,
+                        0.12f
+                    ),
+                    new Vector2(
+                        220f,
+                        50f
+                    )
+                );
 
-            Button backBtn = backBtnGO.AddComponent<Button>();
-            ColorBlock bcb = backBtn.colors;
-            bcb.normalColor = backBtnColor;
-            bcb.highlightedColor = new Color(0.42f, 0.42f, 0.48f, 1f);
-            bcb.pressedColor = new Color(0.25f, 0.25f, 0.3f, 1f);
-            backBtn.colors = bcb;
+            Button backButton =
+                back.GetComponent<Button>();
 
-            RectTransform backBtnRect = backBtnGO.GetComponent<RectTransform>();
-            backBtnRect.anchorMin = new Vector2(0.5f, 0.12f);
-            backBtnRect.anchorMax = new Vector2(0.5f, 0.12f);
-            backBtnRect.pivot = new Vector2(0.5f, 0.5f);
-            backBtnRect.anchoredPosition = Vector2.zero;
-            backBtnRect.sizeDelta = new Vector2(220f, 50f);
+            backButton.onClick.AddListener(
+                () =>
+                {
+                    _levelSelectionPanel.SetActive(false);
 
-            GameObject backTxtGO = new GameObject("Text", typeof(RectTransform));
-            backTxtGO.transform.SetParent(backBtnGO.transform, false);
-            TextMeshProUGUI backTxt = backTxtGO.AddComponent<TextMeshProUGUI>();
-            backTxt.text = "BACK TO MENU";
-            backTxt.fontSize = 18;
-            backTxt.fontStyle = FontStyles.Bold;
-            backTxt.color = Color.white;
-            backTxt.alignment = TextAlignmentOptions.Center;
-            backTxt.font = TMP_Settings.defaultFontAsset;
+                    EnsureDifficultySelectionUI();
 
-            RectTransform backTxtRect = backTxtGO.GetComponent<RectTransform>();
-            backTxtRect.anchorMin = Vector2.zero;
-            backTxtRect.anchorMax = Vector2.one;
-            backTxtRect.offsetMin = Vector2.zero;
-            backTxtRect.offsetMax = Vector2.zero;
-
-            backBtn.onClick.AddListener(() => {
-                _levelSelectionPanel.SetActive(false);
-            });
+                    _difficultySelectionPanel.SetActive(true);
+                }
+            );
 
             _levelSelectionPanel.SetActive(false);
         }
 
-        private void SelectAndPlayLevel(LevelData levelData)
+        private void CreateLevelCard(
+            Transform parent,
+            LevelData lvl)
         {
+            GameObject card =
+                new GameObject(
+                    $"Card_{lvl.LevelName}",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image)
+                );
+
+            card.transform.SetParent(
+                parent,
+                false
+            );
+
+            Image cardImage =
+                card.GetComponent<Image>();
+
+            cardImage.color =
+                new Color(
+                    0.14f,
+                    0.14f,
+                    0.2f,
+                    1f
+                );
+
+            LayoutElement element =
+                card.AddComponent<
+                    LayoutElement
+                >();
+
+            element.preferredWidth = 320f;
+            element.preferredHeight = 420f;
+
+            VerticalLayoutGroup layout =
+                card.AddComponent<
+                    VerticalLayoutGroup
+                >();
+
+            layout.padding =
+                new RectOffset(
+                    20,
+                    20,
+                    25,
+                    25
+                );
+
+            layout.spacing = 15f;
+
+            layout.childAlignment =
+                TextAnchor.UpperCenter;
+
+            layout.childControlHeight = false;
+            layout.childControlWidth = true;
+
+            // Level Name
+            GameObject nameObject =
+                new GameObject(
+                    "NameText",
+                    typeof(RectTransform)
+                );
+
+            nameObject.transform.SetParent(
+                card.transform,
+                false
+            );
+
+            TextMeshProUGUI nameText =
+                nameObject.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            nameText.text =
+                lvl.LevelName.ToUpper();
+
+            nameText.fontSize = 24;
+            nameText.fontStyle =
+                FontStyles.Bold;
+
+            nameText.color =
+                Color.white;
+
+            nameText.alignment =
+                TextAlignmentOptions.Center;
+
+            // Stats
+            GameObject statsObject =
+                new GameObject(
+                    "StatsText",
+                    typeof(RectTransform)
+                );
+
+            statsObject.transform.SetParent(
+                card.transform,
+                false
+            );
+
+            TextMeshProUGUI statsText =
+                statsObject.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            statsText.text =
+                $"STARTING GOLD\n" +
+                $"<color=#FFD700>{lvl.StartingGold} G</color>\n\n" +
+                $"BASE HP\n" +
+                $"<color=#FF5555>{lvl.BaseMaxHealth} HP</color>\n\n" +
+                $"TOTAL WAVES\n" +
+                $"<color=#55FFFF>{lvl.Waves.Count}</color>";
+
+            statsText.fontSize = 18;
+            statsText.lineSpacing = 8f;
+
+            statsText.color =
+                new Color(
+                    0.85f,
+                    0.85f,
+                    0.9f
+                );
+
+            statsText.alignment =
+                TextAlignmentOptions.Center;
+
+            // Spacer
+            GameObject spacer =
+                new GameObject(
+                    "Spacer",
+                    typeof(RectTransform)
+                );
+
+            spacer.transform.SetParent(
+                card.transform,
+                false
+            );
+
+            LayoutElement spacerElement =
+                spacer.AddComponent<
+                    LayoutElement
+                >();
+
+            spacerElement.flexibleHeight = 1f;
+
+            // Select Button
+            GameObject buttonObject =
+                new GameObject(
+                    "PlayButton",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(Button)
+                );
+
+            buttonObject.transform.SetParent(
+                card.transform,
+                false
+            );
+
+            Image buttonImage =
+                buttonObject.GetComponent<Image>();
+
+            Color buttonColor =
+                new Color(
+                    0.12f,
+                    0.75f,
+                    0.38f,
+                    1f
+                );
+
+            buttonImage.color =
+                buttonColor;
+
+            Button button =
+                buttonObject.GetComponent<Button>();
+
+            ColorBlock colors =
+                button.colors;
+
+            colors.normalColor =
+                buttonColor;
+
+            colors.highlightedColor =
+                new Color(
+                    0.15f,
+                    0.85f,
+                    0.45f,
+                    1f
+                );
+
+            colors.pressedColor =
+                new Color(
+                    0.08f,
+                    0.65f,
+                    0.3f,
+                    1f
+                );
+
+            button.colors = colors;
+
+            LayoutElement buttonElement =
+                buttonObject.AddComponent<
+                    LayoutElement
+                >();
+
+            buttonElement.preferredHeight = 50f;
+
+            GameObject buttonTextObject =
+                new GameObject(
+                    "Text",
+                    typeof(RectTransform)
+                );
+
+            buttonTextObject.transform.SetParent(
+                buttonObject.transform,
+                false
+            );
+
+            TextMeshProUGUI buttonText =
+                buttonTextObject.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            buttonText.text =
+                "SELECT LEVEL";
+
+            buttonText.fontSize = 18;
+
+            buttonText.fontStyle =
+                FontStyles.Bold;
+
+            buttonText.color =
+                Color.white;
+
+            buttonText.alignment =
+                TextAlignmentOptions.Center;
+
+            RectTransform textRect =
+                buttonTextObject.GetComponent<
+                    RectTransform
+                >();
+
+            textRect.anchorMin =
+                Vector2.zero;
+
+            textRect.anchorMax =
+                Vector2.one;
+
+            textRect.offsetMin =
+                Vector2.zero;
+
+            textRect.offsetMax =
+                Vector2.zero;
+
+            LevelData targetLevel =
+                lvl;
+
+            button.onClick.AddListener(
+                () =>
+                {
+                    SelectAndPlayLevel(
+                        targetLevel
+                    );
+                }
+            );
+        }
+
+        // =========================================================
+        // START LEVEL
+        // =========================================================
+
+        private void SelectAndPlayLevel(
+            LevelData levelData)
+        {
+            if (levelData == null)
+            {
+                Debug.LogError(
+                    "[UIManager] Selected LevelData is NULL!"
+                );
+
+                return;
+            }
+
+            Debug.Log(
+                $"[UIManager] Starting level: " +
+                $"{levelData.LevelName}"
+            );
+
+            Debug.Log(
+                $"[UIManager] Difficulty: " +
+                $"{DifficultyManager.DifficultyName}"
+            );
+
+            Debug.Log(
+                $"[UIManager] HP multiplier: " +
+                $"x{DifficultyManager.HealthMultiplier}"
+            );
+
+            Debug.Log(
+                $"[UIManager] Speed multiplier: " +
+                $"x{DifficultyManager.SpeedMultiplier}"
+            );
+
+            if (_difficultySelectionPanel != null)
+            {
+                _difficultySelectionPanel.SetActive(false);
+            }
+
             if (_levelSelectionPanel != null)
             {
                 _levelSelectionPanel.SetActive(false);
             }
+
+            Time.timeScale = 1f;
+
             if (GameManager.Instance != null)
             {
-                GameManager.Instance.StartLevel(levelData);
+                GameManager.Instance.StartLevel(
+                    levelData
+                );
             }
             else
             {
-                Time.timeScale = 1f;
-                UnityEngine.SceneManagement.SceneManager.LoadScene(levelData.LevelName);
+                UnityEngine.SceneManagement.SceneManager
+                    .LoadScene(levelData.LevelName);
             }
         }
 
-        /// <summary>
-        /// Resumes gameplay from Pause state. Linked to the Resume button.
-        /// </summary>
+        // =========================================================
+        // SIMPLE BUTTON CREATOR
+        // =========================================================
+
+        private GameObject CreateSimpleButton(
+            Transform parent,
+            string text,
+            Vector2 anchor,
+            Vector2 size)
+        {
+            GameObject buttonObject =
+                new GameObject(
+                    text.Replace(" ", "") + "Button",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(Button)
+                );
+
+            buttonObject.transform.SetParent(
+                parent,
+                false
+            );
+
+            RectTransform rect =
+                buttonObject.GetComponent<
+                    RectTransform
+                >();
+
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f
+                );
+
+            rect.anchoredPosition =
+                Vector2.zero;
+
+            rect.sizeDelta = size;
+
+            Image image =
+                buttonObject.GetComponent<Image>();
+
+            image.color =
+                new Color(
+                    0.35f,
+                    0.35f,
+                    0.4f,
+                    1f
+                );
+
+            Button button =
+                buttonObject.GetComponent<Button>();
+
+            ColorBlock colors =
+                button.colors;
+
+            colors.normalColor =
+                new Color(
+                    0.35f,
+                    0.35f,
+                    0.4f,
+                    1f
+                );
+
+            colors.highlightedColor =
+                new Color(
+                    0.45f,
+                    0.45f,
+                    0.5f,
+                    1f
+                );
+
+            colors.pressedColor =
+                new Color(
+                    0.25f,
+                    0.25f,
+                    0.3f,
+                    1f
+                );
+
+            button.colors = colors;
+
+            GameObject textObject =
+                new GameObject(
+                    "Text",
+                    typeof(RectTransform)
+                );
+
+            textObject.transform.SetParent(
+                buttonObject.transform,
+                false
+            );
+
+            TextMeshProUGUI tmp =
+                textObject.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            tmp.text = text;
+            tmp.fontSize = 18;
+            tmp.fontStyle =
+                FontStyles.Bold;
+
+            tmp.color =
+                Color.white;
+
+            tmp.alignment =
+                TextAlignmentOptions.Center;
+
+            RectTransform textRect =
+                textObject.GetComponent<
+                    RectTransform
+                >();
+
+            textRect.anchorMin =
+                Vector2.zero;
+
+            textRect.anchorMax =
+                Vector2.one;
+
+            textRect.offsetMin =
+                Vector2.zero;
+
+            textRect.offsetMax =
+                Vector2.zero;
+
+            return buttonObject;
+        }
+
+        // =========================================================
+        // TEXT CREATOR
+        // =========================================================
+
+        private TextMeshProUGUI CreateText(
+            Transform parent,
+            string objectName,
+            string text,
+            float fontSize,
+            FontStyles fontStyle,
+            Color color,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 size)
+        {
+            GameObject textObject =
+                new GameObject(
+                    objectName,
+                    typeof(RectTransform)
+                );
+
+            textObject.transform.SetParent(
+                parent,
+                false
+            );
+
+            TextMeshProUGUI tmp =
+                textObject.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            tmp.text = text;
+            tmp.fontSize = fontSize;
+            tmp.fontStyle = fontStyle;
+            tmp.color = color;
+
+            tmp.alignment =
+                TextAlignmentOptions.Center;
+
+            RectTransform rect =
+                textObject.GetComponent<
+                    RectTransform
+                >();
+
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+
+            rect.pivot =
+                new Vector2(
+                    0.5f,
+                    0.5f
+                );
+
+            rect.anchoredPosition =
+                Vector2.zero;
+
+            rect.sizeDelta = size;
+
+            return tmp;
+        }
+
+        // =========================================================
+        // GAMEPLAY BUTTONS
+        // =========================================================
+
         public void OnResumeButtonClicked()
         {
             if (GameManager.Instance != null)
@@ -404,9 +1442,6 @@ namespace TowerDefense.UI
             }
         }
 
-        /// <summary>
-        /// Pauses the game. Linked to the HUD Pause button.
-        /// </summary>
         public void OnPauseButtonClicked()
         {
             if (GameManager.Instance != null)
@@ -415,9 +1450,6 @@ namespace TowerDefense.UI
             }
         }
 
-        /// <summary>
-        /// Restarts the active level. Linked to the Victory/Defeat/Pause Restart button.
-        /// </summary>
         public void OnRestartButtonClicked()
         {
             if (GameManager.Instance != null)
@@ -426,52 +1458,58 @@ namespace TowerDefense.UI
             }
         }
 
-        /// <summary>
-        /// Returns to Main Menu state. Linked to the Return button.
-        /// </summary>
         public void OnReturnToMainMenuButtonClicked()
         {
             Time.timeScale = 1f;
-            UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
+
+            UnityEngine.SceneManagement.SceneManager
+                .LoadScene("MainMenu");
         }
 
-        /// <summary>
-        /// Quits the application. Linked to the Exit button.
-        /// </summary>
         public void OnQuitButtonClicked()
         {
-            Debug.Log("[UIManager] Quitting Game...");
+            Debug.Log(
+                "[UIManager] Quitting Game..."
+            );
+
             Application.Quit();
         }
 
-        #endregion
-
-        #region Stats Info Panel System
+        // =========================================================
+        // UPDATE
+        // =========================================================
 
         private void Update()
         {
-            if (GameManager.Instance == null || GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+            if (GameManager.Instance == null ||
+                GameManager.Instance.CurrentState !=
+                GameManager.GameState.Playing)
             {
-                if (_infoPanel != null && _infoPanel.activeSelf)
+                if (_infoPanel != null &&
+                    _infoPanel.activeSelf)
                 {
                     _infoPanel.SetActive(false);
                 }
+
                 return;
             }
 
-            // Update live stats of selected target if valid
             UpdateSelectedStatsDisplay();
 
-            // Left click triggers selection overlap point check
             bool leftClick = false;
-            Vector2 mouseScreenPos = Vector2.zero;
+            Vector2 mouseScreenPos =
+                Vector2.zero;
 
             if (UnityEngine.InputSystem.Mouse.current != null)
             {
-                if (UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
+                if (UnityEngine.InputSystem.Mouse.current
+                    .leftButton.wasPressedThisFrame)
                 {
                     leftClick = true;
-                    mouseScreenPos = UnityEngine.InputSystem.Mouse.current.position.ReadValue();
+
+                    mouseScreenPos =
+                        UnityEngine.InputSystem.Mouse.current
+                        .position.ReadValue();
                 }
             }
             else
@@ -479,81 +1517,135 @@ namespace TowerDefense.UI
                 if (Input.GetMouseButtonDown(0))
                 {
                     leftClick = true;
-                    mouseScreenPos = Input.mousePosition;
+                    mouseScreenPos =
+                        Input.mousePosition;
                 }
             }
 
-            if (leftClick)
+            if (!leftClick)
+                return;
+
+            if (IsPointerOverInteractiveUI(
+                mouseScreenPos))
             {
-                // Check if clicking on interactive UI
-                if (IsPointerOverInteractiveUI(mouseScreenPos))
+                return;
+            }
+
+            if (Camera.main == null)
+                return;
+
+            Vector3 worldPos =
+                Camera.main.ScreenToWorldPoint(
+                    new Vector3(
+                        mouseScreenPos.x,
+                        mouseScreenPos.y,
+                        Camera.main.nearClipPlane
+                    )
+                );
+
+            Vector2 worldPos2D =
+                new Vector2(
+                    worldPos.x,
+                    worldPos.y
+                );
+
+            Collider2D[] hits =
+                Physics2D.OverlapCircleAll(
+                    worldPos2D,
+                    0.6f
+                );
+
+            Collider2D closestHit = null;
+
+            float closestDist =
+                float.MaxValue;
+
+            TowerDefense.Tower.TowerController
+                targetTower = null;
+
+            TowerDefense.Enemy.EnemyHealth
+                targetEnemy = null;
+
+            foreach (var hit in hits)
+            {
+                if (hit == null)
+                    continue;
+
+                TowerDefense.Tower.TowerController
+                    tower =
+                    hit.GetComponent<
+                        TowerDefense.Tower.TowerController
+                    >();
+
+                TowerDefense.Enemy.EnemyHealth
+                    enemy =
+                    hit.GetComponent<
+                        TowerDefense.Enemy.EnemyHealth
+                    >();
+
+                if (tower != null ||
+                    enemy != null)
                 {
-                    return;
-                }
+                    float dist =
+                        Vector2.Distance(
+                            worldPos2D,
+                            hit.transform.position
+                        );
 
-                if (Camera.main == null) return;
-
-                Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(mouseScreenPos.x, mouseScreenPos.y, Camera.main.nearClipPlane));
-                Vector2 worldPos2D = new Vector2(worldPos.x, worldPos.y);
-
-                Collider2D[] hits = Physics2D.OverlapCircleAll(worldPos2D, 0.6f);
-                Collider2D closestHit = null;
-                float closestDist = float.MaxValue;
-                TowerDefense.Tower.TowerController targetTower = null;
-                TowerDefense.Enemy.EnemyHealth targetEnemy = null;
-
-                foreach (var hit in hits)
-                {
-                    if (hit == null) continue;
-                    TowerDefense.Tower.TowerController tower = hit.GetComponent<TowerDefense.Tower.TowerController>();
-                    TowerDefense.Enemy.EnemyHealth enemy = hit.GetComponent<TowerDefense.Enemy.EnemyHealth>();
-
-                    if (tower != null || enemy != null)
+                    if (dist < closestDist)
                     {
-                        float dist = Vector2.Distance(worldPos2D, hit.transform.position);
-                        if (dist < closestDist)
-                        {
-                            closestDist = dist;
-                            closestHit = hit;
-                            targetTower = tower;
-                            targetEnemy = enemy;
-                        }
+                        closestDist = dist;
+                        closestHit = hit;
+                        targetTower = tower;
+                        targetEnemy = enemy;
                     }
                 }
+            }
 
-                if (closestHit != null)
+            if (closestHit != null)
+            {
+                if (targetTower != null)
                 {
-                    if (targetTower != null)
-                    {
-                        SelectTower(targetTower);
-                    }
-                    else if (targetEnemy != null)
-                    {
-                        SelectEnemy(targetEnemy);
-                    }
+                    SelectTower(targetTower);
                 }
-                else
+                else if (targetEnemy != null)
                 {
-                    Deselect();
+                    SelectEnemy(targetEnemy);
                 }
+            }
+            else
+            {
+                Deselect();
             }
         }
 
-        private void SelectTower(TowerDefense.Tower.TowerController tower)
+        // =========================================================
+        // INFO PANEL
+        // =========================================================
+
+        private void SelectTower(
+            TowerDefense.Tower.TowerController tower)
         {
             _selectedTower = tower;
             _selectedEnemy = null;
+
             EnsureInfoPanel();
+
             _infoPanel.SetActive(true);
+
             UpdateSelectedStatsDisplay();
         }
 
-        private void SelectEnemy(TowerDefense.Enemy.EnemyHealth enemy)
+        private void SelectEnemy(
+            TowerDefense.Enemy.EnemyHealth enemy)
         {
             _selectedEnemy = enemy;
             _selectedTower = null;
+
             EnsureInfoPanel();
+
             _infoPanel.SetActive(true);
+
             UpdateSelectedStatsDisplay();
         }
 
@@ -561,6 +1653,7 @@ namespace TowerDefense.UI
         {
             _selectedTower = null;
             _selectedEnemy = null;
+
             if (_infoPanel != null)
             {
                 _infoPanel.SetActive(false);
@@ -569,49 +1662,79 @@ namespace TowerDefense.UI
 
         private void UpdateSelectedStatsDisplay()
         {
-            if (_infoPanel == null || !_infoPanel.activeSelf) return;
+            if (_infoPanel == null ||
+                !_infoPanel.activeSelf)
+                return;
 
             if (_selectedTower != null)
             {
-                if (_selectedTower == null || _selectedTower.gameObject == null)
+                if (_selectedTower == null ||
+                    _selectedTower.gameObject == null)
                 {
                     Deselect();
                     return;
                 }
 
-                TowerData data = _selectedTower.TowerData;
-                string name = data != null ? data.TowerName : "Tower";
-                float fireRate = data != null ? data.FireRate : 0f;
+                TowerData data =
+                    _selectedTower.TowerData;
 
-                if (_infoTitleText != null) _infoTitleText.text = name.ToUpper() + $" (LVL {_selectedTower.CurrentLevel})";
+                string name =
+                    data != null
+                    ? data.TowerName
+                    : "Tower";
+
+                float fireRate =
+                    data != null
+                    ? data.FireRate
+                    : 0f;
+
+                if (_infoTitleText != null)
+                {
+                    _infoTitleText.text =
+                        name.ToUpper() +
+                        $" (LVL {_selectedTower.CurrentLevel})";
+                }
+
                 if (_infoStatsText != null)
                 {
-                    _infoStatsText.text = $"DAMAGE: <color=#FFD700>{_selectedTower.CurrentDamage}</color>\n\n" +
-                                          $"FIRE RATE: <color=#55FFFF>{fireRate:F1}/s</color>\n\n" +
-                                          $"RANGE: <color=#55FF55>{_selectedTower.CurrentRange:F1}</color>";
+                    _infoStatsText.text =
+                        $"DAMAGE: <color=#FFD700>" +
+                        $"{_selectedTower.CurrentDamage}" +
+                        $"</color>\n\n" +
+
+                        $"FIRE RATE: <color=#55FFFF>" +
+                        $"{fireRate:F1}/s" +
+                        $"</color>\n\n" +
+
+                        $"RANGE: <color=#55FF55>" +
+                        $"{_selectedTower.CurrentRange:F1}" +
+                        $"</color>";
                 }
 
                 if (_lvlUpBtnGO != null)
                 {
-                    if (_selectedTower.CurrentLevel < _selectedTower.MaxLevel)
+                    if (_selectedTower.CurrentLevel <
+                        _selectedTower.MaxLevel)
                     {
                         _lvlUpBtnGO.SetActive(true);
-                        int cost = _selectedTower.UpgradeCost;
-                        bool canAfford = GameManager.Instance == null || GameManager.Instance.CurrentGold >= cost;
+
+                        int cost =
+                            _selectedTower.UpgradeCost;
+
+                        bool canAfford =
+                            GameManager.Instance == null ||
+                            GameManager.Instance.CurrentGold >= cost;
 
                         if (_lvlUpBtnText != null)
                         {
-                            _lvlUpBtnText.text = $"UPGRADE ({cost} G)";
+                            _lvlUpBtnText.text =
+                                $"UPGRADE ({cost} G)";
                         }
 
                         if (_lvlUpBtn != null)
                         {
-                            _lvlUpBtn.interactable = canAfford;
-                            Image btnImg = _lvlUpBtnGO.GetComponent<Image>();
-                            if (btnImg != null)
-                            {
-                                btnImg.color = canAfford ? new Color(0.12f, 0.75f, 0.38f, 1f) : new Color(0.4f, 0.4f, 0.4f, 0.8f);
-                            }
+                            _lvlUpBtn.interactable =
+                                canAfford;
                         }
                     }
                     else
@@ -622,29 +1745,65 @@ namespace TowerDefense.UI
             }
             else if (_selectedEnemy != null)
             {
-                if (_selectedEnemy == null || _selectedEnemy.gameObject == null || _selectedEnemy.IsDead)
+                if (_selectedEnemy == null ||
+                    _selectedEnemy.gameObject == null ||
+                    _selectedEnemy.IsDead)
                 {
                     Deselect();
                     return;
                 }
 
-                string name = _selectedEnemy.EnemyData != null ? _selectedEnemy.EnemyData.EnemyName : "Enemy";
-                int hp = _selectedEnemy.CurrentHealth;
-                int maxHp = _selectedEnemy.MaxHealth;
-                float speed = _selectedEnemy.MoveSpeed;
-                int armor = _selectedEnemy.Armor;
-                int attack = _selectedEnemy.Attack;
+                string name =
+                    _selectedEnemy.EnemyData != null
+                    ? _selectedEnemy.EnemyData.EnemyName
+                    : "Enemy";
 
-                if (_infoTitleText != null) _infoTitleText.text = name.ToUpper();
-                if (_infoStatsText != null)
+                int hp =
+                    _selectedEnemy.CurrentHealth;
+
+                int maxHp =
+                    _selectedEnemy.MaxHealth;
+
+                float speed =
+                    _selectedEnemy.MoveSpeed;
+
+                int armor =
+                    _selectedEnemy.Armor;
+
+                int attack =
+                    _selectedEnemy.Attack;
+
+                if (_infoTitleText != null)
                 {
-                    _infoStatsText.text = $"HP: <color=#FF5555>{hp}/{maxHp}</color>\n\n" +
-                                          $"SPEED: <color=#55FF55>{speed:F1}</color>\n\n" +
-                                          $"ARMOR: <color=#AAAAAA>{armor}</color>\n\n" +
-                                          $"DAMAGE TO BASE: <color=#FF5555>{attack}</color>";
+                    _infoTitleText.text =
+                        name.ToUpper();
                 }
 
-                if (_lvlUpBtnGO != null) _lvlUpBtnGO.SetActive(false);
+                if (_infoStatsText != null)
+                {
+                    _infoStatsText.text =
+                        $"HP: <color=#FF5555>" +
+                        $"{hp}/{maxHp}" +
+                        $"</color>\n\n" +
+
+                        $"SPEED: <color=#55FF55>" +
+                        $"{speed:F1}" +
+                        $"</color>\n\n" +
+
+                        $"ARMOR: <color=#AAAAAA>" +
+                        $"{armor}" +
+                        $"</color>\n\n" +
+
+                        $"DAMAGE TO BASE: " +
+                        $"<color=#FF5555>" +
+                        $"{attack}" +
+                        $"</color>";
+                }
+
+                if (_lvlUpBtnGO != null)
+                {
+                    _lvlUpBtnGO.SetActive(false);
+                }
             }
             else
             {
@@ -652,173 +1811,441 @@ namespace TowerDefense.UI
             }
         }
 
+        // =========================================================
+        // INFO PANEL CREATION
+        // =========================================================
+
         private void EnsureInfoPanel()
         {
-            if (_infoPanel != null) return;
+            if (_infoPanel != null)
+                return;
 
-            Transform parent = gameplayHUDPanel != null ? gameplayHUDPanel.transform : transform;
+            Transform parent =
+                gameplayHUDPanel != null
+                ? gameplayHUDPanel.transform
+                : transform;
 
-            // Create Main Panel
-            _infoPanel = new GameObject("InfoPanel", typeof(RectTransform), typeof(CanvasRenderer));
-            _infoPanel.transform.SetParent(parent, false);
+            _infoPanel =
+                new GameObject(
+                    "InfoPanel",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image)
+                );
 
-            RectTransform rect = _infoPanel.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(1f, 0.5f);
-            rect.anchorMax = new Vector2(1f, 0.5f);
-            rect.pivot = new Vector2(1f, 0.5f);
-            rect.anchoredPosition = new Vector2(-20f, 0f);
-            rect.sizeDelta = new Vector2(280f, 250f);
+            _infoPanel.transform.SetParent(
+                parent,
+                false
+            );
 
-            Image bgImage = _infoPanel.AddComponent<Image>();
-            bgImage.color = new Color(0.08f, 0.09f, 0.15f, 0.92f); // Sleek dark slate glass style
+            RectTransform rect =
+                _infoPanel.GetComponent<
+                    RectTransform
+                >();
 
-            // Highlight header bar
-            GameObject topBar = new GameObject("HeaderBar", typeof(RectTransform), typeof(CanvasRenderer));
-            topBar.transform.SetParent(_infoPanel.transform, false);
-            RectTransform topBarRect = topBar.GetComponent<RectTransform>();
-            topBarRect.anchorMin = new Vector2(0f, 1f);
-            topBarRect.anchorMax = new Vector2(1f, 1f);
-            topBarRect.pivot = new Vector2(0.5f, 1f);
-            topBarRect.anchoredPosition = Vector2.zero;
-            topBarRect.sizeDelta = new Vector2(0f, 6f);
-            Image topBarImg = topBar.AddComponent<Image>();
-            topBarImg.color = new Color(0.2f, 0.6f, 1f, 1f); // Sleek blue highlight bar
+            rect.anchorMin =
+                new Vector2(1f, 0.5f);
 
-            // Title Text
-            GameObject titleGO = new GameObject("TitleText", typeof(RectTransform), typeof(CanvasRenderer));
-            titleGO.transform.SetParent(_infoPanel.transform, false);
-            RectTransform titleRect = titleGO.GetComponent<RectTransform>();
-            titleRect.anchorMin = new Vector2(0f, 1f);
-            titleRect.anchorMax = new Vector2(1f, 1f);
-            titleRect.pivot = new Vector2(0f, 1f);
-            titleRect.anchoredPosition = new Vector2(15f, -15f);
-            titleRect.sizeDelta = new Vector2(-50f, 35f);
+            rect.anchorMax =
+                new Vector2(1f, 0.5f);
 
-            _infoTitleText = titleGO.AddComponent<TextMeshProUGUI>();
+            rect.pivot =
+                new Vector2(1f, 0.5f);
+
+            rect.anchoredPosition =
+                new Vector2(
+                    -20f,
+                    0f
+                );
+
+            rect.sizeDelta =
+                new Vector2(
+                    280f,
+                    250f
+                );
+
+            Image bg =
+                _infoPanel.GetComponent<
+                    Image
+                >();
+
+            bg.color =
+                new Color(
+                    0.08f,
+                    0.09f,
+                    0.15f,
+                    0.92f
+                );
+
+            // Title
+            GameObject title =
+                new GameObject(
+                    "TitleText",
+                    typeof(RectTransform)
+                );
+
+            title.transform.SetParent(
+                _infoPanel.transform,
+                false
+            );
+
+            RectTransform titleRect =
+                title.GetComponent<
+                    RectTransform
+                >();
+
+            titleRect.anchorMin =
+                new Vector2(0f, 1f);
+
+            titleRect.anchorMax =
+                new Vector2(1f, 1f);
+
+            titleRect.pivot =
+                new Vector2(0f, 1f);
+
+            titleRect.anchoredPosition =
+                new Vector2(
+                    15f,
+                    -15f
+                );
+
+            titleRect.sizeDelta =
+                new Vector2(
+                    -50f,
+                    35f
+                );
+
+            _infoTitleText =
+                title.AddComponent<
+                    TextMeshProUGUI
+                >();
+
             _infoTitleText.fontSize = 18f;
-            _infoTitleText.fontStyle = FontStyles.Bold;
-            _infoTitleText.color = Color.white;
-            _infoTitleText.alignment = TextAlignmentOptions.Left;
+            _infoTitleText.fontStyle =
+                FontStyles.Bold;
 
-            // Stats Text
-            GameObject statsGO = new GameObject("StatsText", typeof(RectTransform), typeof(CanvasRenderer));
-            statsGO.transform.SetParent(_infoPanel.transform, false);
-            RectTransform statsRect = statsGO.GetComponent<RectTransform>();
-            statsRect.anchorMin = new Vector2(0f, 0f);
-            statsRect.anchorMax = new Vector2(1f, 1f);
-            statsRect.pivot = new Vector2(0.5f, 0.5f);
-            statsRect.anchoredPosition = new Vector2(0f, -30f);
-            statsRect.sizeDelta = new Vector2(-30f, -80f);
+            _infoTitleText.color =
+                Color.white;
 
-            _infoStatsText = statsGO.AddComponent<TextMeshProUGUI>();
+            _infoTitleText.alignment =
+                TextAlignmentOptions.Left;
+
+            // Stats
+            GameObject stats =
+                new GameObject(
+                    "StatsText",
+                    typeof(RectTransform)
+                );
+
+            stats.transform.SetParent(
+                _infoPanel.transform,
+                false
+            );
+
+            RectTransform statsRect =
+                stats.GetComponent<
+                    RectTransform
+                >();
+
+            statsRect.anchorMin =
+                new Vector2(0f, 0f);
+
+            statsRect.anchorMax =
+                new Vector2(1f, 1f);
+
+            statsRect.anchoredPosition =
+                new Vector2(
+                    0f,
+                    -30f
+                );
+
+            statsRect.sizeDelta =
+                new Vector2(
+                    -30f,
+                    -80f
+                );
+
+            _infoStatsText =
+                stats.AddComponent<
+                    TextMeshProUGUI
+                >();
+
             _infoStatsText.fontSize = 14f;
-            _infoStatsText.color = new Color(0.85f, 0.85f, 0.9f, 1f);
-            _infoStatsText.alignment = TextAlignmentOptions.TopLeft;
 
-            // Close button
-            GameObject closeBtnGO = new GameObject("CloseButton", typeof(RectTransform), typeof(CanvasRenderer));
-            closeBtnGO.transform.SetParent(_infoPanel.transform, false);
-            RectTransform closeRect = closeBtnGO.GetComponent<RectTransform>();
-            closeRect.anchorMin = new Vector2(1f, 1f);
-            closeRect.anchorMax = new Vector2(1f, 1f);
-            closeRect.pivot = new Vector2(1f, 1f);
-            closeRect.anchoredPosition = new Vector2(-10f, -10f);
-            closeRect.sizeDelta = new Vector2(25f, 25f);
+            _infoStatsText.color =
+                new Color(
+                    0.85f,
+                    0.85f,
+                    0.9f,
+                    1f
+                );
 
-            Image closeImg = closeBtnGO.AddComponent<Image>();
-            closeImg.color = new Color(0.8f, 0.2f, 0.2f, 0.8f);
+            _infoStatsText.alignment =
+                TextAlignmentOptions.TopLeft;
 
-            Button closeBtn = closeBtnGO.AddComponent<Button>();
-            closeBtn.onClick.AddListener(Deselect);
+            // Close
+            GameObject close =
+                new GameObject(
+                    "CloseButton",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(Button)
+                );
 
-            // Add text to close button
-            GameObject closeTextGO = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer));
-            closeTextGO.transform.SetParent(closeBtnGO.transform, false);
-            RectTransform closeTextRect = closeTextGO.GetComponent<RectTransform>();
-            closeTextRect.anchorMin = Vector2.zero;
-            closeTextRect.anchorMax = Vector2.one;
-            closeTextRect.sizeDelta = Vector2.zero;
-            TextMeshProUGUI closeText = closeTextGO.AddComponent<TextMeshProUGUI>();
-            closeText.text = "X";
-            closeText.fontSize = 12f;
-            closeText.fontStyle = FontStyles.Bold;
-            closeText.color = Color.white;
-            closeText.alignment = TextAlignmentOptions.Center;
+            close.transform.SetParent(
+                _infoPanel.transform,
+                false
+            );
 
-            // Create Level Up / Upgrade Button
-            _lvlUpBtnGO = new GameObject("UpgradeButton", typeof(RectTransform), typeof(CanvasRenderer));
-            _lvlUpBtnGO.transform.SetParent(_infoPanel.transform, false);
-            RectTransform lvlUpRect = _lvlUpBtnGO.GetComponent<RectTransform>();
-            lvlUpRect.anchorMin = new Vector2(0.5f, 0f);
-            lvlUpRect.anchorMax = new Vector2(0.5f, 0f);
-            lvlUpRect.pivot = new Vector2(0.5f, 0f);
-            lvlUpRect.anchoredPosition = new Vector2(0f, 15f);
-            lvlUpRect.sizeDelta = new Vector2(240f, 40f);
+            RectTransform closeRect =
+                close.GetComponent<
+                    RectTransform
+                >();
 
-            Image lvlUpImg = _lvlUpBtnGO.AddComponent<Image>();
-            lvlUpImg.color = new Color(0.12f, 0.75f, 0.38f, 1f); // Sleek green
+            closeRect.anchorMin =
+                new Vector2(1f, 1f);
 
-            _lvlUpBtn = _lvlUpBtnGO.AddComponent<Button>();
-            _lvlUpBtn.onClick.AddListener(OnUpgradeButtonClicked);
+            closeRect.anchorMax =
+                new Vector2(1f, 1f);
 
-            // Add Text
-            GameObject lvlUpTextGO = new GameObject("Text", typeof(RectTransform));
-            lvlUpTextGO.transform.SetParent(_lvlUpBtnGO.transform, false);
-            RectTransform lvlUpTextRect = lvlUpTextGO.GetComponent<RectTransform>();
-            lvlUpTextRect.anchorMin = Vector2.zero;
-            lvlUpTextRect.anchorMax = Vector2.one;
-            lvlUpTextRect.offsetMin = Vector2.zero;
-            lvlUpTextRect.offsetMax = Vector2.zero;
+            closeRect.pivot =
+                new Vector2(1f, 1f);
 
-            _lvlUpBtnText = lvlUpTextGO.AddComponent<TextMeshProUGUI>();
-            _lvlUpBtnText.text = "UPGRADE";
+            closeRect.anchoredPosition =
+                new Vector2(
+                    -10f,
+                    -10f
+                );
+
+            closeRect.sizeDelta =
+                new Vector2(
+                    25f,
+                    25f
+                );
+
+            Image closeImage =
+                close.GetComponent<Image>();
+
+            closeImage.color =
+                new Color(
+                    0.8f,
+                    0.2f,
+                    0.2f,
+                    0.8f
+                );
+
+            Button closeButton =
+                close.GetComponent<Button>();
+
+            closeButton.onClick.AddListener(
+                Deselect
+            );
+
+            // Upgrade
+            _lvlUpBtnGO =
+                new GameObject(
+                    "UpgradeButton",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image),
+                    typeof(Button)
+                );
+
+            _lvlUpBtnGO.transform.SetParent(
+                _infoPanel.transform,
+                false
+            );
+
+            RectTransform upgradeRect =
+                _lvlUpBtnGO.GetComponent<
+                    RectTransform
+                >();
+
+            upgradeRect.anchorMin =
+                new Vector2(
+                    0.5f,
+                    0f
+                );
+
+            upgradeRect.anchorMax =
+                new Vector2(
+                    0.5f,
+                    0f
+                );
+
+            upgradeRect.pivot =
+                new Vector2(
+                    0.5f,
+                    0f
+                );
+
+            upgradeRect.anchoredPosition =
+                new Vector2(
+                    0f,
+                    15f
+                );
+
+            upgradeRect.sizeDelta =
+                new Vector2(
+                    240f,
+                    40f
+                );
+
+            Image upgradeImage =
+                _lvlUpBtnGO.GetComponent<
+                    Image
+                >();
+
+            upgradeImage.color =
+                new Color(
+                    0.12f,
+                    0.75f,
+                    0.38f,
+                    1f
+                );
+
+            _lvlUpBtn =
+                _lvlUpBtnGO.GetComponent<
+                    Button
+                >();
+
+            _lvlUpBtn.onClick.AddListener(
+                OnUpgradeButtonClicked
+            );
+
+            GameObject upgradeText =
+                new GameObject(
+                    "Text",
+                    typeof(RectTransform)
+                );
+
+            upgradeText.transform.SetParent(
+                _lvlUpBtnGO.transform,
+                false
+            );
+
+            RectTransform upgradeTextRect =
+                upgradeText.GetComponent<
+                    RectTransform
+                >();
+
+            upgradeTextRect.anchorMin =
+                Vector2.zero;
+
+            upgradeTextRect.anchorMax =
+                Vector2.one;
+
+            upgradeTextRect.offsetMin =
+                Vector2.zero;
+
+            upgradeTextRect.offsetMax =
+                Vector2.zero;
+
+            _lvlUpBtnText =
+                upgradeText.AddComponent<
+                    TextMeshProUGUI
+                >();
+
+            _lvlUpBtnText.text =
+                "UPGRADE";
+
             _lvlUpBtnText.fontSize = 14f;
-            _lvlUpBtnText.fontStyle = FontStyles.Bold;
-            _lvlUpBtnText.color = Color.white;
-            _lvlUpBtnText.alignment = TextAlignmentOptions.Center;
+
+            _lvlUpBtnText.fontStyle =
+                FontStyles.Bold;
+
+            _lvlUpBtnText.color =
+                Color.white;
+
+            _lvlUpBtnText.alignment =
+                TextAlignmentOptions.Center;
 
             _lvlUpBtnGO.SetActive(false);
         }
 
+        // =========================================================
+        // UPGRADE
+        // =========================================================
+
         private void OnUpgradeButtonClicked()
         {
-            if (_selectedTower != null && GameManager.Instance != null)
+            if (_selectedTower != null &&
+                GameManager.Instance != null)
             {
-                int cost = _selectedTower.UpgradeCost;
-                if (_selectedTower.CurrentLevel < _selectedTower.MaxLevel && GameManager.Instance.TrySpendGold(cost))
+                int cost =
+                    _selectedTower.UpgradeCost;
+
+                if (_selectedTower.CurrentLevel <
+                    _selectedTower.MaxLevel &&
+                    GameManager.Instance.TrySpendGold(
+                        cost))
                 {
                     _selectedTower.LevelUp();
+
                     UpdateSelectedStatsDisplay();
                 }
             }
         }
 
-        private bool IsPointerOverInteractiveUI(Vector2 screenPos)
+        // =========================================================
+        // UI RAYCAST
+        // =========================================================
+
+        private bool IsPointerOverInteractiveUI(
+            Vector2 screenPos)
         {
-            if (UnityEngine.EventSystems.EventSystem.current == null) return false;
+            if (
+                UnityEngine.EventSystems
+                .EventSystem.current == null)
+            {
+                return false;
+            }
 
-            UnityEngine.EventSystems.PointerEventData eventData = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current);
-            eventData.position = screenPos;
+            UnityEngine.EventSystems
+                .PointerEventData eventData =
+                new UnityEngine.EventSystems
+                    .PointerEventData(
+                        UnityEngine.EventSystems
+                            .EventSystem.current
+                    );
 
-            List<UnityEngine.EventSystems.RaycastResult> results = new List<UnityEngine.EventSystems.RaycastResult>();
-            UnityEngine.EventSystems.EventSystem.current.RaycastAll(eventData, results);
+            eventData.position =
+                screenPos;
+
+            List<UnityEngine.EventSystems
+                .RaycastResult> results =
+                new List<UnityEngine.EventSystems
+                    .RaycastResult>();
+
+            UnityEngine.EventSystems
+                .EventSystem.current.RaycastAll(
+                    eventData,
+                    results
+                );
 
             foreach (var result in results)
             {
-                if (result.gameObject != null)
+                if (result.gameObject == null)
+                    continue;
+
+                string name =
+                    result.gameObject.name;
+
+                if (name ==
+                    "GameplayHUDPanel" ||
+                    name ==
+                    "Canvas" ||
+                    name ==
+                    "EventSystem")
                 {
-                    string name = result.gameObject.name;
-                    // Ignore root canvas, gameplay HUD, and EventSystem
-                    if (name == "GameplayHUDPanel" || name == "Canvas" || name == "EventSystem")
-                    {
-                        continue;
-                    }
-                    return true;
+                    continue;
                 }
+
+                return true;
             }
+
             return false;
         }
-
-        #endregion
     }
 }

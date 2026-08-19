@@ -6,14 +6,14 @@ using TowerDefense.Pooling;
 namespace TowerDefense.Enemy
 {
     /// <summary>
-    /// Base class managing the health and death of an enemy unit.
-    /// Integrates with the ObjectPooler for reuse and raises events on death.
+    /// Base class managing enemy health, attack, armor and speed.
+    /// Uses the global DifficultyManager.
     /// </summary>
     public class EnemyHealth : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("The EnemyData ScriptableObject containing max health and gold reward stats.")]
-        [SerializeField] protected EnemyData enemyData;
+        [SerializeField]
+        protected EnemyData enemyData;
 
         protected int _currentHealth;
         protected int _maxHealth;
@@ -22,129 +22,297 @@ namespace TowerDefense.Enemy
         protected float _moveSpeed;
         protected bool _isDead;
 
+        // =========================================================
+        // PUBLIC PROPERTIES
+        // =========================================================
+
         public int Armor => _armor;
+
         public int Attack => _attack;
+
         public float MoveSpeed => _moveSpeed;
+
         public int CurrentHealth => _currentHealth;
-        public int MaxHealth => _maxHealth > 0 ? _maxHealth : (enemyData != null ? enemyData.GetHealth(1) : 10);
+
+        public int MaxHealth =>
+            _maxHealth > 0
+                ? _maxHealth
+                : (enemyData != null
+                    ? enemyData.GetBaseHealthValue()
+                    : 10);
+
         public bool IsDead => _isDead;
+
         public EnemyData EnemyData => enemyData;
+
+        // =========================================================
+        // HEALTH
+        // =========================================================
 
         public void SetCurrentHealth(int health)
         {
-            _currentHealth = Mathf.Clamp(health, 0, _maxHealth);
+            _currentHealth = Mathf.Clamp(
+                health,
+                0,
+                _maxHealth
+            );
         }
+
+        // =========================================================
+        // START
+        // =========================================================
 
         protected virtual void Start()
         {
-            if (enemyData != null)
+            if (enemyData != null && _maxHealth <= 0)
             {
-                Initialize(enemyData);
+                InitializeWithCurrentDifficulty(enemyData);
             }
         }
 
+        // =========================================================
+        // ENABLE
+        // =========================================================
+
         protected virtual void OnEnable()
         {
-            // Reset state when retrieved from pool
+            _isDead = false;
+
             if (_maxHealth > 0)
             {
                 _currentHealth = _maxHealth;
             }
-            else if (enemyData != null)
-            {
-                _maxHealth = enemyData.GetHealth(1);
-                _currentHealth = _maxHealth;
-            }
-            else
-            {
-                _currentHealth = 10;
-            }
-
-            _isDead = false;
         }
 
-        /// <summary>
-        /// Programmatically initializes the health component (useful for pooled spawns).
-        /// </summary>
-        public virtual void Initialize(EnemyData data, int difficulty = 1)
+        // =========================================================
+        // INITIALIZE WITH GLOBAL DIFFICULTY
+        // =========================================================
+
+        public virtual void InitializeWithCurrentDifficulty(
+            EnemyData data)
         {
+            if (data == null)
+            {
+                Debug.LogError(
+                    "[EnemyHealth] EnemyData is NULL!"
+                );
+
+                return;
+            }
+
             enemyData = data;
 
-            _maxHealth = data.GetHealth(difficulty);
+            float healthMultiplier =
+                DifficultyManager.HealthMultiplier;
+
+            float speedMultiplier =
+                DifficultyManager.SpeedMultiplier;
+
+            // HP
+            _maxHealth =
+                data.GetHealthWithMultiplier(
+                    healthMultiplier
+                );
+
             _currentHealth = _maxHealth;
 
-            _attack = data.GetAttack(difficulty);
-            _armor = data.GetArmor(difficulty);
-            _moveSpeed = data.GetSpeed(difficulty);
+            // Attack
+            _attack =
+                data.GetBaseAttackValue();
+
+            // Armor
+            _armor =
+                data.GetBaseArmorValue();
+
+            // Speed
+            _moveSpeed =
+                data.GetSpeedWithMultiplier(
+                    speedMultiplier
+                );
 
             _isDead = false;
+
+            Debug.Log(
+                $"[EnemyHealth] {gameObject.name} initialized | " +
+                $"Difficulty: {DifficultyManager.DifficultyName} | " +
+                $"HP: {_maxHealth} | " +
+                $"Speed: {_moveSpeed:F2} | " +
+                $"Attack: {_attack} | " +
+                $"Armor: {_armor}"
+            );
         }
-        
-        /// <summary>
-        /// Applies damage to the enemy. Triggers death if health falls to 0 or below.
-        /// </summary>
+
+        // =========================================================
+        // INITIALIZE WITH MULTIPLIERS
+        // =========================================================
+
+        public virtual void Initialize(
+            EnemyData data,
+            float healthMultiplier,
+            float speedMultiplier)
+        {
+            if (data == null)
+            {
+                Debug.LogError(
+                    "[EnemyHealth] EnemyData is NULL!"
+                );
+
+                return;
+            }
+
+            enemyData = data;
+
+            _maxHealth =
+                data.GetHealthWithMultiplier(
+                    healthMultiplier
+                );
+
+            _currentHealth = _maxHealth;
+
+            _attack =
+                data.GetBaseAttackValue();
+
+            _armor =
+                data.GetBaseArmorValue();
+
+            _moveSpeed =
+                data.GetSpeedWithMultiplier(
+                    speedMultiplier
+                );
+
+            _isDead = false;
+
+            Debug.Log(
+                $"[EnemyHealth] {gameObject.name} initialized | " +
+                $"HP: {_maxHealth} | " +
+                $"Speed: {_moveSpeed:F2}"
+            );
+        }
+
+        // =========================================================
+        // COMPATIBILITY INITIALIZE
+        // =========================================================
+
+        public virtual void Initialize(
+            EnemyData data,
+            int difficulty = 1)
+        {
+            // Ignore old difficulty number.
+            // Global DifficultyManager is now the source of truth.
+
+            InitializeWithCurrentDifficulty(data);
+        }
+
+        // =========================================================
+        // DAMAGE
+        // =========================================================
+
         public virtual void TakeDamage(int damage)
         {
-            if (_isDead) return;
+            if (_isDead)
+                return;
 
-            float finalDamage = damage * Mathf.Pow(0.9f, _armor);
-            _currentHealth -= Mathf.CeilToInt(finalDamage);
+            float finalDamage =
+                damage *
+                Mathf.Pow(
+                    0.9f,
+                    _armor
+                );
+
+            _currentHealth -=
+                Mathf.CeilToInt(
+                    finalDamage
+                );
 
             if (_currentHealth <= 0)
             {
+                _currentHealth = 0;
                 Die();
             }
         }
 
-        /// <summary>
-        /// Modifier methods for boss wave adjustments.
-        /// </summary>
+        // =========================================================
+        // MODIFIERS
+        // =========================================================
+
         public void ModifyHealth(float multiplier)
         {
-            _maxHealth = Mathf.RoundToInt(_maxHealth * multiplier);
+            _maxHealth =
+                Mathf.RoundToInt(
+                    _maxHealth * multiplier
+                );
+
             _currentHealth = _maxHealth;
         }
 
         public void ModifyArmor(int addedArmor)
         {
             _armor += addedArmor;
-            _armor = Mathf.Max(_armor, 0); // Clamp to 0 minimum
+
+            _armor = Mathf.Max(
+                _armor,
+                0
+            );
         }
 
         public void ModifyAttack(float multiplier)
         {
-            _attack = Mathf.RoundToInt(_attack * multiplier);
+            _attack =
+                Mathf.RoundToInt(
+                    _attack * multiplier
+                );
         }
 
         public void ModifySpeed(float multiplier)
         {
             _moveSpeed *= multiplier;
-            _moveSpeed = Mathf.Clamp(_moveSpeed, 0.5f, 3.5f); // Maintain speed constraints
+
+            // Không giới hạn 3.5 để Hell vẫn có thể
+            // tăng tốc đúng theo multiplier.
+            _moveSpeed = Mathf.Max(
+                _moveSpeed,
+                0.1f
+            );
         }
 
         public void SetCanBeSlowed(bool value)
         {
-            // Used by slowing resistance system
+            // Reserved for slow resistance system
         }
 
-        /// <summary>
-        /// Handles death logic, rewarding gold and returning the enemy to the object pool.
-        /// </summary>
+        // =========================================================
+        // DEATH
+        // =========================================================
+
         protected virtual void Die()
         {
+            if (_isDead)
+                return;
+
             _isDead = true;
 
-            int goldReward = enemyData != null ? enemyData.GoldReward : 10;
-            
-            // Raise the death event via the EventBus
-            EventBus<EnemyDiedEvent>.Raise(new EnemyDiedEvent(gameObject, goldReward));
-            
-            Debug.Log($"[EnemyHealth] Enemy {gameObject.name} died. Rewarded {goldReward} gold.");
+            int goldReward =
+                enemyData != null
+                    ? enemyData.GoldReward
+                    : 10;
 
-            // Recycle GameObject
+            EventBus<EnemyDiedEvent>.Raise(
+                new EnemyDiedEvent(
+                    gameObject,
+                    goldReward
+                )
+            );
+
+            Debug.Log(
+                $"[EnemyHealth] {gameObject.name} died. " +
+                $"Rewarded {goldReward} gold."
+            );
+
             if (ObjectPooler.Instance != null)
             {
-                ObjectPooler.Instance.ReturnToPool(gameObject);
+                ObjectPooler.Instance.ReturnToPool(
+                    gameObject
+                );
             }
             else
             {
