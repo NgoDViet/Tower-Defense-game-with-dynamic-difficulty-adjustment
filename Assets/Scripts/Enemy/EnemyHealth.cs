@@ -261,11 +261,24 @@ namespace TowerDefense.Enemy
                 );
 
             int actualDamage =
-                Mathf.CeilToInt(
-                    finalDamage
-                );
+    Mathf.CeilToInt(
+        finalDamage
+    );
 
-            _currentHealth -= actualDamage;
+      int damageDealt =
+          Mathf.Min(
+         actualDamage,
+       _currentHealth
+    );
+
+       _currentHealth -= damageDealt;
+
+       if (GameManager.Instance != null)
+    {
+        GameManager.Instance.RegisterDamage(
+        damageDealt
+       );
+    }
 
             if (_currentHealth <= 0)
             {
@@ -291,7 +304,20 @@ namespace TowerDefense.Enemy
             if (damage <= 0)
                 return;
 
-            _currentHealth -= damage;
+            int damageDealt =
+    Mathf.Min(
+        damage,
+        _currentHealth
+    );
+
+_currentHealth -= damageDealt;
+
+if (GameManager.Instance != null)
+{
+    GameManager.Instance.RegisterDamage(
+        damageDealt
+    );
+}
 
             if (_currentHealth <= 0)
             {

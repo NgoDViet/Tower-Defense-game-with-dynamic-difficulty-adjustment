@@ -41,6 +41,15 @@ namespace TowerDefense.UI
         [SerializeField] private TextMeshProUGUI goldText;
         [SerializeField] private TextMeshProUGUI waveText;
 
+        [SerializeField] private TextMeshProUGUI timeText;
+
+        [Header("Result Text")]
+        [SerializeField] private TextMeshProUGUI victoryTimeText;
+        [SerializeField] private TextMeshProUGUI victoryDamageText;
+
+        [SerializeField] private TextMeshProUGUI defeatTimeText;
+        [SerializeField] private TextMeshProUGUI defeatDamageText;
+
         // =========================================================
         // LEVEL DATA
         // =========================================================
@@ -113,6 +122,13 @@ namespace TowerDefense.UI
                 OnWaveStarted
             );
         }
+        private string FormatTime(float time)
+{
+    int minutes = Mathf.FloorToInt(time / 60f);
+    int seconds = Mathf.FloorToInt(time % 60f);
+
+    return $"{minutes:00}:{seconds:00}";
+}
 
         private void OnDisable()
         {
@@ -228,11 +244,67 @@ namespace TowerDefense.UI
         // EVENT BUS
         // =========================================================
 
-        private void OnGameStateChanged(
-            GameStateChangedEvent evt)
-        {
-            UpdatePanelVisibility(evt.NewState);
-        }
+      private void OnGameStateChanged(
+    GameStateChangedEvent evt)
+{
+    UpdatePanelVisibility(evt.NewState);
+
+    if (GameManager.Instance == null)
+        return;
+
+    if (evt.NewState == GameManager.GameState.Victory)
+    {
+        UpdateVictoryResult();
+    }
+    else if (evt.NewState == GameManager.GameState.Defeat)
+    {
+        UpdateDefeatResult();
+    }
+}
+private void UpdateVictoryResult()
+{
+    string time =
+        FormatTime(
+            GameManager.Instance.PlayTime
+        );
+
+    int damage =
+        GameManager.Instance.TotalDamageDealt;
+
+    if (victoryTimeText != null)
+    {
+        victoryTimeText.text =
+            $"TIME: {time}";
+    }
+
+    if (victoryDamageText != null)
+    {
+        victoryDamageText.text =
+            $"DAMAGE: {damage:N0}";
+    }
+}
+private void UpdateDefeatResult()
+{
+    string time =
+        FormatTime(
+            GameManager.Instance.PlayTime
+        );
+
+    int damage =
+        GameManager.Instance.TotalDamageDealt;
+
+    if (defeatTimeText != null)
+    {
+        defeatTimeText.text =
+            $"TIME: {time}";
+    }
+
+    if (defeatDamageText != null)
+    {
+        defeatDamageText.text =
+            $"DAMAGE: {damage:N0}";
+    }
+}
 
         private void OnBaseHealthChanged(
             BaseHealthChangedEvent evt)
@@ -1479,20 +1551,36 @@ namespace TowerDefense.UI
         // UPDATE
         // =========================================================
 
-        private void Update()
-        {
-            if (GameManager.Instance == null ||
-                GameManager.Instance.CurrentState !=
-                GameManager.GameState.Playing)
-            {
-                if (_infoPanel != null &&
-                    _infoPanel.activeSelf)
-                {
-                    _infoPanel.SetActive(false);
-                }
+       private void Update()
+{
+    if (GameManager.Instance == null)
+        return;
 
-                return;
-            }
+    // Update gameplay timer
+    if (timeText != null &&
+        (GameManager.Instance.CurrentState ==
+         GameManager.GameState.Playing ||
+         GameManager.Instance.CurrentState ==
+         GameManager.GameState.Pause))
+    {
+        timeText.text =
+            $"TIME: {FormatTime(GameManager.Instance.PlayTime)}";
+    }
+
+    if (GameManager.Instance.CurrentState !=
+        GameManager.GameState.Playing)
+    {
+        if (_infoPanel != null &&
+            _infoPanel.activeSelf)
+        {
+            _infoPanel.SetActive(false);
+        }
+
+        return;
+    }
+
+    UpdateSelectedStatsDisplay();
+
 
             UpdateSelectedStatsDisplay();
 

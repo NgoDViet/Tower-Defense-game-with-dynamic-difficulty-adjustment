@@ -34,7 +34,8 @@ namespace TowerDefense.Core
         private int _currentWaveIndex = -1;
         private int _activeEnemiesCount = 0;
         private bool _isSpawningWave = false;
-
+        private float _playTime = 0f;
+        private int _totalDamageDealt = 0;
         // Getters
         public GameState CurrentState => _currentState;
         public LevelData ActiveLevelData => _activeLevelData;
@@ -42,7 +43,8 @@ namespace TowerDefense.Core
         public int CurrentGold => _currentGold;
         public int CurrentWaveIndex => _currentWaveIndex;
         public int ActiveEnemiesCount => _activeEnemiesCount;
-
+        public float PlayTime => _playTime;
+        public int TotalDamageDealt => _totalDamageDealt;
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -52,7 +54,13 @@ namespace TowerDefense.Core
             }
             Instance = this;
         }
-
+        private void Update()
+        {
+            if (_currentState == GameState.Playing)
+          {
+             _playTime += Time.deltaTime;
+          }
+        }
         private void OnEnable()
         {
             // Subscribe to game events
@@ -145,6 +153,9 @@ namespace TowerDefense.Core
             _activeEnemiesCount = 0;
             _isSpawningWave = false;
 
+            _playTime = 0f;
+            _totalDamageDealt = 0;          
+
             SetState(GameState.Playing);
 
             EventBus<LevelStartedEvent>.Raise(new LevelStartedEvent(levelData.LevelName));
@@ -191,6 +202,14 @@ namespace TowerDefense.Core
         /// <summary>
         /// Attempts to purchase an item. Returns true if successful.
         /// </summary>
+        /// 
+        public void RegisterDamage(int damage)
+        {
+              if (damage <= 0)
+              return;
+
+              _totalDamageDealt += damage;
+        }
         public bool TrySpendGold(int amount)
         {
             if (amount < 0) return false;
