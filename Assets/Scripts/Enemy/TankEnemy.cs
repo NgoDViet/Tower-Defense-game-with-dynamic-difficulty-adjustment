@@ -3,9 +3,6 @@ using TowerDefense.Data;
 
 namespace TowerDefense.Enemy
 {
-    /// <summary>
-    /// Tank enemy.
-    /// </summary>
     public class TankEnemy : EnemyHealth
     {
         public override void Initialize(
@@ -16,7 +13,7 @@ namespace TowerDefense.Enemy
                 "[TankEnemy] Initialize using Global Difficulty"
             );
 
-            base.InitializeWithCurrentDifficulty(data);
+            InitializeWithCurrentDifficulty(data);
 
             Debug.Log(
                 $"[TankEnemy] " +

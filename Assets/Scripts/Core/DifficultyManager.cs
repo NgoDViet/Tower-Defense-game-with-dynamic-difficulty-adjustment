@@ -4,10 +4,20 @@ namespace TowerDefense.Core
 {
     /// <summary>
     /// Global difficulty manager.
-    /// Controls enemy HP and Speed multipliers.
+    ///
+    /// Normal     : HP x1    | Speed x1
+    /// NormalPlus : HP x1.5  | Speed x1.15
+    /// Hard       : HP x2.5  | Speed x1.3
+    /// Hell       : HP x4    | Speed x1.5
     /// </summary>
     public class DifficultyManager : MonoBehaviour
     {
+        public static DifficultyManager Instance { get; private set; }
+
+        // =========================================================
+        // CURRENT DIFFICULTY
+        // =========================================================
+
         private static DifficultyMode currentDifficulty =
             DifficultyMode.Normal;
 
@@ -104,6 +114,30 @@ namespace TowerDefense.Core
         }
 
         // =========================================================
+        // UNITY
+        // =========================================================
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+
+            DontDestroyOnLoad(gameObject);
+
+            Debug.Log(
+                $"[DifficultyManager] Started | " +
+                $"Difficulty = {DifficultyName} | " +
+                $"HP x{HealthMultiplier} | " +
+                $"Speed x{SpeedMultiplier}"
+            );
+        }
+
+        // =========================================================
         // SET DIFFICULTY
         // =========================================================
 
@@ -112,15 +146,15 @@ namespace TowerDefense.Core
             currentDifficulty = difficulty;
 
             Debug.Log(
-                $"[DifficultyManager] " +
-                $"Difficulty = {DifficultyName} | " +
+                $"[DifficultyManager] Difficulty changed -> " +
+                $"{DifficultyName} | " +
                 $"HP x{HealthMultiplier} | " +
                 $"Speed x{SpeedMultiplier}"
             );
         }
 
         // =========================================================
-        // APPLY HP
+        // APPLY MULTIPLIERS
         // =========================================================
 
         public static int ApplyHealth(int baseHealth)
@@ -129,10 +163,6 @@ namespace TowerDefense.Core
                 baseHealth * HealthMultiplier
             );
         }
-
-        // =========================================================
-        // APPLY SPEED
-        // =========================================================
 
         public static float ApplySpeed(float baseSpeed)
         {

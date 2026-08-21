@@ -145,7 +145,7 @@ namespace TowerDefense.Data
         }
 
         // =========================================================
-        // DIFFICULTY HP
+        // DIFFICULTY
         // =========================================================
 
         public int GetHealthWithMultiplier(float multiplier)
@@ -154,10 +154,6 @@ namespace TowerDefense.Data
                 GetBaseHealthValue() * multiplier
             );
         }
-
-        // =========================================================
-        // DIFFICULTY SPEED
-        // =========================================================
 
         public float GetSpeedWithMultiplier(float multiplier)
         {

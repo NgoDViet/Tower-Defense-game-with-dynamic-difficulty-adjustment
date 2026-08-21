@@ -6,7 +6,8 @@ using TowerDefense.Pooling;
 namespace TowerDefense.Enemy
 {
     /// <summary>
-    /// Base class managing enemy health, attack, armor and speed.
+    /// Base class managing enemy health, attack, armor,
+    /// movement speed, slow effect and death.
     /// Uses the global DifficultyManager.
     /// </summary>
     public class EnemyHealth : MonoBehaviour
@@ -15,22 +16,34 @@ namespace TowerDefense.Enemy
         [SerializeField]
         protected EnemyData enemyData;
 
-        protected int _currentHealth;
-        protected int _maxHealth;
-        protected int _armor;
-        protected int _attack;
-        protected float _moveSpeed;
+        // =========================================================
+        // INTERNAL DATA
+        // =========================================================
+
         protected bool _isDead;
 
+        protected int _currentHealth;
+        protected int _maxHealth;
+
+        protected int _armor;
+        protected int _attack;
+
+        protected float _moveSpeed;
+
+        // Slow system
+        protected float _slowMultiplier = 1f;
+        protected float _slowTimer = 0f;
+
         // =========================================================
-        // PUBLIC PROPERTIES
+        // PROPERTIES
         // =========================================================
 
         public int Armor => _armor;
 
         public int Attack => _attack;
 
-        public float MoveSpeed => _moveSpeed;
+        public float MoveSpeed =>
+            _moveSpeed * _slowMultiplier;
 
         public int CurrentHealth => _currentHealth;
 
@@ -46,19 +59,6 @@ namespace TowerDefense.Enemy
         public EnemyData EnemyData => enemyData;
 
         // =========================================================
-        // HEALTH
-        // =========================================================
-
-        public void SetCurrentHealth(int health)
-        {
-            _currentHealth = Mathf.Clamp(
-                health,
-                0,
-                _maxHealth
-            );
-        }
-
-        // =========================================================
         // START
         // =========================================================
 
@@ -71,12 +71,34 @@ namespace TowerDefense.Enemy
         }
 
         // =========================================================
+        // UPDATE
+        // =========================================================
+
+        protected virtual void Update()
+        {
+            if (_slowTimer <= 0f)
+                return;
+
+            _slowTimer -= Time.deltaTime;
+
+            if (_slowTimer <= 0f)
+            {
+                _slowTimer = 0f;
+                _slowMultiplier = 1f;
+            }
+        }
+
+        // =========================================================
         // ENABLE
         // =========================================================
 
         protected virtual void OnEnable()
         {
             _isDead = false;
+
+            // Reset slow effect when reused from Object Pool
+            _slowMultiplier = 1f;
+            _slowTimer = 0f;
 
             if (_maxHealth > 0)
             {
@@ -100,50 +122,15 @@ namespace TowerDefense.Enemy
                 return;
             }
 
-            enemyData = data;
-
-            float healthMultiplier =
-                DifficultyManager.HealthMultiplier;
-
-            float speedMultiplier =
-                DifficultyManager.SpeedMultiplier;
-
-            // HP
-            _maxHealth =
-                data.GetHealthWithMultiplier(
-                    healthMultiplier
-                );
-
-            _currentHealth = _maxHealth;
-
-            // Attack
-            _attack =
-                data.GetBaseAttackValue();
-
-            // Armor
-            _armor =
-                data.GetBaseArmorValue();
-
-            // Speed
-            _moveSpeed =
-                data.GetSpeedWithMultiplier(
-                    speedMultiplier
-                );
-
-            _isDead = false;
-
-            Debug.Log(
-                $"[EnemyHealth] {gameObject.name} initialized | " +
-                $"Difficulty: {DifficultyManager.DifficultyName} | " +
-                $"HP: {_maxHealth} | " +
-                $"Speed: {_moveSpeed:F2} | " +
-                $"Attack: {_attack} | " +
-                $"Armor: {_armor}"
+            Initialize(
+                data,
+                DifficultyManager.HealthMultiplier,
+                DifficultyManager.SpeedMultiplier
             );
         }
 
         // =========================================================
-        // INITIALIZE WITH MULTIPLIERS
+        // MAIN INITIALIZE
         // =========================================================
 
         public virtual void Initialize(
@@ -162,6 +149,19 @@ namespace TowerDefense.Enemy
 
             enemyData = data;
 
+            // =====================================================
+            // RESET STATUS
+            // =====================================================
+
+            _isDead = false;
+
+            _slowMultiplier = 1f;
+            _slowTimer = 0f;
+
+            // =====================================================
+            // HP
+            // =====================================================
+
             _maxHealth =
                 data.GetHealthWithMultiplier(
                     healthMultiplier
@@ -169,23 +169,40 @@ namespace TowerDefense.Enemy
 
             _currentHealth = _maxHealth;
 
+            // =====================================================
+            // ATTACK
+            // =====================================================
+
             _attack =
                 data.GetBaseAttackValue();
 
+            // =====================================================
+            // ARMOR
+            // =====================================================
+
             _armor =
                 data.GetBaseArmorValue();
+
+            // =====================================================
+            // SPEED
+            // =====================================================
 
             _moveSpeed =
                 data.GetSpeedWithMultiplier(
                     speedMultiplier
                 );
 
-            _isDead = false;
+            // =====================================================
+            // DEBUG
+            // =====================================================
 
             Debug.Log(
                 $"[EnemyHealth] {gameObject.name} initialized | " +
+                $"Difficulty: {DifficultyManager.DifficultyName} | " +
                 $"HP: {_maxHealth} | " +
-                $"Speed: {_moveSpeed:F2}"
+                $"Speed: {_moveSpeed:F2} | " +
+                $"Attack: {_attack} | " +
+                $"Armor: {_armor}"
             );
         }
 
@@ -197,19 +214,43 @@ namespace TowerDefense.Enemy
             EnemyData data,
             int difficulty = 1)
         {
-            // Ignore old difficulty number.
-            // Global DifficultyManager is now the source of truth.
+            float multiplier =
+                Mathf.Max(1f, difficulty);
 
-            InitializeWithCurrentDifficulty(data);
+            Initialize(
+                data,
+                multiplier,
+                multiplier
+            );
+        }
+
+        // =========================================================
+        // HEALTH
+        // =========================================================
+
+        public void SetCurrentHealth(int health)
+        {
+            _currentHealth =
+                Mathf.Clamp(
+                    health,
+                    0,
+                    _maxHealth
+                );
         }
 
         // =========================================================
         // DAMAGE
         // =========================================================
 
+        /// <summary>
+        /// Normal damage. Armor reduces the damage.
+        /// </summary>
         public virtual void TakeDamage(int damage)
         {
             if (_isDead)
+                return;
+
+            if (damage <= 0)
                 return;
 
             float finalDamage =
@@ -219,16 +260,92 @@ namespace TowerDefense.Enemy
                     _armor
                 );
 
-            _currentHealth -=
+            int actualDamage =
                 Mathf.CeilToInt(
                     finalDamage
                 );
+
+            _currentHealth -= actualDamage;
 
             if (_currentHealth <= 0)
             {
                 _currentHealth = 0;
                 Die();
             }
+        }
+
+        // =========================================================
+        // DAMAGE IGNORING ARMOR
+        // =========================================================
+
+        /// <summary>
+        /// Damage that completely ignores enemy armor.
+        /// Used by Mage Tower.
+        /// </summary>
+        public virtual void TakeDamageIgnoringArmor(
+            int damage)
+        {
+            if (_isDead)
+                return;
+
+            if (damage <= 0)
+                return;
+
+            _currentHealth -= damage;
+
+            if (_currentHealth <= 0)
+            {
+                _currentHealth = 0;
+                Die();
+            }
+        }
+
+        // =========================================================
+        // SLOW
+        // =========================================================
+
+        /// <summary>
+        /// Applies a temporary slow effect.
+        ///
+        /// Example:
+        /// slowPercent = 0.3f
+        /// means enemy speed becomes 70%.
+        /// </summary>
+        public virtual void ApplySlow(
+            float slowPercent,
+            float duration)
+        {
+            if (_isDead)
+                return;
+
+            slowPercent =
+                Mathf.Clamp01(slowPercent);
+
+            duration =
+                Mathf.Max(
+                    0f,
+                    duration
+                );
+
+            _slowMultiplier =
+                Mathf.Clamp01(
+                    1f - slowPercent
+                );
+
+            _slowTimer =
+                Mathf.Max(
+                    _slowTimer,
+                    duration
+                );
+        }
+
+        // =========================================================
+        // SLOW RESISTANCE
+        // =========================================================
+
+        public void SetCanBeSlowed(bool value)
+        {
+            // Reserved for slow resistance system
         }
 
         // =========================================================
@@ -249,10 +366,11 @@ namespace TowerDefense.Enemy
         {
             _armor += addedArmor;
 
-            _armor = Mathf.Max(
-                _armor,
-                0
-            );
+            _armor =
+                Mathf.Max(
+                    _armor,
+                    0
+                );
         }
 
         public void ModifyAttack(float multiplier)
@@ -267,17 +385,12 @@ namespace TowerDefense.Enemy
         {
             _moveSpeed *= multiplier;
 
-            // Không giới hạn 3.5 để Hell vẫn có thể
-            // tăng tốc đúng theo multiplier.
-            _moveSpeed = Mathf.Max(
-                _moveSpeed,
-                0.1f
-            );
-        }
-
-        public void SetCanBeSlowed(bool value)
-        {
-            // Reserved for slow resistance system
+            _moveSpeed =
+                Mathf.Clamp(
+                    _moveSpeed,
+                    0.5f,
+                    3.5f
+                );
         }
 
         // =========================================================

@@ -3,9 +3,6 @@ using TowerDefense.Data;
 
 namespace TowerDefense.Enemy
 {
-    /// <summary>
-    /// Fast enemy.
-    /// </summary>
     public class FastEnemy : EnemyHealth
     {
         public override void Initialize(
@@ -16,7 +13,7 @@ namespace TowerDefense.Enemy
                 "[FastEnemy] Initialize using Global Difficulty"
             );
 
-            base.InitializeWithCurrentDifficulty(data);
+            InitializeWithCurrentDifficulty(data);
 
             Debug.Log(
                 $"[FastEnemy] " +

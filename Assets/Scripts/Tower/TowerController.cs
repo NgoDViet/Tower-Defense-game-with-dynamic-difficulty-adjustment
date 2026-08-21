@@ -239,34 +239,95 @@ namespace TowerDefense.Tower
             }
         }
 
-        private void Shoot()
-        {
-            if (towerData.ProjectilePrefab == null)
-            {
-                Debug.LogError($"[TowerController] {gameObject.name} is missing a Projectile Prefab configuration!");
-                return;
-            }
+       private void Shoot()
+{
+    if (towerData.ProjectilePrefab == null)
+    {
+        Debug.LogError(
+            $"[TowerController] {gameObject.name} " +
+            $"is missing a Projectile Prefab configuration!"
+        );
 
-            Debug.Log($"[TowerController Debug] {gameObject.name} is shooting at {(_targetEnemy != null ? _targetEnemy.name : "null")}");
+        return;
+    }
 
-            // Spawn projectile from pool
-            GameObject projectileObj = ObjectPooler.Instance.GetPooledObject(
-                towerData.ProjectilePrefab, 
-                shootPoint.position, 
-                shootPoint.rotation
-            );
+    if (_targetEnemy == null ||
+        _targetEnemy.IsDead)
+    {
+        return;
+    }
 
-            // Initialize projectile
-            ProjectileController projectile = projectileObj.GetComponent<ProjectileController>();
-            if (projectile != null)
-            {
-                projectile.Initialize(_targetEnemy, CurrentDamage, towerData.ProjectileSpeed);
-            }
-            else
-            {
-                Debug.LogWarning($"[TowerController] Spawned projectile {projectileObj.name} does not have a ProjectileController attached.");
-            }
-        }
+    Debug.Log(
+        $"[TowerController Debug] " +
+        $"{gameObject.name} is shooting at " +
+        $"{_targetEnemy.name}"
+    );
+
+    // =====================================================
+    // GET PROJECTILE FROM POOL
+    // =====================================================
+
+    GameObject projectileObj =
+        ObjectPooler.Instance.GetPooledObject(
+            towerData.ProjectilePrefab,
+            shootPoint.position,
+            shootPoint.rotation
+        );
+
+    if (projectileObj == null)
+    {
+        Debug.LogError(
+            $"[TowerController] Failed to get projectile " +
+            $"for {gameObject.name}"
+        );
+
+        return;
+    }
+
+    // =====================================================
+    // GET PROJECTILE CONTROLLER
+    // =====================================================
+
+    ProjectileController projectile =
+        projectileObj.GetComponent<ProjectileController>();
+
+    if (projectile == null)
+    {
+        Debug.LogWarning(
+            $"[TowerController] Spawned projectile " +
+            $"{projectileObj.name} does not have " +
+            $"a ProjectileController attached."
+        );
+
+        return;
+    }
+
+    // =====================================================
+    // CHECK ICE TOWER
+    // =====================================================
+
+    bool isIceTower =
+        towerData.Type == TowerType.Ice;
+
+    // =====================================================
+    // INITIALIZE PROJECTILE
+    // =====================================================
+
+    projectile.Initialize(
+        _targetEnemy,
+        CurrentDamage,
+        towerData.ProjectileSpeed,
+
+        // Apply Slow
+        isIceTower,
+
+        // Slow Percent
+        towerData.SlowPercent,
+
+        // Slow Duration
+        towerData.SlowDuration
+    );
+}
 
         public void LevelUp()
         {
