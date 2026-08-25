@@ -7,18 +7,6 @@ using TowerDefense.Data;
 
 namespace TowerDefense.UI
 {
-    /// <summary>
-    /// Coordinates all UI panels and text overlays.
-    /// Handles:
-    /// Main Menu
-    /// Difficulty Selection
-    /// Level Selection
-    /// Gameplay HUD
-    /// Pause
-    /// Victory
-    /// Defeat
-    /// Tower / Enemy information
-    /// </summary>
     public class UIManager : MonoBehaviour
     {
         // =========================================================
@@ -40,8 +28,11 @@ namespace TowerDefense.UI
         [SerializeField] private TextMeshProUGUI healthText;
         [SerializeField] private TextMeshProUGUI goldText;
         [SerializeField] private TextMeshProUGUI waveText;
-
         [SerializeField] private TextMeshProUGUI timeText;
+
+        // =========================================================
+        // RESULT
+        // =========================================================
 
         [Header("Result Text")]
         [SerializeField] private TextMeshProUGUI victoryTimeText;
@@ -61,10 +52,6 @@ namespace TowerDefense.UI
         [SerializeField]
         private List<LevelData> levels =
             new List<LevelData>();
-
-        // =========================================================
-        // EDITOR PROPERTIES
-        // =========================================================
 
         public LevelData LevelDataToPlay
         {
@@ -90,18 +77,23 @@ namespace TowerDefense.UI
         // =========================================================
 
         private TowerDefense.Tower.TowerController _selectedTower;
+
         private TowerDefense.Enemy.EnemyHealth _selectedEnemy;
 
         private GameObject _infoPanel;
+
         private TextMeshProUGUI _infoTitleText;
+
         private TextMeshProUGUI _infoStatsText;
 
         private GameObject _lvlUpBtnGO;
+
         private Button _lvlUpBtn;
+
         private TextMeshProUGUI _lvlUpBtnText;
 
         // =========================================================
-        // UNITY EVENTS
+        // ENABLE
         // =========================================================
 
         private void OnEnable()
@@ -122,13 +114,10 @@ namespace TowerDefense.UI
                 OnWaveStarted
             );
         }
-        private string FormatTime(float time)
-{
-    int minutes = Mathf.FloorToInt(time / 60f);
-    int seconds = Mathf.FloorToInt(time % 60f);
 
-    return $"{minutes:00}:{seconds:00}";
-}
+        // =========================================================
+        // DISABLE
+        // =========================================================
 
         private void OnDisable()
         {
@@ -149,17 +138,24 @@ namespace TowerDefense.UI
             );
         }
 
+        // =========================================================
+        // START
+        // =========================================================
+
         private void Start()
         {
             if (levels == null)
             {
-                levels = new List<LevelData>();
+                levels =
+                    new List<LevelData>();
             }
 
             if (levels.Count == 0 &&
                 levelDataToPlay != null)
             {
-                levels.Add(levelDataToPlay);
+                levels.Add(
+                    levelDataToPlay
+                );
             }
 
             if (GameManager.Instance != null)
@@ -177,7 +173,26 @@ namespace TowerDefense.UI
         }
 
         // =========================================================
-        // GAME STATE UI
+        // TIME
+        // =========================================================
+
+        private string FormatTime(float time)
+        {
+            int minutes =
+                Mathf.FloorToInt(
+                    time / 60f
+                );
+
+            int seconds =
+                Mathf.FloorToInt(
+                    time % 60f
+                );
+
+            return $"{minutes:00}:{seconds:00}";
+        }
+
+        // =========================================================
+        // PANEL VISIBILITY
         // =========================================================
 
         private void UpdatePanelVisibility(
@@ -241,70 +256,89 @@ namespace TowerDefense.UI
         }
 
         // =========================================================
-        // EVENT BUS
+        // GAME STATE
         // =========================================================
 
-      private void OnGameStateChanged(
-    GameStateChangedEvent evt)
-{
-    UpdatePanelVisibility(evt.NewState);
+        private void OnGameStateChanged(
+            GameStateChangedEvent evt)
+        {
+            UpdatePanelVisibility(
+                evt.NewState
+            );
 
-    if (GameManager.Instance == null)
-        return;
+            if (GameManager.Instance == null)
+                return;
 
-    if (evt.NewState == GameManager.GameState.Victory)
-    {
-        UpdateVictoryResult();
-    }
-    else if (evt.NewState == GameManager.GameState.Defeat)
-    {
-        UpdateDefeatResult();
-    }
-}
-private void UpdateVictoryResult()
-{
-    string time =
-        FormatTime(
-            GameManager.Instance.PlayTime
-        );
+            if (evt.NewState ==
+                GameManager.GameState.Victory)
+            {
+                UpdateVictoryResult();
+            }
+            else if (
+                evt.NewState ==
+                GameManager.GameState.Defeat)
+            {
+                UpdateDefeatResult();
+            }
+        }
 
-    int damage =
-        GameManager.Instance.TotalDamageDealt;
+        // =========================================================
+        // VICTORY
+        // =========================================================
 
-    if (victoryTimeText != null)
-    {
-        victoryTimeText.text =
-            $"TIME: {time}";
-    }
+        private void UpdateVictoryResult()
+        {
+            string time =
+                FormatTime(
+                    GameManager.Instance.PlayTime
+                );
 
-    if (victoryDamageText != null)
-    {
-        victoryDamageText.text =
-            $"DAMAGE: {damage:N0}";
-    }
-}
-private void UpdateDefeatResult()
-{
-    string time =
-        FormatTime(
-            GameManager.Instance.PlayTime
-        );
+            int damage =
+                GameManager.Instance.TotalDamageDealt;
 
-    int damage =
-        GameManager.Instance.TotalDamageDealt;
+            if (victoryTimeText != null)
+            {
+                victoryTimeText.text =
+                    $"TIME: {time}";
+            }
 
-    if (defeatTimeText != null)
-    {
-        defeatTimeText.text =
-            $"TIME: {time}";
-    }
+            if (victoryDamageText != null)
+            {
+                victoryDamageText.text =
+                    $"DAMAGE: {damage:N0}";
+            }
+        }
 
-    if (defeatDamageText != null)
-    {
-        defeatDamageText.text =
-            $"DAMAGE: {damage:N0}";
-    }
-}
+        // =========================================================
+        // DEFEAT
+        // =========================================================
+
+        private void UpdateDefeatResult()
+        {
+            string time =
+                FormatTime(
+                    GameManager.Instance.PlayTime
+                );
+
+            int damage =
+                GameManager.Instance.TotalDamageDealt;
+
+            if (defeatTimeText != null)
+            {
+                defeatTimeText.text =
+                    $"TIME: {time}";
+            }
+
+            if (defeatDamageText != null)
+            {
+                defeatDamageText.text =
+                    $"DAMAGE: {damage:N0}";
+            }
+        }
+
+        // =========================================================
+        // BASE HP
+        // =========================================================
 
         private void OnBaseHealthChanged(
             BaseHealthChangedEvent evt)
@@ -315,6 +349,10 @@ private void UpdateDefeatResult()
                     $"HP: {evt.CurrentHealth}/{evt.MaxHealth}";
             }
         }
+
+        // =========================================================
+        // GOLD
+        // =========================================================
 
         private void OnGoldChanged(
             GoldChangedEvent evt)
@@ -328,6 +366,10 @@ private void UpdateDefeatResult()
             UpdateSelectedStatsDisplay();
         }
 
+        // =========================================================
+        // WAVE
+        // =========================================================
+
         private void OnWaveStarted(
             WaveStartedEvent evt)
         {
@@ -339,48 +381,38 @@ private void UpdateDefeatResult()
         }
 
         // =========================================================
-        // PLAY BUTTON
+        // PLAY
         // =========================================================
 
         public void OnPlayButtonClicked()
         {
-            Debug.Log(
-                "[UIManager] PLAY GAME clicked."
-            );
-
             EnsureDifficultySelectionUI();
 
             if (_difficultySelectionPanel == null)
             {
                 Debug.LogError(
-                    "[UIManager] Difficulty Selection Panel could not be created."
+                    "[UIManager] " +
+                    "Difficulty Selection Panel could not be created."
                 );
 
                 return;
             }
 
-            // Hide main menu
             if (mainMenuPanel != null)
             {
                 mainMenuPanel.SetActive(false);
             }
 
-            // Hide level selection
             if (_levelSelectionPanel != null)
             {
                 _levelSelectionPanel.SetActive(false);
             }
 
-            // Show difficulty selection
             _difficultySelectionPanel.SetActive(true);
-
-            Debug.Log(
-                "[UIManager] Difficulty Selection opened."
-            );
         }
 
         // =========================================================
-        // DIFFICULTY SELECTION
+        // DIFFICULTY UI
         // =========================================================
 
         private void EnsureDifficultySelectionUI()
@@ -390,8 +422,8 @@ private void UpdateDefeatResult()
 
             Transform parent =
                 mainMenuPanel != null
-                ? mainMenuPanel.transform.parent
-                : transform;
+                    ? mainMenuPanel.transform.parent
+                    : transform;
 
             _difficultySelectionPanel =
                 new GameObject(
@@ -410,10 +442,17 @@ private void UpdateDefeatResult()
                 _difficultySelectionPanel
                     .GetComponent<RectTransform>();
 
-            panelRect.anchorMin = Vector2.zero;
-            panelRect.anchorMax = Vector2.one;
-            panelRect.offsetMin = Vector2.zero;
-            panelRect.offsetMax = Vector2.zero;
+            panelRect.anchorMin =
+                Vector2.zero;
+
+            panelRect.anchorMax =
+                Vector2.one;
+
+            panelRect.offsetMin =
+                Vector2.zero;
+
+            panelRect.offsetMax =
+                Vector2.zero;
 
             Image panelImage =
                 _difficultySelectionPanel
@@ -427,10 +466,6 @@ private void UpdateDefeatResult()
                     0.98f
                 );
 
-            // -----------------------------------------------------
-            // TITLE
-            // -----------------------------------------------------
-
             CreateText(
                 _difficultySelectionPanel.transform,
                 "DifficultyTitle",
@@ -442,10 +477,6 @@ private void UpdateDefeatResult()
                 new Vector2(0.5f, 0.85f),
                 new Vector2(700f, 100f)
             );
-
-            // -----------------------------------------------------
-            // DESCRIPTION
-            // -----------------------------------------------------
 
             CreateText(
                 _difficultySelectionPanel.transform,
@@ -462,10 +493,6 @@ private void UpdateDefeatResult()
                 new Vector2(0.5f, 0.76f),
                 new Vector2(600f, 60f)
             );
-
-            // -----------------------------------------------------
-            // BUTTON CONTAINER
-            // -----------------------------------------------------
 
             GameObject container =
                 new GameObject(
@@ -494,7 +521,10 @@ private void UpdateDefeatResult()
                 Vector2.zero;
 
             containerRect.sizeDelta =
-                new Vector2(1100f, 350f);
+                new Vector2(
+                    1100f,
+                    350f
+                );
 
             HorizontalLayoutGroup layout =
                 container.AddComponent<
@@ -512,20 +542,12 @@ private void UpdateDefeatResult()
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            // -----------------------------------------------------
-            // NORMAL
-            // -----------------------------------------------------
-
             CreateDifficultyButton(
                 container.transform,
                 "NORMAL",
                 "HP ×1\nSPEED ×1",
                 DifficultyMode.Normal
             );
-
-            // -----------------------------------------------------
-            // NORMAL+
-            // -----------------------------------------------------
 
             CreateDifficultyButton(
                 container.transform,
@@ -534,10 +556,6 @@ private void UpdateDefeatResult()
                 DifficultyMode.NormalPlus
             );
 
-            // -----------------------------------------------------
-            // HARD
-            // -----------------------------------------------------
-
             CreateDifficultyButton(
                 container.transform,
                 "HARD",
@@ -545,20 +563,12 @@ private void UpdateDefeatResult()
                 DifficultyMode.Hard
             );
 
-            // -----------------------------------------------------
-            // HELL
-            // -----------------------------------------------------
-
             CreateDifficultyButton(
                 container.transform,
                 "HELL",
                 "HP ×4\nSPEED ×1.5",
                 DifficultyMode.Hell
             );
-
-            // -----------------------------------------------------
-            // BACK BUTTON
-            // -----------------------------------------------------
 
             GameObject back =
                 CreateSimpleButton(
@@ -568,7 +578,10 @@ private void UpdateDefeatResult()
                         0.5f,
                         0.12f
                     ),
-                    new Vector2(220f, 55f)
+                    new Vector2(
+                        220f,
+                        55f
+                    )
                 );
 
             Button backButton =
@@ -580,6 +593,10 @@ private void UpdateDefeatResult()
 
             _difficultySelectionPanel.SetActive(false);
         }
+
+        // =========================================================
+        // DIFFICULTY BUTTON
+        // =========================================================
 
         private void CreateDifficultyButton(
             Transform parent,
@@ -606,8 +623,11 @@ private void UpdateDefeatResult()
                     LayoutElement
                 >();
 
-            layoutElement.preferredWidth = 240f;
-            layoutElement.preferredHeight = 280f;
+            layoutElement.preferredWidth =
+                240f;
+
+            layoutElement.preferredHeight =
+                280f;
 
             Image image =
                 buttonObject.GetComponent<Image>();
@@ -620,7 +640,8 @@ private void UpdateDefeatResult()
                     1f
                 );
 
-            image.color = buttonColor;
+            image.color =
+                buttonColor;
 
             Button button =
                 buttonObject.GetComponent<Button>();
@@ -647,9 +668,9 @@ private void UpdateDefeatResult()
                     1f
                 );
 
-            button.colors = colors;
+            button.colors =
+                colors;
 
-            // Title
             GameObject titleObject =
                 new GameObject(
                     "Title",
@@ -666,8 +687,12 @@ private void UpdateDefeatResult()
                     TextMeshProUGUI
                 >();
 
-            titleText.text = title;
-            titleText.fontSize = 28;
+            titleText.text =
+                title;
+
+            titleText.fontSize =
+                28;
+
             titleText.fontStyle =
                 FontStyles.Bold;
 
@@ -683,15 +708,23 @@ private void UpdateDefeatResult()
                 >();
 
             titleRect.anchorMin =
-                new Vector2(0.05f, 0.55f);
+                new Vector2(
+                    0.05f,
+                    0.55f
+                );
 
             titleRect.anchorMax =
-                new Vector2(0.95f, 0.9f);
+                new Vector2(
+                    0.95f,
+                    0.9f
+                );
 
-            titleRect.offsetMin = Vector2.zero;
-            titleRect.offsetMax = Vector2.zero;
+            titleRect.offsetMin =
+                Vector2.zero;
 
-            // Description
+            titleRect.offsetMax =
+                Vector2.zero;
+
             GameObject descriptionObject =
                 new GameObject(
                     "Description",
@@ -711,7 +744,8 @@ private void UpdateDefeatResult()
             descriptionText.text =
                 description;
 
-            descriptionText.fontSize = 18;
+            descriptionText.fontSize =
+                18;
 
             descriptionText.color =
                 new Color(
@@ -729,10 +763,16 @@ private void UpdateDefeatResult()
                 >();
 
             descriptionRect.anchorMin =
-                new Vector2(0.05f, 0.15f);
+                new Vector2(
+                    0.05f,
+                    0.15f
+                );
 
             descriptionRect.anchorMax =
-                new Vector2(0.95f, 0.55f);
+                new Vector2(
+                    0.95f,
+                    0.55f
+                );
 
             descriptionRect.offsetMin =
                 Vector2.zero;
@@ -740,7 +780,6 @@ private void UpdateDefeatResult()
             descriptionRect.offsetMax =
                 Vector2.zero;
 
-            // Click
             button.onClick.AddListener(
                 () =>
                 {
@@ -751,6 +790,10 @@ private void UpdateDefeatResult()
             );
         }
 
+        // =========================================================
+        // SELECT DIFFICULTY
+        // =========================================================
+
         private void SelectDifficulty(
             DifficultyMode difficulty)
         {
@@ -758,18 +801,11 @@ private void UpdateDefeatResult()
                 difficulty
             );
 
-            Debug.Log(
-                $"[UIManager] Selected difficulty: " +
-                $"{DifficultyManager.DifficultyName}"
-            );
-
-            // Hide difficulty screen
             if (_difficultySelectionPanel != null)
             {
                 _difficultySelectionPanel.SetActive(false);
             }
 
-            // Open level selection
             EnsureLevelSelectionUI();
 
             if (_levelSelectionPanel != null)
@@ -792,7 +828,7 @@ private void UpdateDefeatResult()
         }
 
         // =========================================================
-        // LEVEL SELECTION
+        // LEVEL UI
         // =========================================================
 
         private void EnsureLevelSelectionUI()
@@ -803,7 +839,8 @@ private void UpdateDefeatResult()
             if (mainMenuPanel == null)
             {
                 Debug.LogError(
-                    "[UIManager] Main Menu Panel is missing!"
+                    "[UIManager] " +
+                    "Main Menu Panel is missing!"
                 );
 
                 return;
@@ -830,13 +867,22 @@ private void UpdateDefeatResult()
                     RectTransform
                 >();
 
-            rect.anchorMin = Vector2.zero;
-            rect.anchorMax = Vector2.one;
-            rect.offsetMin = Vector2.zero;
-            rect.offsetMax = Vector2.zero;
+            rect.anchorMin =
+                Vector2.zero;
+
+            rect.anchorMax =
+                Vector2.one;
+
+            rect.offsetMin =
+                Vector2.zero;
+
+            rect.offsetMax =
+                Vector2.zero;
 
             Image img =
-                _levelSelectionPanel.GetComponent<Image>();
+                _levelSelectionPanel.GetComponent<
+                    Image
+                >();
 
             img.color =
                 new Color(
@@ -845,10 +891,6 @@ private void UpdateDefeatResult()
                     0.12f,
                     0.98f
                 );
-
-            // -----------------------------------------------------
-            // TITLE
-            // -----------------------------------------------------
 
             CreateText(
                 _levelSelectionPanel.transform,
@@ -859,12 +901,11 @@ private void UpdateDefeatResult()
                 Color.white,
                 new Vector2(0.5f, 0.9f),
                 new Vector2(0.5f, 0.9f),
-                new Vector2(600f, 100f)
+                new Vector2(
+                    600f,
+                    100f
+                )
             );
-
-            // -----------------------------------------------------
-            // CURRENT DIFFICULTY
-            // -----------------------------------------------------
 
             CreateText(
                 _levelSelectionPanel.transform,
@@ -880,12 +921,11 @@ private void UpdateDefeatResult()
                 ),
                 new Vector2(0.5f, 0.82f),
                 new Vector2(0.5f, 0.82f),
-                new Vector2(600f, 50f)
+                new Vector2(
+                    600f,
+                    50f
+                )
             );
-
-            // -----------------------------------------------------
-            // CONTAINER
-            // -----------------------------------------------------
 
             GameObject container =
                 new GameObject(
@@ -904,10 +944,16 @@ private void UpdateDefeatResult()
                 >();
 
             containerRect.anchorMin =
-                new Vector2(0.1f, 0.25f);
+                new Vector2(
+                    0.1f,
+                    0.25f
+                );
 
             containerRect.anchorMax =
-                new Vector2(0.9f, 0.75f);
+                new Vector2(
+                    0.9f,
+                    0.75f
+                );
 
             containerRect.offsetMin =
                 Vector2.zero;
@@ -920,20 +966,23 @@ private void UpdateDefeatResult()
                     HorizontalLayoutGroup
                 >();
 
-            layout.spacing = 50f;
+            layout.spacing =
+                50f;
 
             layout.childAlignment =
                 TextAnchor.MiddleCenter;
 
-            layout.childControlHeight = true;
-            layout.childControlWidth = true;
+            layout.childControlHeight =
+                true;
 
-            layout.childForceExpandHeight = false;
-            layout.childForceExpandWidth = false;
+            layout.childControlWidth =
+                true;
 
-            // -----------------------------------------------------
-            // LEVEL CARDS
-            // -----------------------------------------------------
+            layout.childForceExpandHeight =
+                false;
+
+            layout.childForceExpandWidth =
+                false;
 
             foreach (LevelData lvl in levels)
             {
@@ -945,10 +994,6 @@ private void UpdateDefeatResult()
                     lvl
                 );
             }
-
-            // -----------------------------------------------------
-            // BACK BUTTON
-            // -----------------------------------------------------
 
             GameObject back =
                 CreateSimpleButton(
@@ -980,6 +1025,10 @@ private void UpdateDefeatResult()
 
             _levelSelectionPanel.SetActive(false);
         }
+
+        // =========================================================
+        // LEVEL CARD
+        // =========================================================
 
         private void CreateLevelCard(
             Transform parent,
@@ -1014,8 +1063,11 @@ private void UpdateDefeatResult()
                     LayoutElement
                 >();
 
-            element.preferredWidth = 320f;
-            element.preferredHeight = 420f;
+            element.preferredWidth =
+                320f;
+
+            element.preferredHeight =
+                420f;
 
             VerticalLayoutGroup layout =
                 card.AddComponent<
@@ -1030,15 +1082,18 @@ private void UpdateDefeatResult()
                     25
                 );
 
-            layout.spacing = 15f;
+            layout.spacing =
+                15f;
 
             layout.childAlignment =
                 TextAnchor.UpperCenter;
 
-            layout.childControlHeight = false;
-            layout.childControlWidth = true;
+            layout.childControlHeight =
+                false;
 
-            // Level Name
+            layout.childControlWidth =
+                true;
+
             GameObject nameObject =
                 new GameObject(
                     "NameText",
@@ -1058,7 +1113,9 @@ private void UpdateDefeatResult()
             nameText.text =
                 lvl.LevelName.ToUpper();
 
-            nameText.fontSize = 24;
+            nameText.fontSize =
+                24;
+
             nameText.fontStyle =
                 FontStyles.Bold;
 
@@ -1068,7 +1125,6 @@ private void UpdateDefeatResult()
             nameText.alignment =
                 TextAlignmentOptions.Center;
 
-            // Stats
             GameObject statsObject =
                 new GameObject(
                     "StatsText",
@@ -1093,8 +1149,11 @@ private void UpdateDefeatResult()
                 $"TOTAL WAVES\n" +
                 $"<color=#55FFFF>{lvl.Waves.Count}</color>";
 
-            statsText.fontSize = 18;
-            statsText.lineSpacing = 8f;
+            statsText.fontSize =
+                18;
+
+            statsText.lineSpacing =
+                8f;
 
             statsText.color =
                 new Color(
@@ -1106,7 +1165,6 @@ private void UpdateDefeatResult()
             statsText.alignment =
                 TextAlignmentOptions.Center;
 
-            // Spacer
             GameObject spacer =
                 new GameObject(
                     "Spacer",
@@ -1123,9 +1181,9 @@ private void UpdateDefeatResult()
                     LayoutElement
                 >();
 
-            spacerElement.flexibleHeight = 1f;
+            spacerElement.flexibleHeight =
+                1f;
 
-            // Select Button
             GameObject buttonObject =
                 new GameObject(
                     "PlayButton",
@@ -1179,14 +1237,16 @@ private void UpdateDefeatResult()
                     1f
                 );
 
-            button.colors = colors;
+            button.colors =
+                colors;
 
             LayoutElement buttonElement =
                 buttonObject.AddComponent<
                     LayoutElement
                 >();
 
-            buttonElement.preferredHeight = 50f;
+            buttonElement.preferredHeight =
+                50f;
 
             GameObject buttonTextObject =
                 new GameObject(
@@ -1207,7 +1267,8 @@ private void UpdateDefeatResult()
             buttonText.text =
                 "SELECT LEVEL";
 
-            buttonText.fontSize = 18;
+            buttonText.fontSize =
+                18;
 
             buttonText.fontStyle =
                 FontStyles.Bold;
@@ -1258,31 +1319,12 @@ private void UpdateDefeatResult()
             if (levelData == null)
             {
                 Debug.LogError(
-                    "[UIManager] Selected LevelData is NULL!"
+                    "[UIManager] " +
+                    "Selected LevelData is NULL!"
                 );
 
                 return;
             }
-
-            Debug.Log(
-                $"[UIManager] Starting level: " +
-                $"{levelData.LevelName}"
-            );
-
-            Debug.Log(
-                $"[UIManager] Difficulty: " +
-                $"{DifficultyManager.DifficultyName}"
-            );
-
-            Debug.Log(
-                $"[UIManager] HP multiplier: " +
-                $"x{DifficultyManager.HealthMultiplier}"
-            );
-
-            Debug.Log(
-                $"[UIManager] Speed multiplier: " +
-                $"x{DifficultyManager.SpeedMultiplier}"
-            );
 
             if (_difficultySelectionPanel != null)
             {
@@ -1294,7 +1336,8 @@ private void UpdateDefeatResult()
                 _levelSelectionPanel.SetActive(false);
             }
 
-            Time.timeScale = 1f;
+            Time.timeScale =
+                1f;
 
             if (GameManager.Instance != null)
             {
@@ -1304,13 +1347,16 @@ private void UpdateDefeatResult()
             }
             else
             {
-                UnityEngine.SceneManagement.SceneManager
-                    .LoadScene(levelData.LevelName);
+                UnityEngine.SceneManagement
+                    .SceneManager
+                    .LoadScene(
+                        levelData.LevelName
+                    );
             }
         }
 
         // =========================================================
-        // SIMPLE BUTTON CREATOR
+        // SIMPLE BUTTON
         // =========================================================
 
         private GameObject CreateSimpleButton(
@@ -1321,7 +1367,10 @@ private void UpdateDefeatResult()
         {
             GameObject buttonObject =
                 new GameObject(
-                    text.Replace(" ", "") + "Button",
+                    text.Replace(
+                        " ",
+                        ""
+                    ) + "Button",
                     typeof(RectTransform),
                     typeof(CanvasRenderer),
                     typeof(Image),
@@ -1338,8 +1387,12 @@ private void UpdateDefeatResult()
                     RectTransform
                 >();
 
-            rect.anchorMin = anchor;
-            rect.anchorMax = anchor;
+            rect.anchorMin =
+                anchor;
+
+            rect.anchorMax =
+                anchor;
+
             rect.pivot =
                 new Vector2(
                     0.5f,
@@ -1349,7 +1402,8 @@ private void UpdateDefeatResult()
             rect.anchoredPosition =
                 Vector2.zero;
 
-            rect.sizeDelta = size;
+            rect.sizeDelta =
+                size;
 
             Image image =
                 buttonObject.GetComponent<Image>();
@@ -1372,27 +1426,25 @@ private void UpdateDefeatResult()
                 new Color(
                     0.35f,
                     0.35f,
-                    0.4f,
-                    1f
+                    0.4f
                 );
 
             colors.highlightedColor =
                 new Color(
                     0.45f,
                     0.45f,
-                    0.5f,
-                    1f
+                    0.5f
                 );
 
             colors.pressedColor =
                 new Color(
                     0.25f,
                     0.25f,
-                    0.3f,
-                    1f
+                    0.3f
                 );
 
-            button.colors = colors;
+            button.colors =
+                colors;
 
             GameObject textObject =
                 new GameObject(
@@ -1410,8 +1462,12 @@ private void UpdateDefeatResult()
                     TextMeshProUGUI
                 >();
 
-            tmp.text = text;
-            tmp.fontSize = 18;
+            tmp.text =
+                text;
+
+            tmp.fontSize =
+                18;
+
             tmp.fontStyle =
                 FontStyles.Bold;
 
@@ -1442,7 +1498,7 @@ private void UpdateDefeatResult()
         }
 
         // =========================================================
-        // TEXT CREATOR
+        // CREATE TEXT
         // =========================================================
 
         private TextMeshProUGUI CreateText(
@@ -1472,10 +1528,17 @@ private void UpdateDefeatResult()
                     TextMeshProUGUI
                 >();
 
-            tmp.text = text;
-            tmp.fontSize = fontSize;
-            tmp.fontStyle = fontStyle;
-            tmp.color = color;
+            tmp.text =
+                text;
+
+            tmp.fontSize =
+                fontSize;
+
+            tmp.fontStyle =
+                fontStyle;
+
+            tmp.color =
+                color;
 
             tmp.alignment =
                 TextAlignmentOptions.Center;
@@ -1485,8 +1548,11 @@ private void UpdateDefeatResult()
                     RectTransform
                 >();
 
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
+            rect.anchorMin =
+                anchorMin;
+
+            rect.anchorMax =
+                anchorMax;
 
             rect.pivot =
                 new Vector2(
@@ -1497,13 +1563,14 @@ private void UpdateDefeatResult()
             rect.anchoredPosition =
                 Vector2.zero;
 
-            rect.sizeDelta = size;
+            rect.sizeDelta =
+                size;
 
             return tmp;
         }
 
         // =========================================================
-        // GAMEPLAY BUTTONS
+        // PAUSE
         // =========================================================
 
         public void OnResumeButtonClicked()
@@ -1522,6 +1589,10 @@ private void UpdateDefeatResult()
             }
         }
 
+        // =========================================================
+        // RESTART
+        // =========================================================
+
         public void OnRestartButtonClicked()
         {
             if (GameManager.Instance != null)
@@ -1530,20 +1601,28 @@ private void UpdateDefeatResult()
             }
         }
 
+        // =========================================================
+        // MAIN MENU
+        // =========================================================
+
         public void OnReturnToMainMenuButtonClicked()
         {
-            Time.timeScale = 1f;
+            Time.timeScale =
+                1f;
 
-            UnityEngine.SceneManagement.SceneManager
-                .LoadScene("MainMenu");
+            UnityEngine.SceneManagement
+                .SceneManager
+                .LoadScene(
+                    "MainMenu"
+                );
         }
+
+        // =========================================================
+        // QUIT
+        // =========================================================
 
         public void OnQuitButtonClicked()
         {
-            Debug.Log(
-                "[UIManager] Quitting Game..."
-            );
-
             Application.Quit();
         }
 
@@ -1551,60 +1630,76 @@ private void UpdateDefeatResult()
         // UPDATE
         // =========================================================
 
-       private void Update()
-{
-    if (GameManager.Instance == null)
-        return;
-
-    // Update gameplay timer
-    if (timeText != null &&
-        (GameManager.Instance.CurrentState ==
-         GameManager.GameState.Playing ||
-         GameManager.Instance.CurrentState ==
-         GameManager.GameState.Pause))
-    {
-        timeText.text =
-            $"TIME: {FormatTime(GameManager.Instance.PlayTime)}";
-    }
-
-    if (GameManager.Instance.CurrentState !=
-        GameManager.GameState.Playing)
-    {
-        if (_infoPanel != null &&
-            _infoPanel.activeSelf)
+        private void Update()
         {
-            _infoPanel.SetActive(false);
-        }
+            if (GameManager.Instance == null)
+                return;
 
-        return;
-    }
+            if (timeText != null &&
+    (
+        GameManager.Instance.CurrentState ==
+        GameManager.GameState.Playing ||
 
-    UpdateSelectedStatsDisplay();
+        GameManager.Instance.CurrentState ==
+        GameManager.GameState.Pause
+    ))
+{
+    string formattedTime =
+        FormatTime(
+            GameManager.Instance.PlayTime
+        );
 
+    timeText.text =
+        $"TIME: {formattedTime}";
+}
+
+            if (GameManager.Instance.CurrentState !=
+                GameManager.GameState.Playing)
+            {
+                if (_infoPanel != null &&
+                    _infoPanel.activeSelf)
+                {
+                    _infoPanel.SetActive(false);
+                }
+
+                return;
+            }
 
             UpdateSelectedStatsDisplay();
 
-            bool leftClick = false;
+            bool leftClick =
+                false;
+
             Vector2 mouseScreenPos =
                 Vector2.zero;
 
-            if (UnityEngine.InputSystem.Mouse.current != null)
+            if (
+                UnityEngine.InputSystem
+                    .Mouse.current != null)
             {
-                if (UnityEngine.InputSystem.Mouse.current
-                    .leftButton.wasPressedThisFrame)
+                if (
+                    UnityEngine.InputSystem
+                        .Mouse.current
+                        .leftButton
+                        .wasPressedThisFrame)
                 {
-                    leftClick = true;
+                    leftClick =
+                        true;
 
                     mouseScreenPos =
-                        UnityEngine.InputSystem.Mouse.current
-                        .position.ReadValue();
+                        UnityEngine.InputSystem
+                            .Mouse.current
+                            .position
+                            .ReadValue();
                 }
             }
             else
             {
                 if (Input.GetMouseButtonDown(0))
                 {
-                    leftClick = true;
+                    leftClick =
+                        true;
+
                     mouseScreenPos =
                         Input.mousePosition;
                 }
@@ -1643,7 +1738,8 @@ private void UpdateDefeatResult()
                     0.6f
                 );
 
-            Collider2D closestHit = null;
+            Collider2D closestHit =
+                null;
 
             float closestDist =
                 float.MaxValue;
@@ -1682,10 +1778,17 @@ private void UpdateDefeatResult()
 
                     if (dist < closestDist)
                     {
-                        closestDist = dist;
-                        closestHit = hit;
-                        targetTower = tower;
-                        targetEnemy = enemy;
+                        closestDist =
+                            dist;
+
+                        closestHit =
+                            hit;
+
+                        targetTower =
+                            tower;
+
+                        targetEnemy =
+                            enemy;
                     }
                 }
             }
@@ -1694,11 +1797,15 @@ private void UpdateDefeatResult()
             {
                 if (targetTower != null)
                 {
-                    SelectTower(targetTower);
+                    SelectTower(
+                        targetTower
+                    );
                 }
                 else if (targetEnemy != null)
                 {
-                    SelectEnemy(targetEnemy);
+                    SelectEnemy(
+                        targetEnemy
+                    );
                 }
             }
             else
@@ -1708,56 +1815,88 @@ private void UpdateDefeatResult()
         }
 
         // =========================================================
-        // INFO PANEL
+        // SELECT TOWER
         // =========================================================
 
         private void SelectTower(
             TowerDefense.Tower.TowerController tower)
         {
-            _selectedTower = tower;
-            _selectedEnemy = null;
+            _selectedTower =
+                tower;
+
+            _selectedEnemy =
+                null;
 
             EnsureInfoPanel();
 
-            _infoPanel.SetActive(true);
+            _infoPanel.SetActive(
+                true
+            );
 
             UpdateSelectedStatsDisplay();
         }
+
+        // =========================================================
+        // SELECT ENEMY
+        // =========================================================
 
         private void SelectEnemy(
             TowerDefense.Enemy.EnemyHealth enemy)
         {
-            _selectedEnemy = enemy;
-            _selectedTower = null;
+            _selectedEnemy =
+                enemy;
+
+            _selectedTower =
+                null;
 
             EnsureInfoPanel();
 
-            _infoPanel.SetActive(true);
+            _infoPanel.SetActive(
+                true
+            );
 
             UpdateSelectedStatsDisplay();
         }
 
+        // =========================================================
+        // DESELECT
+        // =========================================================
+
         private void Deselect()
         {
-            _selectedTower = null;
-            _selectedEnemy = null;
+            _selectedTower =
+                null;
+
+            _selectedEnemy =
+                null;
 
             if (_infoPanel != null)
             {
-                _infoPanel.SetActive(false);
+                _infoPanel.SetActive(
+                    false
+                );
             }
         }
+
+        // =========================================================
+        // UPDATE SELECTED STATS
+        // =========================================================
 
         private void UpdateSelectedStatsDisplay()
         {
             if (_infoPanel == null ||
                 !_infoPanel.activeSelf)
+            {
                 return;
+            }
+
+            // =====================================================
+            // TOWER
+            // =====================================================
 
             if (_selectedTower != null)
             {
-                if (_selectedTower == null ||
-                    _selectedTower.gameObject == null)
+                if (_selectedTower.gameObject == null)
                 {
                     Deselect();
                     return;
@@ -1768,13 +1907,17 @@ private void UpdateDefeatResult()
 
                 string name =
                     data != null
-                    ? data.TowerName
-                    : "Tower";
+                        ? data.TowerName
+                        : "Tower";
 
                 float fireRate =
                     data != null
-                    ? data.FireRate
-                    : 0f;
+                        ? data.FireRate
+                        : 0f;
+
+                // -------------------------------------------------
+                // TITLE
+                // -------------------------------------------------
 
                 if (_infoTitleText != null)
                 {
@@ -1783,35 +1926,53 @@ private void UpdateDefeatResult()
                         $" (LVL {_selectedTower.CurrentLevel})";
                 }
 
+                // -------------------------------------------------
+                // STATS
+                // -------------------------------------------------
+
                 if (_infoStatsText != null)
                 {
                     _infoStatsText.text =
-                        $"DAMAGE: <color=#FFD700>" +
+                        $"DAMAGE: " +
+                        $"<color=#FFD700>" +
                         $"{_selectedTower.CurrentDamage}" +
                         $"</color>\n\n" +
 
-                        $"FIRE RATE: <color=#55FFFF>" +
+                        $"FIRE RATE: " +
+                        $"<color=#55FFFF>" +
                         $"{fireRate:F1}/s" +
                         $"</color>\n\n" +
 
-                        $"RANGE: <color=#55FF55>" +
+                        $"RANGE: " +
+                        $"<color=#55FF55>" +
                         $"{_selectedTower.CurrentRange:F1}" +
                         $"</color>";
                 }
 
+                // -------------------------------------------------
+                // UPGRADE BUTTON
+                // -------------------------------------------------
+
                 if (_lvlUpBtnGO != null)
                 {
+                    // ALWAYS SHOW BUTTON
+                    // At level 3 it becomes MAX LEVEL.
+                    _lvlUpBtnGO.SetActive(true);
+
+                    // =================================================
+                    // NOT MAX LEVEL
+                    // =================================================
+
                     if (_selectedTower.CurrentLevel <
                         _selectedTower.MaxLevel)
                     {
-                        _lvlUpBtnGO.SetActive(true);
-
                         int cost =
                             _selectedTower.UpgradeCost;
 
                         bool canAfford =
                             GameManager.Instance == null ||
-                            GameManager.Instance.CurrentGold >= cost;
+                            GameManager.Instance.CurrentGold >=
+                            cost;
 
                         if (_lvlUpBtnText != null)
                         {
@@ -1825,16 +1986,35 @@ private void UpdateDefeatResult()
                                 canAfford;
                         }
                     }
+
+                    // =================================================
+                    // MAX LEVEL
+                    // =================================================
+
                     else
                     {
-                        _lvlUpBtnGO.SetActive(false);
+                        if (_lvlUpBtnText != null)
+                        {
+                            _lvlUpBtnText.text =
+                                "MAX LEVEL";
+                        }
+
+                        if (_lvlUpBtn != null)
+                        {
+                            _lvlUpBtn.interactable =
+                                false;
+                        }
                     }
                 }
             }
+
+            // =====================================================
+            // ENEMY
+            // =====================================================
+
             else if (_selectedEnemy != null)
             {
-                if (_selectedEnemy == null ||
-                    _selectedEnemy.gameObject == null ||
+                if (_selectedEnemy.gameObject == null ||
                     _selectedEnemy.IsDead)
                 {
                     Deselect();
@@ -1843,8 +2023,8 @@ private void UpdateDefeatResult()
 
                 string name =
                     _selectedEnemy.EnemyData != null
-                    ? _selectedEnemy.EnemyData.EnemyName
-                    : "Enemy";
+                        ? _selectedEnemy.EnemyData.EnemyName
+                        : "Enemy";
 
                 int hp =
                     _selectedEnemy.CurrentHealth;
@@ -1870,15 +2050,18 @@ private void UpdateDefeatResult()
                 if (_infoStatsText != null)
                 {
                     _infoStatsText.text =
-                        $"HP: <color=#FF5555>" +
+                        $"HP: " +
+                        $"<color=#FF5555>" +
                         $"{hp}/{maxHp}" +
                         $"</color>\n\n" +
 
-                        $"SPEED: <color=#55FF55>" +
+                        $"SPEED: " +
+                        $"<color=#55FF55>" +
                         $"{speed:F1}" +
                         $"</color>\n\n" +
 
-                        $"ARMOR: <color=#AAAAAA>" +
+                        $"ARMOR: " +
+                        $"<color=#AAAAAA>" +
                         $"{armor}" +
                         $"</color>\n\n" +
 
@@ -1890,7 +2073,9 @@ private void UpdateDefeatResult()
 
                 if (_lvlUpBtnGO != null)
                 {
-                    _lvlUpBtnGO.SetActive(false);
+                    _lvlUpBtnGO.SetActive(
+                        false
+                    );
                 }
             }
             else
@@ -1900,7 +2085,7 @@ private void UpdateDefeatResult()
         }
 
         // =========================================================
-        // INFO PANEL CREATION
+        // INFO PANEL
         // =========================================================
 
         private void EnsureInfoPanel()
@@ -1910,8 +2095,8 @@ private void UpdateDefeatResult()
 
             Transform parent =
                 gameplayHUDPanel != null
-                ? gameplayHUDPanel.transform
-                : transform;
+                    ? gameplayHUDPanel.transform
+                    : transform;
 
             _infoPanel =
                 new GameObject(
@@ -1932,13 +2117,22 @@ private void UpdateDefeatResult()
                 >();
 
             rect.anchorMin =
-                new Vector2(1f, 0.5f);
+                new Vector2(
+                    1f,
+                    0.5f
+                );
 
             rect.anchorMax =
-                new Vector2(1f, 0.5f);
+                new Vector2(
+                    1f,
+                    0.5f
+                );
 
             rect.pivot =
-                new Vector2(1f, 0.5f);
+                new Vector2(
+                    1f,
+                    0.5f
+                );
 
             rect.anchoredPosition =
                 new Vector2(
@@ -1965,7 +2159,10 @@ private void UpdateDefeatResult()
                     0.92f
                 );
 
-            // Title
+            // =====================================================
+            // TITLE
+            // =====================================================
+
             GameObject title =
                 new GameObject(
                     "TitleText",
@@ -1983,13 +2180,22 @@ private void UpdateDefeatResult()
                 >();
 
             titleRect.anchorMin =
-                new Vector2(0f, 1f);
+                new Vector2(
+                    0f,
+                    1f
+                );
 
             titleRect.anchorMax =
-                new Vector2(1f, 1f);
+                new Vector2(
+                    1f,
+                    1f
+                );
 
             titleRect.pivot =
-                new Vector2(0f, 1f);
+                new Vector2(
+                    0f,
+                    1f
+                );
 
             titleRect.anchoredPosition =
                 new Vector2(
@@ -2008,7 +2214,9 @@ private void UpdateDefeatResult()
                     TextMeshProUGUI
                 >();
 
-            _infoTitleText.fontSize = 18f;
+            _infoTitleText.fontSize =
+                18f;
+
             _infoTitleText.fontStyle =
                 FontStyles.Bold;
 
@@ -2018,7 +2226,10 @@ private void UpdateDefeatResult()
             _infoTitleText.alignment =
                 TextAlignmentOptions.Left;
 
-            // Stats
+            // =====================================================
+            // STATS
+            // =====================================================
+
             GameObject stats =
                 new GameObject(
                     "StatsText",
@@ -2036,10 +2247,16 @@ private void UpdateDefeatResult()
                 >();
 
             statsRect.anchorMin =
-                new Vector2(0f, 0f);
+                new Vector2(
+                    0f,
+                    0f
+                );
 
             statsRect.anchorMax =
-                new Vector2(1f, 1f);
+                new Vector2(
+                    1f,
+                    1f
+                );
 
             statsRect.anchoredPosition =
                 new Vector2(
@@ -2058,7 +2275,8 @@ private void UpdateDefeatResult()
                     TextMeshProUGUI
                 >();
 
-            _infoStatsText.fontSize = 14f;
+            _infoStatsText.fontSize =
+                14f;
 
             _infoStatsText.color =
                 new Color(
@@ -2071,7 +2289,10 @@ private void UpdateDefeatResult()
             _infoStatsText.alignment =
                 TextAlignmentOptions.TopLeft;
 
-            // Close
+            // =====================================================
+            // CLOSE
+            // =====================================================
+
             GameObject close =
                 new GameObject(
                     "CloseButton",
@@ -2092,13 +2313,22 @@ private void UpdateDefeatResult()
                 >();
 
             closeRect.anchorMin =
-                new Vector2(1f, 1f);
+                new Vector2(
+                    1f,
+                    1f
+                );
 
             closeRect.anchorMax =
-                new Vector2(1f, 1f);
+                new Vector2(
+                    1f,
+                    1f
+                );
 
             closeRect.pivot =
-                new Vector2(1f, 1f);
+                new Vector2(
+                    1f,
+                    1f
+                );
 
             closeRect.anchoredPosition =
                 new Vector2(
@@ -2130,7 +2360,10 @@ private void UpdateDefeatResult()
                 Deselect
             );
 
-            // Upgrade
+            // =====================================================
+            // UPGRADE BUTTON
+            // =====================================================
+
             _lvlUpBtnGO =
                 new GameObject(
                     "UpgradeButton",
@@ -2238,7 +2471,8 @@ private void UpdateDefeatResult()
             _lvlUpBtnText.text =
                 "UPGRADE";
 
-            _lvlUpBtnText.fontSize = 14f;
+            _lvlUpBtnText.fontSize =
+                14f;
 
             _lvlUpBtnText.fontStyle =
                 FontStyles.Bold;
@@ -2249,31 +2483,62 @@ private void UpdateDefeatResult()
             _lvlUpBtnText.alignment =
                 TextAlignmentOptions.Center;
 
-            _lvlUpBtnGO.SetActive(false);
+            _lvlUpBtnGO.SetActive(
+                false
+            );
         }
 
         // =========================================================
-        // UPGRADE
+        // UPGRADE CLICK
         // =========================================================
 
         private void OnUpgradeButtonClicked()
         {
-            if (_selectedTower != null &&
-                GameManager.Instance != null)
+            if (_selectedTower == null)
+                return;
+
+            if (GameManager.Instance == null)
+                return;
+
+            // =====================================================
+            // MAX LEVEL
+            // =====================================================
+
+            if (_selectedTower.CurrentLevel >=
+                _selectedTower.MaxLevel)
             {
-                int cost =
-                    _selectedTower.UpgradeCost;
-
-                if (_selectedTower.CurrentLevel <
-                    _selectedTower.MaxLevel &&
-                    GameManager.Instance.TrySpendGold(
-                        cost))
-                {
-                    _selectedTower.LevelUp();
-
-                    UpdateSelectedStatsDisplay();
-                }
+                UpdateSelectedStatsDisplay();
+                return;
             }
+
+            // =====================================================
+            // GET UPGRADE COST
+            // =====================================================
+
+            int cost =
+                _selectedTower.UpgradeCost;
+
+            // =====================================================
+            // SPEND GOLD
+            // =====================================================
+
+            if (!GameManager.Instance.TrySpendGold(
+                cost))
+            {
+                return;
+            }
+
+            // =====================================================
+            // LEVEL UP
+            // =====================================================
+
+            _selectedTower.LevelUp();
+
+            // =====================================================
+            // REFRESH UI
+            // =====================================================
+
+            UpdateSelectedStatsDisplay();
         }
 
         // =========================================================
@@ -2285,7 +2550,7 @@ private void UpdateDefeatResult()
         {
             if (
                 UnityEngine.EventSystems
-                .EventSystem.current == null)
+                    .EventSystem.current == null)
             {
                 return false;
             }
@@ -2307,7 +2572,8 @@ private void UpdateDefeatResult()
                     .RaycastResult>();
 
             UnityEngine.EventSystems
-                .EventSystem.current.RaycastAll(
+                .EventSystem.current
+                .RaycastAll(
                     eventData,
                     results
                 );

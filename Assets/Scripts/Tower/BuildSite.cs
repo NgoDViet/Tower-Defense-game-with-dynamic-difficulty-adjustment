@@ -3,48 +3,170 @@ using UnityEngine;
 namespace TowerDefense.Tower
 {
     /// <summary>
-    /// Represents a valid building site on the map where defensive towers can be placed.
-    /// Tracks occupancy and provides helper references.
+    /// Một ô đất có thể xây Tower.
+    /// Mỗi BuildSite giữ chính xác Tower đang nằm trên nó.
     /// </summary>
+    [RequireComponent(typeof(Collider2D))]
     public class BuildSite : MonoBehaviour
     {
+        // =========================================================
+        // STATE
+        // =========================================================
+
         [Header("State")]
-        [SerializeField] private bool isOccupied = false;
-        [SerializeField] private GameObject occupyingTower;
 
-        public bool IsOccupied => isOccupied;
-        public GameObject OccupyingTower => occupyingTower;
+        [SerializeField]
+        private bool isOccupied = false;
 
-        /// <summary>
-        /// Marks the build site as occupied by the specified tower.
-        /// </summary>
-        public void SetOccupied(GameObject tower)
+        [SerializeField]
+        private GameObject occupyingTower;
+
+        // =========================================================
+        // PROPERTIES
+        // =========================================================
+
+        public bool IsOccupied
         {
-            isOccupied = true;
-            occupyingTower = tower;
-
-            // Hide the build site visual when occupied
-            SpriteRenderer sr = GetComponent<SpriteRenderer>();
-            if (sr != null)
+            get
             {
-                sr.enabled = false;
+                return isOccupied;
             }
         }
 
-        /// <summary>
-        /// Clears the occupancy status of the build site.
-        /// </summary>
+        public GameObject OccupyingTower
+        {
+            get
+            {
+                return occupyingTower;
+            }
+        }
+
+        // =========================================================
+        // AWAKE
+        // =========================================================
+
+        private void Awake()
+        {
+            UpdateBuildSiteVisual();
+        }
+
+        // =========================================================
+        // SET OCCUPIED
+        // =========================================================
+
+        public void SetOccupied(
+            GameObject tower)
+        {
+            if (tower == null)
+            {
+                Debug.LogWarning(
+                    "[BuildSite] " +
+                    "Cannot occupy site with null tower."
+                );
+
+                return;
+            }
+
+            isOccupied = true;
+
+            occupyingTower = tower;
+
+            UpdateBuildSiteVisual();
+
+            Debug.Log(
+                "[BuildSite] OCCUPIED | " +
+                $"Site={gameObject.name} | " +
+                $"Tower={tower.name}"
+            );
+        }
+
+        // =========================================================
+        // CLEAR
+        // =========================================================
+
         public void ClearOccupied()
         {
+            Debug.Log(
+                "[BuildSite] CLEAR | " +
+                $"Site={gameObject.name} | " +
+                $"Tower=" +
+                (occupyingTower != null
+                    ? occupyingTower.name
+                    : "NULL")
+            );
+
             isOccupied = false;
+
             occupyingTower = null;
 
-            // Show the build site visual when empty
-            SpriteRenderer sr = GetComponent<SpriteRenderer>();
+            UpdateBuildSiteVisual();
+        }
+
+        // =========================================================
+        // VISUAL
+        // =========================================================
+
+        private void UpdateBuildSiteVisual()
+        {
+            SpriteRenderer sr =
+                GetComponent<SpriteRenderer>();
+
             if (sr != null)
             {
-                sr.enabled = true;
+                sr.enabled =
+                    !isOccupied;
             }
+        }
+
+        // =========================================================
+        // CLICK
+        // =========================================================
+
+        private void OnMouseDown()
+        {
+            Debug.Log(
+                "[BuildSite] Clicked: " +
+                gameObject.name
+            );
+
+            if (TowerPlacementManager.Instance == null)
+            {
+                Debug.LogWarning(
+                    "[BuildSite] " +
+                    "TowerPlacementManager not found."
+                );
+
+                return;
+            }
+
+            // -----------------------------------------------------
+            // Quan trọng:
+            // Truyền CHÍNH BuildSite này.
+            // -----------------------------------------------------
+
+            TowerPlacementManager.Instance
+                .OpenRadialMenu(this);
+        }
+
+        // =========================================================
+        // DEBUG
+        // =========================================================
+
+        private void OnDrawGizmosSelected()
+        {
+            Collider2D col =
+                GetComponent<Collider2D>();
+
+            if (col == null)
+                return;
+
+            Gizmos.color =
+                Color.yellow;
+
+            Gizmos.DrawWireCube(
+                col.bounds.center,
+                col.bounds.size
+            );
         }
     }
 }
