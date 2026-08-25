@@ -1,0 +1,379 @@
+using UnityEngine;
+using TowerDefense.Core;
+using TowerDefense.Data;
+using TowerDefense.Enemy;
+using TowerDefense.Pooling;
+using TowerDefense.Projectile;
+
+namespace TowerDefense.Tower
+{
+    /// <summary>
+    /// Component managing a defensive tower's targeting logic, aiming, and firing mechanism.
+    /// Finds enemies within range and shoots projectiles at them on a cooldown.
+    /// </summary>
+    public class TowerController : MonoBehaviour
+    {
+        public enum TargetingMode
+        {
+            First,
+            Closest,
+            Strongest
+        }
+
+        [Header("References")]
+        [Tooltip("The configuration data for this tower.")]
+        [SerializeField] private TowerData towerData;
+
+        [Tooltip("Optional transform where projectiles are spawned.")]
+        [SerializeField] private Transform shootPoint;
+
+        [Tooltip("If checked, this tower exists in the level design and will not be destroyed on level start/reset.")]
+        [SerializeField] private bool isPreBuilt = false;
+
+        public bool IsPreBuilt => isPreBuilt;
+
+        private GameObject _visualTemplateParent;
+
+        [Header("Targeting Settings")]
+        [SerializeField] private TargetingMode targetingMode = TargetingMode.First;
+        [SerializeField] private LayerMask enemyLayerMask;
+        [Tooltip("How frequently in seconds the target is re-evaluated.")]
+        [SerializeField] private float targetReevaluateInterval = 0.1f;
+
+        [Header("Rotation")]
+        [Tooltip("The visual part of the tower that rotates toward enemies.")]
+        [SerializeField] private Transform rotatingVisual;
+
+        [Tooltip("Should the tower rotate towards the target?")]
+        [SerializeField] private bool rotateTowardsTarget = true;
+
+        [SerializeField] private float rotationSpeed = 10f;
+        [SerializeField] private float spriteAngleOffset = 0f;
+
+        private EnemyHealth _targetEnemy;
+        private float _fireCooldownTimer = 0f;
+        private float _targetReevaluateTimer = 0f;
+
+        private int _currentLevel = 1;
+        private const int MAX_LEVEL = 3;
+
+        [Header("Upgrade Prefabs")]
+        [SerializeField] private GameObject level2Prefab;
+        [SerializeField] private GameObject level3Prefab;
+
+        public int CurrentLevel => _currentLevel;
+        public int MaxLevel => MAX_LEVEL;
+        public int UpgradeCost => 100 * _currentLevel;
+
+        public int CurrentDamage => towerData != null ? towerData.Damage + (_currentLevel - 1) * 2 : 0;
+        public float CurrentRange => towerData != null ? towerData.Range + (_currentLevel - 1) * 1.0f : 0f;
+
+        public EnemyHealth TargetEnemy => _targetEnemy;
+        public TowerData TowerData => towerData;
+
+        private void Awake()
+        {
+            EnsureVisualTemplates();
+        }
+
+        private void EnsureVisualTemplates()
+        {
+            if (_visualTemplateParent != null) return;
+
+            // Create a hidden parent to store initial visual templates
+            _visualTemplateParent = new GameObject("TemplatesContainer");
+            _visualTemplateParent.transform.SetParent(transform);
+            _visualTemplateParent.SetActive(false);
+
+            foreach (Transform child in transform)
+            {
+                if (child.name.StartsWith("Visual_"))
+                {
+                    GameObject template = Instantiate(child.gameObject, _visualTemplateParent.transform);
+                    template.name = child.name;
+                    template.transform.localPosition = child.localPosition;
+                    template.transform.localRotation = child.localRotation;
+                    template.transform.localScale = child.localScale;
+                }
+            }
+        }
+
+        private void Start()
+        {
+            if (shootPoint == null)
+            {
+                shootPoint = transform;
+            }
+            Debug.Log($"[TowerController Start] {gameObject.name} initialized. towerData: {(towerData != null ? towerData.name : "NULL")}, enemyLayerMask: {enemyLayerMask.value}, shootPoint: {shootPoint.name}, enabled: {enabled}");
+        }
+
+        private void Update()
+        {
+            // Only execute logic if game is actively running
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameManager.GameState.Playing) return;
+            if (towerData == null) return;
+
+            // Re-evaluate target on interval to save performance
+            _targetReevaluateTimer -= Time.deltaTime;
+            if (_targetReevaluateTimer <= 0f)
+            {
+                UpdateTarget();
+                _targetReevaluateTimer = targetReevaluateInterval;
+            }
+
+            // Verify target validity (in range, active, alive)
+            if (!IsTargetValid(_targetEnemy))
+            {
+                _targetEnemy = null;
+            }
+
+            // Aim and Fire
+            if (_targetEnemy != null)
+            {
+                if (rotateTowardsTarget)
+                {
+                    AimAtTarget(_targetEnemy.transform.position);
+                }
+
+                _fireCooldownTimer -= Time.deltaTime;
+                if (_fireCooldownTimer <= 0f)
+                {
+                    Shoot();
+                    _fireCooldownTimer = 1f / towerData.FireRate;
+                }
+            }
+            else
+            {
+                // Reset cooldown or decrement it slowly when no target is present
+                _fireCooldownTimer = Mathf.Max(0f, _fireCooldownTimer - Time.deltaTime);
+            }
+        }
+
+        private void UpdateTarget()
+        {
+            Collider2D[] colliders = Physics2D.OverlapCircleAll(transform.position, CurrentRange, enemyLayerMask);
+            if (colliders.Length == 0)
+            {
+                _targetEnemy = null;
+                Collider2D[] allColliders = Physics2D.OverlapCircleAll(transform.position, CurrentRange);
+                if (allColliders.Length > 0)
+                {
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                    foreach (var c in allColliders)
+                    {
+                        sb.Append(c.gameObject.name).Append(" (Layer ").Append(c.gameObject.layer).Append("), ");
+                    }
+                    Debug.Log($"[TowerController Debug] {gameObject.name} found NO enemies (LayerMask={enemyLayerMask.value}), but found other colliders in range: {sb.ToString()}");
+                }
+                return;
+            }
+
+            EnemyHealth bestTarget = null;
+            float bestMetric = float.MinValue;
+
+            foreach (Collider2D col in colliders)
+            {
+                EnemyHealth enemy = col.GetComponent<EnemyHealth>();
+                if (enemy == null || enemy.IsDead) continue;
+
+                // Validate that the enemy's pivot position is actually within range
+                // to prevent collider-edge-only detections from causing target-flickering
+                float dist = Vector2.Distance(transform.position, enemy.transform.position);
+                if (dist > CurrentRange) continue;
+
+                float metric = 0f;
+                EnemyMovement movement = col.GetComponent<EnemyMovement>();
+
+                switch (targetingMode)
+                {
+                    case TargetingMode.First:
+                        if (movement != null && movement.ActivePath != null)
+                        {
+                            // Metric: current waypoint index combined with progress to the next waypoint.
+                            // Higher value means further along the path.
+                            int wpIndex = movement.CurrentWaypointIndex;
+                            Transform targetWp = movement.ActivePath.GetWaypoint(wpIndex);
+                            float distToWp = targetWp != null ? Vector2.Distance(movement.transform.position, targetWp.position) : 0f;
+                            metric = (wpIndex * 1000f) - distToWp;
+                        }
+                        else
+                        {
+                            // Fallback if movement info isn't available: closest to tower
+                            metric = -Vector2.Distance(transform.position, col.transform.position);
+                        }
+                        break;
+
+                    case TargetingMode.Closest:
+                        metric = -Vector2.Distance(transform.position, col.transform.position);
+                        break;
+
+                    case TargetingMode.Strongest:
+                        metric = enemy.CurrentHealth;
+                        break;
+                }
+
+                if (metric > bestMetric)
+                {
+                    bestMetric = metric;
+                    bestTarget = enemy;
+                }
+            }
+
+            _targetEnemy = bestTarget;
+        }
+
+        private bool IsTargetValid(EnemyHealth enemy)
+        {
+            if (enemy == null) return false;
+            if (enemy.IsDead || !enemy.gameObject.activeSelf) return false;
+            
+            // Check range
+            float dist = Vector2.Distance(transform.position, enemy.transform.position);
+            return dist <= CurrentRange;
+        }
+
+        private void AimAtTarget(Vector3 targetPosition)
+        {
+            if (rotatingVisual == null)
+                return;
+
+            Vector3 direction = targetPosition - rotatingVisual.position;
+
+            if (direction.sqrMagnitude <= 0.001f)
+                return;
+
+            float targetAngle =
+                Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+
+            Quaternion targetRotation =
+                Quaternion.AngleAxis(
+                    targetAngle + spriteAngleOffset,
+                    Vector3.forward
+                );
+
+            rotatingVisual.rotation = Quaternion.Slerp(
+                rotatingVisual.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
+        }
+
+        private void Shoot()
+        {
+            if (towerData.ProjectilePrefab == null)
+            {
+                Debug.LogError($"[TowerController] {gameObject.name} is missing a Projectile Prefab configuration!");
+                return;
+            }
+
+            Debug.Log($"[TowerController Debug] {gameObject.name} is shooting at {(_targetEnemy != null ? _targetEnemy.name : "null")}");
+
+            // Spawn projectile from pool
+            GameObject projectileObj = ObjectPooler.Instance.GetPooledObject(
+                towerData.ProjectilePrefab, 
+                shootPoint.position, 
+                shootPoint.rotation
+            );
+
+            // Initialize projectile
+            ProjectileController projectile = projectileObj.GetComponent<ProjectileController>();
+            if (projectile != null)
+            {
+                projectile.Initialize(_targetEnemy, CurrentDamage, towerData.ProjectileSpeed);
+            }
+            else
+            {
+                Debug.LogWarning($"[TowerController] Spawned projectile {projectileObj.name} does not have a ProjectileController attached.");
+            }
+        }
+
+        public void LevelUp()
+        {
+            if (_currentLevel >= MAX_LEVEL) return;
+
+            _currentLevel++;
+
+            // Clean up old visual children
+            foreach (Transform child in transform)
+            {
+                if (child.name.StartsWith("Visual_"))
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            // Apply new visuals
+            GameObject prefabToUse = null;
+            if (_currentLevel == 2) prefabToUse = level2Prefab;
+            else if (_currentLevel == 3) prefabToUse = level3Prefab;
+
+            if (prefabToUse != null)
+            {
+                foreach (Transform child in prefabToUse.transform)
+                {
+                    if (child.name.StartsWith("Visual_"))
+                    {
+                        GameObject instantiated = Instantiate(child.gameObject, transform);
+                        instantiated.name = child.name;
+                    }
+                }
+            }
+
+            Debug.Log($"[TowerController] Upgraded {gameObject.name} to Level {_currentLevel}. Damage: {CurrentDamage}, Range: {CurrentRange}");
+        }
+
+        public void ResetTowerState()
+        {
+            EnsureVisualTemplates();
+
+            // Only reset level and restore visuals if the tower was actually upgraded
+            if (_currentLevel > 1)
+            {
+                _currentLevel = 1;
+                RestoreInitialVisuals();
+            }
+
+            _fireCooldownTimer = 0f;
+            _targetReevaluateTimer = 0f;
+            _targetEnemy = null;
+
+            Debug.Log($"[TowerController] Reset {gameObject.name} state to Level {_currentLevel}");
+        }
+
+        private void RestoreInitialVisuals()
+        {
+            // Clean up current visual children
+            foreach (Transform child in transform)
+            {
+                if (child.name.StartsWith("Visual_"))
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+
+            // Restore from template parent
+            if (_visualTemplateParent != null)
+            {
+                foreach (Transform templateChild in _visualTemplateParent.transform)
+                {
+                    GameObject restoredVisual = Instantiate(templateChild.gameObject, transform);
+                    restoredVisual.name = templateChild.name;
+                    restoredVisual.transform.localPosition = templateChild.localPosition;
+                    restoredVisual.transform.localRotation = templateChild.localRotation;
+                    restoredVisual.transform.localScale = templateChild.localScale;
+                    restoredVisual.SetActive(true);
+                }
+            }
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            // Draw targeting range circle in Scene View
+            Gizmos.color = new Color(0f, 1f, 0f, 0.15f);
+            Gizmos.DrawSphere(transform.position, towerData != null ? CurrentRange : 5f);
+            
+            Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(transform.position, towerData != null ? CurrentRange : 5f);
+        }
+    }
+}
