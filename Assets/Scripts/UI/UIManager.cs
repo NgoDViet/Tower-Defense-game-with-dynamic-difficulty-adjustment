@@ -50,6 +50,12 @@ namespace TowerDefense.UI
         [SerializeField] private TextMeshProUGUI waveText;
         [SerializeField] private TextMeshProUGUI timeText;
 
+        [Header("HUD Prefabs")]
+        [SerializeField] private GameObject goldPrefab;
+        [SerializeField] private GameObject healthPrefab;
+        [SerializeField] private GameObject pausePrefab;
+        [SerializeField] private Sprite waveSprite;
+
         // =========================================================
         // RESULT
         // =========================================================
@@ -188,12 +194,15 @@ namespace TowerDefense.UI
 
             _endlessModeEnabled = false;
 
-PlayerPrefs.SetInt(
-    "TowerDefense_EndlessMode",
-    0
-);
+            PlayerPrefs.SetInt(
+                "TowerDefense_EndlessMode",
+                0
+            );
+            PlayerPrefs.Save();
 
-PlayerPrefs.Save();
+            EnsureInfoPanel();
+
+            EnsureTimeTextsExist();
 
             if (GameManager.Instance != null)
             {
@@ -203,6 +212,8 @@ PlayerPrefs.Save();
             {
                 UpdatePanelVisibility(GameManager.GameState.MainMenu);
             }
+
+            InitializeHUDGraphics();
         }
 
         // =========================================================
@@ -325,7 +336,7 @@ PlayerPrefs.Save();
         private void OnBaseHealthChanged(BaseHealthChangedEvent evt)
         {
             if (healthText != null)
-                healthText.text = $"HP: {evt.CurrentHealth}/{evt.MaxHealth}";
+                healthText.text = $"{evt.CurrentHealth}/{evt.MaxHealth}";
         }
 
         // =========================================================
@@ -335,7 +346,7 @@ PlayerPrefs.Save();
         private void OnGoldChanged(GoldChangedEvent evt)
         {
             if (goldText != null)
-                goldText.text = $"Gold: {evt.CurrentGold}";
+                goldText.text = $"{evt.CurrentGold}";
 
             UpdateSelectedStatsDisplay();
         }
@@ -347,7 +358,7 @@ PlayerPrefs.Save();
         private void OnWaveStarted(WaveStartedEvent evt)
         {
             if (waveText != null)
-                waveText.text = $"Wave: {evt.WaveIndex + 1}/{evt.TotalWaves}";
+                waveText.text = $"Wave: {evt.WaveIndex + 1}";
         }
 
         // =========================================================
@@ -2998,7 +3009,7 @@ private void SelectAndPlayLevel(LevelData levelData)
         // INFO PANEL
         // =========================================================
 
-        private void EnsureInfoPanel()
+        public void EnsureInfoPanel()
         {
             if (_infoPanel != null)
                 return;
@@ -3034,7 +3045,7 @@ private void SelectAndPlayLevel(LevelData levelData)
 
             GameObject title =
                 new GameObject(
-                    "TitleText",
+                    "Title",
                     typeof(RectTransform)
                 );
 
@@ -3063,7 +3074,7 @@ private void SelectAndPlayLevel(LevelData levelData)
 
             GameObject stats =
                 new GameObject(
-                    "StatsText",
+                    "Stats",
                     typeof(RectTransform)
                 );
 
@@ -3265,6 +3276,403 @@ private void SelectAndPlayLevel(LevelData levelData)
             }
 
             return false;
+        }
+
+        // =========================================================
+        // DYNAMIC HUD GRAPHICS SETUP
+        // =========================================================
+
+        private void InitializeHUDGraphics()
+        {
+            if (gameplayHUDPanel == null) return;
+            if (gameplayHUDPanel.transform.Find("Gold_Panel") != null) return;
+
+            // Load prefabs and sprites if not assigned in Editor
+            #if UNITY_EDITOR
+            UnityEditor.AssetDatabase.Refresh();
+            if (goldPrefab == null)
+                goldPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/gold.prefab");
+            if (healthPrefab == null)
+                healthPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/health.prefab");
+            if (pausePrefab == null)
+                pausePrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/pause.prefab");
+            if (waveSprite == null)
+                waveSprite = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Palettes/bound.png");
+            #endif
+
+            // Fallback for standalone builds if assets are missing
+            if (waveSprite == null) waveSprite = LoadSpriteRuntime("Palettes/bound.png");
+
+            // Format initial values
+            if (healthText != null)
+            {
+                healthText.text = healthText.text.Replace("HP: ", "").Replace("HP:", "");
+            }
+            if (goldText != null)
+            {
+                goldText.text = goldText.text.Replace("Gold: ", "").Replace("Gold:", "");
+            }
+
+            // Setup Gold Panel
+            if (goldText != null && goldPrefab != null)
+            {
+                GameObject goldGO = ConvertSpritePrefabToUI(goldPrefab, gameplayHUDPanel.transform);
+                if (goldGO != null)
+                {
+                    goldGO.name = "Gold_Panel";
+                    ConfigureHUDPanel(goldGO, ref goldText, "Gold");
+                    goldGO.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, 480f);
+                }
+            }
+
+            // Setup Health Panel
+            if (healthText != null && healthPrefab != null)
+            {
+                GameObject healthGO = ConvertSpritePrefabToUI(healthPrefab, gameplayHUDPanel.transform);
+                if (healthGO != null)
+                {
+                    healthGO.name = "Health_Panel";
+                    ConfigureHUDPanel(healthGO, ref healthText, "Health");
+                    healthGO.GetComponent<RectTransform>().anchoredPosition = new Vector2(-500f, 480f);
+                }
+            }
+
+            // Setup Wave Panel
+            SetupWavePanel();
+            Transform waveBackground = gameplayHUDPanel.transform.Find("Wave_Background");
+            if (waveBackground != null)
+            {
+                waveBackground.GetComponent<RectTransform>().anchoredPosition = new Vector2(500f, 480f);
+            }
+
+            // Setup Pause Button
+            SetupPausePrefabButton();
+
+            // Destroy Start Wave Button if it exists
+            Transform startWaveBtn = gameplayHUDPanel.transform.Find("StartWaveButton");
+            if (startWaveBtn != null)
+            {
+                Destroy(startWaveBtn.gameObject);
+            }
+
+            // Position Time text at top-left
+            if (timeText != null)
+            {
+                RectTransform timeRect = timeText.GetComponent<RectTransform>();
+                if (timeRect != null)
+                {
+                    timeRect.anchorMin = new Vector2(0f, 1f);
+                    timeRect.anchorMax = new Vector2(0f, 1f);
+                    timeRect.pivot = new Vector2(0f, 1f);
+                    timeRect.anchoredPosition = new Vector2(30f, -30f);
+                    timeText.alignment = TextAlignmentOptions.Left;
+                }
+            }
+        }
+
+        private GameObject ConvertSpritePrefabToUI(GameObject prefab, Transform parent)
+        {
+            if (prefab == null) return null;
+            GameObject go = Instantiate(prefab, parent);
+            ConvertSpriteToImageRecursive(go, true);
+            return go;
+        }
+
+        private void ConvertSpriteToImageRecursive(GameObject go, bool isRoot)
+        {
+            if (go == null) return;
+
+            Vector3 localPos = go.transform.localPosition;
+            Vector3 localScale = go.transform.localScale;
+
+            SpriteRenderer sr = go.GetComponent<SpriteRenderer>();
+            Sprite sprite = null;
+            Color color = Color.white;
+            if (sr != null)
+            {
+                sprite = sr.sprite;
+                color = sr.color;
+                DestroyImmediate(sr);
+            }
+
+            RectTransform rect = go.GetComponent<RectTransform>();
+            if (rect == null)
+            {
+                rect = go.AddComponent<RectTransform>();
+            }
+
+            // Convert localPosition from world units to UI pixels (1 unit = 100 pixels)
+            if (!isRoot)
+            {
+                rect.anchoredPosition = new Vector2(localPos.x * 100f, localPos.y * 100f);
+            }
+            rect.localScale = localScale;
+
+            if (sprite != null)
+            {
+                Image img = go.AddComponent<Image>();
+                img.sprite = sprite;
+                img.color = color;
+                img.preserveAspect = true;
+                img.SetNativeSize();
+            }
+
+            // Gather children first to handle Unity replacing standard Transform with RectTransform safely
+            List<GameObject> children = new List<GameObject>();
+            foreach (Transform child in go.transform)
+            {
+                if (child != null)
+                {
+                    children.Add(child.gameObject);
+                }
+            }
+
+            foreach (GameObject child in children)
+            {
+                ConvertSpriteToImageRecursive(child, false);
+            }
+        }
+
+        private void ConfigureHUDPanel(GameObject panelGO, ref TextMeshProUGUI textComp, string namePrefix)
+        {
+            RectTransform mainRect = panelGO.GetComponent<RectTransform>();
+            RectTransform oldTextRect = textComp != null ? textComp.GetComponent<RectTransform>() : null;
+
+            // 1. Try to find a pre-existing TextMeshProUGUI component in the prefab hierarchy
+            TextMeshProUGUI prefabText = panelGO.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (prefabText != null)
+            {
+                // Deactivate the old scene text and redirect reference to the prefab's text
+                if (textComp != null)
+                {
+                    textComp.gameObject.SetActive(false);
+                }
+                textComp = prefabText;
+
+                // Native prefab positioning: map panel to the old text position if not custom positioned in prefab
+                if (oldTextRect != null && mainRect.anchoredPosition == Vector2.zero)
+                {
+                    mainRect.anchorMin = oldTextRect.anchorMin;
+                    mainRect.anchorMax = oldTextRect.anchorMax;
+                    mainRect.pivot = oldTextRect.pivot;
+                    mainRect.anchoredPosition = oldTextRect.anchoredPosition;
+                }
+                return;
+            }
+
+            // 2. Fallback: Reparent the scene's text component if no text is defined in the prefab
+            if (textComp != null && oldTextRect != null)
+            {
+                mainRect.anchorMin = oldTextRect.anchorMin;
+                mainRect.anchorMax = oldTextRect.anchorMax;
+                mainRect.pivot = oldTextRect.pivot;
+                mainRect.anchoredPosition = oldTextRect.anchoredPosition;
+
+                // Set size of the panel to be exactly 240x80 visually
+                mainRect.sizeDelta = new Vector2(240f / mainRect.localScale.x, 80f / mainRect.localScale.y);
+
+                textComp.transform.SetParent(panelGO.transform, false);
+                RectTransform textRect = textComp.GetComponent<RectTransform>();
+                textRect.anchorMin = new Vector2(0.45f, 0f);
+                textRect.anchorMax = new Vector2(1f, 1f);
+                textRect.pivot = new Vector2(0.5f, 0.5f);
+                textRect.anchoredPosition = new Vector2(10f, 0f);
+                textRect.sizeDelta = Vector2.zero;
+                textComp.alignment = TextAlignmentOptions.MidlineLeft;
+
+                // Scale down font size dynamically so the text matches the wave text size on screen
+                float targetFontSize = (waveText != null) ? waveText.fontSize : 28f;
+                textComp.fontSize = targetFontSize / mainRect.localScale.x;
+
+                // Scale down child icon by the parent's scale factor to preserve original prefab scale on screen
+                if (panelGO.transform.childCount > 0)
+                {
+                    Transform iconTrans = panelGO.transform.GetChild(0);
+                    if (iconTrans != textComp.transform)
+                    {
+                        RectTransform iconRect = iconTrans.GetComponent<RectTransform>();
+                        Vector3 originalChildScale = iconRect.localScale;
+                        iconRect.localScale = new Vector3(originalChildScale.x / mainRect.localScale.x, originalChildScale.y / mainRect.localScale.y, 1f);
+                    }
+                }
+            }
+        }
+
+        private void SetupWavePanel()
+        {
+            if (waveText == null) return;
+
+            // Create the background panel using the waveSprite (bound.png)
+            GameObject bgGO = new GameObject("Wave_Background", typeof(RectTransform), typeof(CanvasRenderer));
+            bgGO.transform.SetParent(gameplayHUDPanel.transform, false);
+
+            if (waveSprite != null)
+            {
+                Image bgImg = bgGO.AddComponent<Image>();
+                bgImg.sprite = waveSprite;
+                bgImg.preserveAspect = false;
+                bgImg.type = Image.Type.Simple;
+            }
+
+            RectTransform bgRect = bgGO.GetComponent<RectTransform>();
+            RectTransform textRect = waveText.GetComponent<RectTransform>();
+
+            bgRect.anchorMin = textRect.anchorMin;
+            bgRect.anchorMax = textRect.anchorMax;
+            bgRect.pivot = textRect.pivot;
+            bgRect.anchoredPosition = textRect.anchoredPosition;
+            bgRect.sizeDelta = new Vector2(240f, 80f);
+
+            // Reparent wave text
+            waveText.transform.SetParent(bgGO.transform, false);
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.pivot = new Vector2(0.5f, 0.5f);
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.sizeDelta = Vector2.zero;
+            waveText.alignment = TextAlignmentOptions.Center;
+        }
+
+        private void SetupPausePrefabButton()
+        {
+            if (gameplayHUDPanel == null || pausePrefab == null) return;
+
+            Transform oldPauseBtnTrans = gameplayHUDPanel.transform.Find("PauseButton");
+            Vector2 position = new Vector2(850f, 480f);
+            if (oldPauseBtnTrans != null)
+            {
+                position = oldPauseBtnTrans.GetComponent<RectTransform>().anchoredPosition;
+                DestroyImmediate(oldPauseBtnTrans.gameObject);
+            }
+
+            GameObject pauseGO = ConvertSpritePrefabToUI(pausePrefab, gameplayHUDPanel.transform);
+            if (pauseGO != null)
+            {
+                pauseGO.name = "PauseButton";
+
+                RectTransform rect = pauseGO.GetComponent<RectTransform>();
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = position;
+
+                // Respect pre-existing Button component if one exists in the prefab
+                Button btn = pauseGO.GetComponent<Button>();
+                if (btn == null)
+                {
+                    btn = pauseGO.AddComponent<Button>();
+                }
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(OnPauseButtonClicked);
+
+                Image img = pauseGO.GetComponent<Image>();
+                if (img != null) img.raycastTarget = true;
+
+                foreach (Transform child in pauseGO.transform)
+                {
+                    Image childImg = child.GetComponent<Image>();
+                    if (childImg != null) childImg.raycastTarget = true;
+                }
+            }
+        }
+
+        private Sprite LoadSpriteRuntime(string relativePath)
+        {
+            try
+            {
+                string fullPath = System.IO.Path.Combine(Application.dataPath, relativePath);
+                if (System.IO.File.Exists(fullPath))
+                {
+                    byte[] bytes = System.IO.File.ReadAllBytes(fullPath);
+                    Texture2D tex = new Texture2D(2, 2);
+                    if (tex.LoadImage(bytes))
+                    {
+                        tex.filterMode = FilterMode.Point;
+                        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+                    }
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[UIManager] Failed to load sprite at runtime: {relativePath}. Error: {e.Message}");
+            }
+            return null;
+        }
+
+        private void EnsureTimeTextsExist()
+        {
+            // 1. timeText
+            if (timeText == null && gameplayHUDPanel != null)
+            {
+                Transform existing = gameplayHUDPanel.transform.Find("TimeText");
+                if (existing != null)
+                {
+                    timeText = existing.GetComponent<TextMeshProUGUI>();
+                }
+                else
+                {
+                    GameObject go = new GameObject("TimeText", typeof(RectTransform), typeof(CanvasRenderer));
+                    go.transform.SetParent(gameplayHUDPanel.transform, false);
+                    timeText = go.AddComponent<TextMeshProUGUI>();
+                    timeText.fontSize = 28f;
+                    timeText.color = Color.white;
+                    timeText.text = "TIME: 00:00";
+                }
+            }
+
+            // 2. victoryTimeText
+            if (victoryTimeText == null && victoryOverlayPanel != null)
+            {
+                Transform existing = victoryOverlayPanel.transform.Find("VictoryTimeText");
+                if (existing != null)
+                {
+                    victoryTimeText = existing.GetComponent<TextMeshProUGUI>();
+                }
+                else
+                {
+                    GameObject go = new GameObject("VictoryTimeText", typeof(RectTransform), typeof(CanvasRenderer));
+                    go.transform.SetParent(victoryOverlayPanel.transform, false);
+                    victoryTimeText = go.AddComponent<TextMeshProUGUI>();
+                    victoryTimeText.fontSize = 24f;
+                    victoryTimeText.color = Color.white;
+                    victoryTimeText.alignment = TextAlignmentOptions.Center;
+                    victoryTimeText.text = "TIME: 00:00";
+
+                    RectTransform rect = go.GetComponent<RectTransform>();
+                    rect.anchorMin = new Vector2(0.5f, 0.5f);
+                    rect.anchorMax = new Vector2(0.5f, 0.5f);
+                    rect.pivot = new Vector2(0.5f, 0.5f);
+                    rect.anchoredPosition = new Vector2(0f, 133f);
+                    rect.sizeDelta = new Vector2(200f, 50f);
+                }
+            }
+
+            // 3. defeatTimeText
+            if (defeatTimeText == null && defeatOverlayPanel != null)
+            {
+                Transform existing = defeatOverlayPanel.transform.Find("DefeatTimeText");
+                if (existing != null)
+                {
+                    defeatTimeText = existing.GetComponent<TextMeshProUGUI>();
+                }
+                else
+                {
+                    GameObject go = new GameObject("DefeatTimeText", typeof(RectTransform), typeof(CanvasRenderer));
+                    go.transform.SetParent(defeatOverlayPanel.transform, false);
+                    defeatTimeText = go.AddComponent<TextMeshProUGUI>();
+                    defeatTimeText.fontSize = 24f;
+                    defeatTimeText.color = Color.white;
+                    defeatTimeText.alignment = TextAlignmentOptions.Center;
+                    defeatTimeText.text = "TIME: 00:00";
+
+                    RectTransform rect = go.GetComponent<RectTransform>();
+                    rect.anchorMin = new Vector2(0.5f, 0.5f);
+                    rect.anchorMax = new Vector2(0.5f, 0.5f);
+                    rect.pivot = new Vector2(0.5f, 0.5f);
+                    rect.anchoredPosition = new Vector2(0f, 133f);
+                    rect.sizeDelta = new Vector2(200f, 50f);
+                }
+            }
         }
     }
 }

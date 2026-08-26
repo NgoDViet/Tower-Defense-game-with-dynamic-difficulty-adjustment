@@ -556,6 +556,16 @@ namespace TowerDefense.Tower
 
             if (existingInfoPanel == null)
             {
+                UIManager uiManager = FindAnyObjectByType<UIManager>();
+                if (uiManager != null)
+                {
+                    uiManager.EnsureInfoPanel();
+                    existingInfoPanel = gameplayHUD.Find("InfoPanel");
+                }
+            }
+
+            if (existingInfoPanel == null)
+            {
                 Debug.LogError(
                     "[TowerPlacementManager] InfoPanel not found."
                 );
