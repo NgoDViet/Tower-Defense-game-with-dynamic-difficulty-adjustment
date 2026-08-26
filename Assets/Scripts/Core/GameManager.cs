@@ -5,12 +5,26 @@ using TowerDefense.Pooling;
 namespace TowerDefense.Core
 {
     /// <summary>
-    /// Core game manager:
-    /// Game state, HP, gold, wave state, timer,
-    /// damage statistics, one-life rule and time-limit rule.
+    /// Core game manager.
+    ///
+    /// Handles:
+    /// - Game state
+    /// - Base HP
+    /// - Gold
+    /// - Wave state
+    /// - Endless mode
+    /// - Difficulty selection
+    /// - Time limit
+    /// - One-life mode
+    /// - Total damage statistics
+    /// - Enemy counting
     /// </summary>
     public class GameManager : MonoBehaviour
     {
+        // =========================================================
+        // GAME STATE
+        // =========================================================
+
         public enum GameState
         {
             MainMenu,
@@ -22,8 +36,44 @@ namespace TowerDefense.Core
 
         public static GameManager Instance { get; private set; }
 
+        // =========================================================
+        // SCENE / GAME MODE DATA
+        // =========================================================
+
+        /// <summary>
+        /// Used by MainMenu to tell the game scene to start Endless Mode.
+        /// </summary>
+        public static bool startAsEndless = false;
+
+        /// <summary>
+        /// Selected difficulty:
+        /// 1 = Normal
+        /// 2 = Hard
+        /// 3 = Hell
+        /// </summary>
+        public static int SelectedDifficulty = 1;
+
+        // =========================================================
+        // LEVEL SETTINGS
+        // =========================================================
+
         [Header("Level Settings")]
         [SerializeField] private LevelData defaultLevelData;
+
+        // =========================================================
+        // DEPENDENCIES
+        // =========================================================
+
+        [Header("Dependencies")]
+        [Tooltip(
+            "Assign WaveManager here for better performance. " +
+            "If empty, GameManager will find it automatically."
+        )]
+        [SerializeField] private WaveManager _waveManager;
+
+        // =========================================================
+        // PROPERTIES
+        // =========================================================
 
         public LevelData DefaultLevelData
         {
@@ -37,7 +87,6 @@ namespace TowerDefense.Core
         private int _currentHealth;
         private int _currentGold;
 
-        // Wave index starts from 0 internally.
         // Wave 1 = index 0
         // Wave 2 = index 1
         private int _currentWaveIndex = -1;
@@ -45,19 +94,32 @@ namespace TowerDefense.Core
         private int _activeEnemiesCount;
         private bool _isSpawningWave;
 
+        private bool _isEndlessMode;
+
         private float _playTime;
         private int _totalDamageDealt;
 
-        public static int SelectedDifficulty = 1;
-
         public GameState CurrentState => _currentState;
+
         public LevelData ActiveLevelData => _activeLevelData;
+
         public int CurrentHealth => _currentHealth;
+
         public int CurrentGold => _currentGold;
+
         public int CurrentWaveIndex => _currentWaveIndex;
+
         public int ActiveEnemiesCount => _activeEnemiesCount;
+
         public float PlayTime => _playTime;
+
         public int TotalDamageDealt => _totalDamageDealt;
+
+        public bool IsEndlessMode => _isEndlessMode;
+
+        // =========================================================
+        // AWAKE
+        // =========================================================
 
         private void Awake()
         {
@@ -68,40 +130,51 @@ namespace TowerDefense.Core
             }
 
             Instance = this;
+
+            SubscribeEvents();
         }
 
-        private void OnEnable()
-        {
-            EventBus<EnemySpawnedEvent>.Subscribe(OnEnemySpawned);
-            EventBus<EnemyDiedEvent>.Subscribe(OnEnemyDied);
-            EventBus<EnemyReachedBaseEvent>.Subscribe(OnEnemyReachedBase);
-
-            EventBus<WaveStartedEvent>.Subscribe(OnWaveStarted);
-            EventBus<WaveCompletedEvent>.Subscribe(OnWaveCompleted);
-        }
-
-        private void OnDisable()
-        {
-            EventBus<EnemySpawnedEvent>.Unsubscribe(OnEnemySpawned);
-            EventBus<EnemyDiedEvent>.Unsubscribe(OnEnemyDied);
-            EventBus<EnemyReachedBaseEvent>.Unsubscribe(OnEnemyReachedBase);
-
-            EventBus<WaveStartedEvent>.Unsubscribe(OnWaveStarted);
-            EventBus<WaveCompletedEvent>.Unsubscribe(OnWaveCompleted);
-        }
+        // =========================================================
+        // START
+        // =========================================================
 
         private void Start()
         {
-            if (defaultLevelData != null &&
-                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name != "MainMenu")
+            // Cache WaveManager once.
+            if (_waveManager == null)
             {
-                StartLevel(defaultLevelData);
+                _waveManager = FindFirstObjectByType<WaveManager>();
+            }
+
+            string currentScene =
+                UnityEngine.SceneManagement.SceneManager
+                .GetActiveScene()
+                .name;
+
+            // Do not automatically start the game while in MainMenu.
+            if (defaultLevelData != null &&
+                currentScene != "MainMenu")
+            {
+                if (startAsEndless)
+                {
+                    startAsEndless = false;
+
+                    StartEndlessMode(defaultLevelData);
+                }
+                else
+                {
+                    StartLevel(defaultLevelData);
+                }
             }
             else
             {
                 SetState(GameState.MainMenu);
             }
         }
+
+        // =========================================================
+        // UPDATE
+        // =========================================================
 
         private void Update()
         {
@@ -110,19 +183,88 @@ namespace TowerDefense.Core
 
             _playTime += Time.deltaTime;
 
+            // Time limit.
             if (DifficultyManager.TimeLimitMinutes > 0f &&
-                _playTime >= DifficultyManager.TimeLimitMinutes * 60f)
+                _playTime >=
+                DifficultyManager.TimeLimitMinutes * 60f)
             {
-                Debug.Log("[GameManager] Time limit reached. Defeat.");
+                Debug.Log(
+                    "[GameManager] Time limit reached. Defeat.");
 
                 SetState(GameState.Defeat);
             }
         }
 
+        // =========================================================
+        // DESTROY
+        // =========================================================
+
+        private void OnDestroy()
+        {
+            UnsubscribeEvents();
+
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
+
+        // =========================================================
+        // EVENT SUBSCRIPTION
+        // =========================================================
+
+        private void SubscribeEvents()
+        {
+            EventBus<EnemySpawnedEvent>
+                .Subscribe(OnEnemySpawned);
+
+            EventBus<EnemyDiedEvent>
+                .Subscribe(OnEnemyDied);
+
+            EventBus<EnemyReachedBaseEvent>
+                .Subscribe(OnEnemyReachedBase);
+
+            EventBus<WaveStartedEvent>
+                .Subscribe(OnWaveStarted);
+
+            EventBus<WaveCompletedEvent>
+                .Subscribe(OnWaveCompleted);
+        }
+
+        private void UnsubscribeEvents()
+        {
+            EventBus<EnemySpawnedEvent>
+                .Unsubscribe(OnEnemySpawned);
+
+            EventBus<EnemyDiedEvent>
+                .Unsubscribe(OnEnemyDied);
+
+            EventBus<EnemyReachedBaseEvent>
+                .Unsubscribe(OnEnemyReachedBase);
+
+            EventBus<WaveStartedEvent>
+                .Unsubscribe(OnWaveStarted);
+
+            EventBus<WaveCompletedEvent>
+                .Unsubscribe(OnWaveCompleted);
+        }
+
+        // =========================================================
+        // DIFFICULTY
+        // =========================================================
+
         public void SetDifficulty(int difficulty)
         {
-            SelectedDifficulty = difficulty;
+            SelectedDifficulty = Mathf.Clamp(difficulty, 1, 3);
+
+            Debug.Log(
+                $"[GameManager] Difficulty selected: " +
+                $"{SelectedDifficulty}");
         }
+
+        // =========================================================
+        // GAME STATE
+        // =========================================================
 
         public void SetState(GameState newState)
         {
@@ -130,6 +272,7 @@ namespace TowerDefense.Core
                 return;
 
             GameState oldState = _currentState;
+
             _currentState = newState;
 
             switch (_currentState)
@@ -138,11 +281,13 @@ namespace TowerDefense.Core
                 case GameState.Playing:
 
                     Time.timeScale = 1f;
+
                     break;
 
                 case GameState.Pause:
 
                     Time.timeScale = 0f;
+
                     break;
 
                 case GameState.Victory:
@@ -164,9 +309,19 @@ namespace TowerDefense.Core
                     break;
             }
 
+            Debug.Log(
+                $"[GameManager] State changed: " +
+                $"{oldState} -> {_currentState}");
+
             EventBus<GameStateChangedEvent>.Raise(
-                new GameStateChangedEvent(oldState, _currentState));
+                new GameStateChangedEvent(
+                    oldState,
+                    _currentState));
         }
+
+        // =========================================================
+        // START NORMAL LEVEL
+        // =========================================================
 
         public void StartLevel(LevelData levelData)
         {
@@ -178,32 +333,76 @@ namespace TowerDefense.Core
                 return;
             }
 
+            ResetGameVariables(
+                levelData,
+                false);
+
+            EventBus<LevelStartedEvent>.Raise(
+                new LevelStartedEvent(
+                    levelData.LevelName));
+        }
+
+        // =========================================================
+        // START ENDLESS
+        // =========================================================
+
+        public void StartEndlessMode(LevelData levelData)
+        {
+            if (levelData == null)
+            {
+                Debug.LogError(
+                    "[GameManager] Cannot start endless mode " +
+                    "with null LevelData!");
+
+                return;
+            }
+
+            ResetGameVariables(
+                levelData,
+                true);
+
+            EventBus<LevelStartedEvent>.Raise(
+                new LevelStartedEvent(
+                    levelData.LevelName + " (Endless)"));
+        }
+
+        // =========================================================
+        // RESET
+        // =========================================================
+
+        private void ResetGameVariables(
+            LevelData levelData,
+            bool isEndless)
+        {
             if (ObjectPooler.Instance != null)
             {
-                ObjectPooler.Instance.ReturnAllActiveToPool();
+                ObjectPooler.Instance
+                    .ReturnAllActiveToPool();
             }
 
             _activeLevelData = levelData;
 
-            _currentHealth = levelData.BaseMaxHealth;
-            _currentGold = levelData.StartingGold;
+            _currentHealth =
+                levelData.BaseMaxHealth;
 
-            // IMPORTANT:
-            // -1 means no wave has started yet.
+            _currentGold =
+                levelData.StartingGold;
+
             _currentWaveIndex = -1;
 
             _activeEnemiesCount = 0;
+
             _isSpawningWave = false;
 
+            _isEndlessMode = isEndless;
+
             _playTime = 0f;
+
             _totalDamageDealt = 0;
 
             Time.timeScale = 1f;
 
             SetState(GameState.Playing);
-
-            EventBus<LevelStartedEvent>.Raise(
-                new LevelStartedEvent(levelData.LevelName));
 
             EventBus<BaseHealthChangedEvent>.Raise(
                 new BaseHealthChangedEvent(
@@ -211,8 +410,13 @@ namespace TowerDefense.Core
                     levelData.BaseMaxHealth));
 
             EventBus<GoldChangedEvent>.Raise(
-                new GoldChangedEvent(_currentGold));
+                new GoldChangedEvent(
+                    _currentGold));
         }
+
+        // =========================================================
+        // PAUSE
+        // =========================================================
 
         public void TogglePause()
         {
@@ -226,13 +430,30 @@ namespace TowerDefense.Core
             }
         }
 
+        // =========================================================
+        // RESTART
+        // =========================================================
+
         public void RestartLevel()
         {
-            if (_activeLevelData != null)
+            if (_activeLevelData == null)
+                return;
+
+            if (_isEndlessMode)
             {
-                StartLevel(_activeLevelData);
+                StartEndlessMode(
+                    _activeLevelData);
+            }
+            else
+            {
+                StartLevel(
+                    _activeLevelData);
             }
         }
+
+        // =========================================================
+        // GOLD
+        // =========================================================
 
         public void AddGold(int amount)
         {
@@ -242,69 +463,87 @@ namespace TowerDefense.Core
             _currentGold += amount;
 
             EventBus<GoldChangedEvent>.Raise(
-                new GoldChangedEvent(_currentGold));
+                new GoldChangedEvent(
+                    _currentGold));
         }
 
         public bool TrySpendGold(int amount)
         {
-            if (amount < 0 || _currentGold < amount)
+            if (amount < 0)
+                return false;
+
+            if (_currentGold < amount)
                 return false;
 
             _currentGold -= amount;
 
             EventBus<GoldChangedEvent>.Raise(
-                new GoldChangedEvent(_currentGold));
+                new GoldChangedEvent(
+                    _currentGold));
 
             return true;
         }
 
+        // =========================================================
+        // DAMAGE STATISTICS
+        // =========================================================
+
         public void RegisterDamage(int damage)
         {
-            if (damage > 0)
-            {
-                _totalDamageDealt += damage;
-            }
+            if (damage <= 0)
+                return;
+
+            _totalDamageDealt += damage;
         }
 
         // =========================================================
         // ENEMY SPAWNED
         // =========================================================
 
-        private void OnEnemySpawned(EnemySpawnedEvent evt)
+        private void OnEnemySpawned(
+            EnemySpawnedEvent evt)
         {
             _activeEnemiesCount++;
 
             Debug.Log(
-                $"[GameManager] Enemy spawned. Active enemies = {_activeEnemiesCount}");
+                $"[GameManager] Enemy spawned. " +
+                $"Active enemies = {_activeEnemiesCount}");
         }
 
         // =========================================================
         // ENEMY DIED
         // =========================================================
 
-        private void OnEnemyDied(EnemyDiedEvent evt)
+        private void OnEnemyDied(
+            EnemyDiedEvent evt)
         {
             AddGold(evt.GoldReward);
 
             DecrementEnemyCount();
 
             Debug.Log(
-                $"[GameManager] Enemy died. Active enemies = {_activeEnemiesCount}");
+                $"[GameManager] Enemy died. " +
+                $"Active enemies = {_activeEnemiesCount}");
         }
 
         // =========================================================
         // ENEMY REACHED BASE
         // =========================================================
 
-        private void OnEnemyReachedBase(EnemyReachedBaseEvent evt)
+        private void OnEnemyReachedBase(
+            EnemyReachedBaseEvent evt)
         {
+            // One-life mode.
             if (DifficultyManager.OneLifeMode)
             {
                 Debug.Log(
-                    "[GameManager] One Life mode: enemy reached base. Defeat.");
+                    "[GameManager] One Life mode: " +
+                    "enemy reached base. Defeat.");
 
                 _activeEnemiesCount =
-                    Mathf.Max(0, _activeEnemiesCount - 1);
+                    Mathf.Max(
+                        0,
+                        _activeEnemiesCount - 1);
 
                 SetState(GameState.Defeat);
 
@@ -314,14 +553,18 @@ namespace TowerDefense.Core
             _currentHealth =
                 Mathf.Max(
                     0,
-                    _currentHealth - evt.DamageToBase);
+                    _currentHealth -
+                    evt.DamageToBase);
+
+            int maxHealth =
+                _activeLevelData != null
+                    ? _activeLevelData.BaseMaxHealth
+                    : 20;
 
             EventBus<BaseHealthChangedEvent>.Raise(
                 new BaseHealthChangedEvent(
                     _currentHealth,
-                    _activeLevelData != null
-                        ? _activeLevelData.BaseMaxHealth
-                        : 20));
+                    maxHealth));
 
             if (_currentHealth <= 0)
             {
@@ -337,26 +580,32 @@ namespace TowerDefense.Core
         // WAVE STARTED
         // =========================================================
 
-        private void OnWaveStarted(WaveStartedEvent evt)
+        private void OnWaveStarted(
+            WaveStartedEvent evt)
         {
-            _currentWaveIndex = evt.WaveIndex;
+            _currentWaveIndex =
+                evt.WaveIndex;
 
             _isSpawningWave = true;
 
             Debug.Log(
-                $"[GameManager] ===== WAVE STARTED: {_currentWaveIndex + 1} =====");
+                $"[GameManager] ===== WAVE " +
+                $"{_currentWaveIndex + 1} STARTED =====");
         }
 
         // =========================================================
         // WAVE COMPLETED SPAWNING
         // =========================================================
 
-        private void OnWaveCompleted(WaveCompletedEvent evt)
+        private void OnWaveCompleted(
+            WaveCompletedEvent evt)
         {
             _isSpawningWave = false;
 
             Debug.Log(
-                $"[GameManager] Wave {_currentWaveIndex + 1} finished spawning.");
+                $"[GameManager] Wave " +
+                $"{_currentWaveIndex + 1} " +
+                "finished spawning.");
 
             CheckWaveClearStatus();
         }
@@ -368,7 +617,9 @@ namespace TowerDefense.Core
         private void DecrementEnemyCount()
         {
             _activeEnemiesCount =
-                Mathf.Max(0, _activeEnemiesCount - 1);
+                Mathf.Max(
+                    0,
+                    _activeEnemiesCount - 1);
 
             CheckWaveClearStatus();
         }
@@ -382,48 +633,41 @@ namespace TowerDefense.Core
             if (_currentState != GameState.Playing)
                 return;
 
-            // Still spawning enemies.
             if (_isSpawningWave)
                 return;
 
-            // Still have enemies alive.
             if (_activeEnemiesCount > 0)
                 return;
 
-            // No wave has started yet.
             if (_currentWaveIndex < 0)
                 return;
 
             Debug.Log(
-                $"[GameManager] ===== WAVE {_currentWaveIndex + 1} CLEARED =====");
+                $"[GameManager] ===== WAVE " +
+                $"{_currentWaveIndex + 1} CLEARED =====");
 
-            // Tell WaveManager that the wave is completely cleared.
             EventBus<WaveClearedEvent>.Raise(
-                new WaveClearedEvent(_currentWaveIndex));
+                new WaveClearedEvent(
+                    _currentWaveIndex));
 
-            // Check if this was the FINAL wave.
-            WaveManager waveManager =
-                FindFirstObjectByType<WaveManager>();
-
-            if (waveManager == null)
+            // IMPORTANT:
+            // WaveManager is responsible for starting
+            // the next wave.
+            //
+            // GameManager only handles victory
+            // for normal mode.
+            if (!_isEndlessMode &&
+                _waveManager != null)
             {
-                Debug.LogWarning(
-                    "[GameManager] WaveManager not found.");
+                if (_currentWaveIndex >=
+                    _waveManager.Waves.Count - 1)
+                {
+                    Debug.Log(
+                        "[GameManager] ===== " +
+                        "ALL WAVES CLEARED =====");
 
-                return;
-            }
-
-            int totalWaves = waveManager.Waves.Count;
-
-            if (totalWaves <= 0)
-                return;
-
-            if (_currentWaveIndex >= totalWaves - 1)
-            {
-                Debug.Log(
-                    "[GameManager] ===== ALL WAVES CLEARED =====");
-
-                SetState(GameState.Victory);
+                    SetState(GameState.Victory);
+                }
             }
         }
     }

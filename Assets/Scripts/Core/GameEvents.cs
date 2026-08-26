@@ -5,55 +5,57 @@ namespace TowerDefense.Core
     /// <summary>
     /// Event fired when an enemy successfully navigates the path and reaches the base.
     /// </summary>
-    public struct EnemyReachedBaseEvent
+    public readonly struct EnemyReachedBaseEvent
     {
-        public GameObject EnemyGameObject;
-        public int DamageToBase;
+        public readonly GameObject EnemyGameObject;
+        public readonly int DamageToBase;
 
-        public EnemyReachedBaseEvent(GameObject enemyGameObject, int damageToBase)
+        public EnemyReachedBaseEvent(GameObject enemy, int damage)
         {
-            EnemyGameObject = enemyGameObject;
-            DamageToBase = damageToBase;
+            EnemyGameObject = enemy;
+            DamageToBase = damage;
         }
     }
 
     /// <summary>
     /// Event fired when an enemy is spawned into the scene.
     /// </summary>
-    public struct EnemySpawnedEvent
+    public readonly struct EnemySpawnedEvent
     {
-        public GameObject EnemyGameObject;
+        public readonly GameObject EnemyGameObject;
 
-        public EnemySpawnedEvent(GameObject enemyGameObject)
+        public EnemySpawnedEvent(GameObject enemy)
         {
-            EnemyGameObject = enemyGameObject;
+            EnemyGameObject = enemy;
         }
     }
 
     /// <summary>
     /// Event fired when an enemy is killed or destroyed.
     /// </summary>
-    public struct EnemyDiedEvent
+    public readonly struct EnemyDiedEvent
     {
-        public GameObject EnemyGameObject;
-        public int GoldReward;
+        public readonly GameObject EnemyGameObject;
+        public readonly int GoldReward;
 
-        public EnemyDiedEvent(GameObject enemyGameObject, int goldReward)
+        public EnemyDiedEvent(GameObject enemy, int gold)
         {
-            EnemyGameObject = enemyGameObject;
-            GoldReward = goldReward;
+            EnemyGameObject = enemy;
+            GoldReward = gold;
         }
     }
 
     /// <summary>
     /// Event fired when the global game state changes.
     /// </summary>
-    public struct GameStateChangedEvent
+    public readonly struct GameStateChangedEvent
     {
-        public GameManager.GameState PreviousState;
-        public GameManager.GameState NewState;
+        public readonly GameManager.GameState PreviousState;
+        public readonly GameManager.GameState NewState;
 
-        public GameStateChangedEvent(GameManager.GameState previousState, GameManager.GameState newState)
+        public GameStateChangedEvent(
+            GameManager.GameState previousState,
+            GameManager.GameState newState)
         {
             PreviousState = previousState;
             NewState = newState;
@@ -63,10 +65,10 @@ namespace TowerDefense.Core
     /// <summary>
     /// Event fired when the base health changes.
     /// </summary>
-    public struct BaseHealthChangedEvent
+    public readonly struct BaseHealthChangedEvent
     {
-        public int CurrentHealth;
-        public int MaxHealth;
+        public readonly int CurrentHealth;
+        public readonly int MaxHealth;
 
         public BaseHealthChangedEvent(int currentHealth, int maxHealth)
         {
@@ -78,9 +80,9 @@ namespace TowerDefense.Core
     /// <summary>
     /// Event fired when the player's gold amount changes.
     /// </summary>
-    public struct GoldChangedEvent
+    public readonly struct GoldChangedEvent
     {
-        public int CurrentGold;
+        public readonly int CurrentGold;
 
         public GoldChangedEvent(int currentGold)
         {
@@ -91,10 +93,10 @@ namespace TowerDefense.Core
     /// <summary>
     /// Event fired when a wave begins spawning.
     /// </summary>
-    public struct WaveStartedEvent
+    public readonly struct WaveStartedEvent
     {
-        public int WaveIndex;
-        public int TotalWaves;
+        public readonly int WaveIndex;
+        public readonly int TotalWaves;
 
         public WaveStartedEvent(int waveIndex, int totalWaves)
         {
@@ -106,9 +108,9 @@ namespace TowerDefense.Core
     /// <summary>
     /// Event fired when a wave has finished spawning all its enemies.
     /// </summary>
-    public struct WaveCompletedEvent
+    public readonly struct WaveCompletedEvent
     {
-        public int WaveIndex;
+        public readonly int WaveIndex;
 
         public WaveCompletedEvent(int waveIndex)
         {
@@ -119,9 +121,9 @@ namespace TowerDefense.Core
     /// <summary>
     /// Event fired when all enemies of a wave have been cleared.
     /// </summary>
-    public struct WaveClearedEvent
+    public readonly struct WaveClearedEvent
     {
-        public int WaveIndex;
+        public readonly int WaveIndex;
 
         public WaveClearedEvent(int waveIndex)
         {
@@ -132,22 +134,22 @@ namespace TowerDefense.Core
     /// <summary>
     /// Event fired when a level starts.
     /// </summary>
-    public struct LevelStartedEvent
+    public readonly struct LevelStartedEvent
     {
-        public string LevelName;
+        public readonly string LevelName;
 
-        public LevelStartedEvent(string levelName)
+        public LevelStartedEvent(string name)
         {
-            LevelName = levelName;
+            LevelName = name;
         }
     }
 
     /// <summary>
     /// Event fired when the level is completed (won or lost).
     /// </summary>
-    public struct LevelCompletedEvent
+    public readonly struct LevelCompletedEvent
     {
-        public bool Won;
+        public readonly bool Won;
 
         public LevelCompletedEvent(bool won)
         {

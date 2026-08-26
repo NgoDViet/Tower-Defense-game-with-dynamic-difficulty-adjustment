@@ -29,8 +29,16 @@ namespace TowerDefense.Core
 
     public class WaveManager : MonoBehaviour
     {
+        // =========================================================
+        // REFERENCES
+        // =========================================================
+
         [Header("References")]
         [SerializeField] private WaypointPath waypointPath;
+
+        // =========================================================
+        // ENEMY PREFABS
+        // =========================================================
 
         [Header("Enemy Prefabs")]
         [SerializeField] private GameObject basicEnemyPrefab;
@@ -38,35 +46,64 @@ namespace TowerDefense.Core
         [SerializeField] private GameObject tankEnemyPrefab;
         [SerializeField] private GameObject armorEnemyPrefab;
 
+        // =========================================================
+        // ENEMY DATA
+        // =========================================================
+
         [Header("Enemy Specifications")]
         [SerializeField] private EnemyData basicEnemyData;
         [SerializeField] private EnemyData fastEnemyData;
         [SerializeField] private EnemyData tankEnemyData;
         [SerializeField] private EnemyData armorEnemyData;
 
+        // =========================================================
+        // WAVE SETTINGS
+        // =========================================================
+
         [Header("Wave Controls")]
         [SerializeField] private bool autoStartNextWave = true;
+
         [SerializeField] private float waveInterval = 5f;
+
         [SerializeField] private float firstWaveDelay = 3f;
 
+        // =========================================================
+        // WAVE DATA
+        // =========================================================
+
         [Header("Waves Setup")]
-        [SerializeField] private List<WaveSetup> waves =
+        [SerializeField]
+        private List<WaveSetup> waves =
             new List<WaveSetup>();
+
+        // =========================================================
+        // INTERNAL DATA
+        // =========================================================
 
         private LevelData _levelData;
 
         private int _currentWaveIndex = -1;
 
         private bool _isSpawning;
+
         private bool _waitingForNextWave;
 
         private int _activeSpawnGroupsCount;
 
         private Coroutine _waveSpawnCoroutine;
+
         private Coroutine _autoNextWaveCoroutine;
 
         private List<WaveSetup> _initialInspectorWaves =
             new List<WaveSetup>();
+
+        // =========================================================
+        // PROPERTIES
+        // =========================================================
+
+        public List<WaveSetup> Waves => waves;
+
+        public bool IsEndlessMode { get; private set; }
 
         public GameObject BasicEnemyPrefab
         {
@@ -116,7 +153,32 @@ namespace TowerDefense.Core
             set => armorEnemyData = value;
         }
 
-        public List<WaveSetup> Waves => waves;
+        // =========================================================
+        // DYNAMIC SPAWN GROUP
+        // =========================================================
+
+        private struct DynamicSpawnGroup
+        {
+            public GameObject Prefab;
+
+            public EnemyData Data;
+
+            public int Count;
+
+            public float SpawnInterval;
+
+            public DynamicSpawnGroup(
+                GameObject prefab,
+                EnemyData data,
+                int count,
+                float spawnInterval)
+            {
+                Prefab = prefab;
+                Data = data;
+                Count = count;
+                SpawnInterval = spawnInterval;
+            }
+        }
 
         // =========================================================
         // AWAKE
@@ -134,9 +196,11 @@ namespace TowerDefense.Core
 
         private void OnEnable()
         {
-            EventBus<LevelStartedEvent>.Subscribe(OnLevelStarted);
+            EventBus<LevelStartedEvent>
+                .Subscribe(OnLevelStarted);
 
-            EventBus<WaveClearedEvent>.Subscribe(OnWaveCleared);
+            EventBus<WaveClearedEvent>
+                .Subscribe(OnWaveCleared);
         }
 
         // =========================================================
@@ -145,19 +209,25 @@ namespace TowerDefense.Core
 
         private void OnDisable()
         {
-            EventBus<LevelStartedEvent>.Unsubscribe(OnLevelStarted);
+            EventBus<LevelStartedEvent>
+                .Unsubscribe(OnLevelStarted);
 
-            EventBus<WaveClearedEvent>.Unsubscribe(OnWaveCleared);
+            EventBus<WaveClearedEvent>
+                .Unsubscribe(OnWaveCleared);
 
             if (_waveSpawnCoroutine != null)
             {
-                StopCoroutine(_waveSpawnCoroutine);
+                StopCoroutine(
+                    _waveSpawnCoroutine);
+
                 _waveSpawnCoroutine = null;
             }
 
             if (_autoNextWaveCoroutine != null)
             {
-                StopCoroutine(_autoNextWaveCoroutine);
+                StopCoroutine(
+                    _autoNextWaveCoroutine);
+
                 _autoNextWaveCoroutine = null;
             }
         }
@@ -165,46 +235,70 @@ namespace TowerDefense.Core
         // =========================================================
         // START NEXT WAVE
         // =========================================================
-
         public void StartNextWave()
         {
-            // Don't start another wave while one is spawning.
             if (_isSpawning)
             {
                 Debug.Log(
-                    "[WaveManager] Cannot start next wave: still spawning.");
+                    "[WaveManager] Cannot start next wave: " +
+                    "still spawning.");
 
                 return;
             }
 
-            // Don't start another wave while waiting.
             if (_waitingForNextWave)
             {
                 Debug.Log(
-                    "[WaveManager] Cannot start next wave: waiting.");
+                    "[WaveManager] Cannot start next wave: " +
+                    "waiting.");
 
                 return;
             }
 
-            // Make sure there are no enemies remaining.
             if (GameManager.Instance != null &&
                 GameManager.Instance.ActiveEnemiesCount > 0)
             {
                 Debug.Log(
                     $"[WaveManager] Cannot start next wave: " +
-                    $"{GameManager.Instance.ActiveEnemiesCount} enemies remain.");
+                    $"{GameManager.Instance.ActiveEnemiesCount} " +
+                    "enemies remain.");
 
                 return;
             }
 
-            int nextWaveIndex =
-                _currentWaveIndex + 1;
+            int nextWaveIndex = _currentWaveIndex + 1;
 
-            // No more waves.
-            if (nextWaveIndex >= waves.Count)
+            // =====================================================
+            // FIXED WAVES
+            // =====================================================
+            // Endless OFF = only use waves configured for the level.
+            if (!IsEndlessMode &&
+                nextWaveIndex >= waves.Count)
             {
                 Debug.Log(
-                    "[WaveManager] No more waves.");
+                    "[WaveManager] Fixed Waves completed. " +
+                    "No more waves.");
+
+                return;
+            }
+
+            // =====================================================
+            // ENDLESS WAVES
+            // =====================================================
+            // Endless ON = generate a new wave before accessing
+            // waves[nextWaveIndex] when the configured waves end.
+            if (IsEndlessMode &&
+                nextWaveIndex >= waves.Count)
+            {
+                GenerateNextEndlessWave();
+            }
+
+            // Safety check.
+            if (nextWaveIndex >= waves.Count)
+            {
+                Debug.LogError(
+                    "[WaveManager] Cannot start wave. " +
+                    $"Index={nextWaveIndex}, Count={waves.Count}");
 
                 return;
             }
@@ -212,7 +306,9 @@ namespace TowerDefense.Core
             _currentWaveIndex = nextWaveIndex;
 
             Debug.Log(
-                $"[WaveManager] ===== STARTING WAVE {_currentWaveIndex + 1}/{waves.Count} =====");
+                $"[WaveManager] ===== STARTING WAVE " +
+                $"{_currentWaveIndex + 1} ===== " +
+                $"Mode={(IsEndlessMode ? "ENDLESS" : "FIXED")}");
 
             _waveSpawnCoroutine =
                 StartCoroutine(
@@ -222,27 +318,159 @@ namespace TowerDefense.Core
         }
 
         // =========================================================
-        // DYNAMIC SPAWN GROUP
+        // GENERATE ENDLESS WAVE
         // =========================================================
 
-        private struct DynamicSpawnGroup
+        private void GenerateNextEndlessWave()
         {
-            public EnemyType enemyType;
-            public EnemyData enemyData;
-            public int count;
-            public float spawnInterval;
+            int waveNum =
+                _currentWaveIndex + 1;
 
-            public DynamicSpawnGroup(
-                EnemyType type,
-                EnemyData data,
-                int count,
-                float interval)
+            float difficultyMultiplier = 1f;
+
+            // -----------------------------------------------------
+            // PLAYER PERFORMANCE DDA
+            // -----------------------------------------------------
+
+            if (GameManager.Instance != null &&
+                GameManager.Instance.ActiveLevelData != null)
             {
-                enemyType = type;
-                enemyData = data;
-                this.count = count;
-                spawnInterval = interval;
+                int maxHealth =
+                    GameManager.Instance
+                    .ActiveLevelData
+                    .BaseMaxHealth;
+
+                int currentHealth =
+                    GameManager.Instance
+                    .CurrentHealth;
+
+                int currentGold =
+                    GameManager.Instance
+                    .CurrentGold;
+
+                // Player has full HP.
+                if (currentHealth >= maxHealth)
+                {
+                    difficultyMultiplier += 0.3f;
+                }
+                // Player is close to death.
+                else if (currentHealth <= maxHealth * 0.3f)
+                {
+                    difficultyMultiplier -= 0.3f;
+                }
+
+                // Player has lots of gold.
+                if (currentGold > 500)
+                {
+                    difficultyMultiplier += 0.2f;
+                }
             }
+
+            difficultyMultiplier =
+                Mathf.Max(
+                    0.5f,
+                    difficultyMultiplier);
+
+            // -----------------------------------------------------
+            // BASE THREAT
+            // -----------------------------------------------------
+
+            int baseThreat =
+                20 + (waveNum * 5);
+
+            int totalThreatPoints =
+                Mathf.RoundToInt(
+                    baseThreat *
+                    difficultyMultiplier);
+
+            // -----------------------------------------------------
+            // ARMOR
+            // -----------------------------------------------------
+
+            WaveSetup newWave =
+                new WaveSetup();
+
+            if (waveNum >= 5)
+            {
+                int armorBudget =
+                    Mathf.RoundToInt(
+                        totalThreatPoints * 0.3f);
+
+                newWave.armorCount =
+                    armorBudget / 4;
+
+                totalThreatPoints -=
+                    newWave.armorCount * 4;
+            }
+
+            // -----------------------------------------------------
+            // TANK
+            // -----------------------------------------------------
+
+            if (waveNum >= 3)
+            {
+                int tankBudget =
+                    Mathf.RoundToInt(
+                        totalThreatPoints * 0.3f);
+
+                newWave.tankCount =
+                    tankBudget / 3;
+
+                totalThreatPoints -=
+                    newWave.tankCount * 3;
+            }
+
+            // -----------------------------------------------------
+            // FAST
+            // -----------------------------------------------------
+
+            int fastBudget =
+                Mathf.RoundToInt(
+                    totalThreatPoints * 0.2f);
+
+            newWave.fastCount =
+                fastBudget / 2;
+
+            totalThreatPoints -=
+                newWave.fastCount * 2;
+
+            // -----------------------------------------------------
+            // BASIC
+            // -----------------------------------------------------
+
+            newWave.basicCount =
+                Mathf.Max(
+                    0,
+                    totalThreatPoints);
+
+            // -----------------------------------------------------
+            // SPAWN INTERVAL
+            // -----------------------------------------------------
+
+            float spawnRateBase =
+                Mathf.Max(
+                    0.2f,
+                    1f -
+                    difficultyMultiplier * 0.1f);
+
+            newWave.basicSpawnInterval =
+                spawnRateBase;
+
+            newWave.fastSpawnInterval =
+                spawnRateBase * 0.8f;
+
+            newWave.tankSpawnInterval =
+                spawnRateBase * 1.5f;
+
+            newWave.armorSpawnInterval =
+                spawnRateBase * 2f;
+
+            waves.Add(newWave);
+
+            Debug.Log(
+                $"[DDA] Wave {waveNum} | " +
+                $"Multiplier: {difficultyMultiplier} | " +
+                $"Threat: {baseThreat * difficultyMultiplier}");
         }
 
         // =========================================================
@@ -254,6 +482,7 @@ namespace TowerDefense.Core
             WaveSetup waveData)
         {
             _isSpawning = true;
+
             _waitingForNextWave = false;
 
             EventBus<WaveStartedEvent>.Raise(
@@ -261,119 +490,111 @@ namespace TowerDefense.Core
                     waveIndex,
                     waves.Count));
 
-            int multiplier =
-                DifficultyManager.EnemyCountMultiplier;
-
             List<DynamicSpawnGroup> groups =
                 new List<DynamicSpawnGroup>();
 
-            // -----------------------------------------------------
+            // =====================================================
             // BASIC
-            // -----------------------------------------------------
+            // =====================================================
 
             if (waveData.basicCount > 0 &&
+                basicEnemyPrefab != null &&
                 basicEnemyData != null)
             {
                 groups.Add(
                     new DynamicSpawnGroup(
-                        EnemyType.Basic,
+                        basicEnemyPrefab,
                         basicEnemyData,
-                        Mathf.Max(
-                            1,
-                            Mathf.RoundToInt(
-                                waveData.basicCount * multiplier)),
+                        CalculateEnemyCount(
+                            waveData.basicCount),
                         waveData.basicSpawnInterval));
             }
 
-            // -----------------------------------------------------
+            // =====================================================
             // FAST
-            // -----------------------------------------------------
+            // =====================================================
 
             if (waveData.fastCount > 0 &&
+                fastEnemyPrefab != null &&
                 fastEnemyData != null)
             {
                 groups.Add(
                     new DynamicSpawnGroup(
-                        EnemyType.Fast,
+                        fastEnemyPrefab,
                         fastEnemyData,
-                        Mathf.Max(
-                            1,
-                            Mathf.RoundToInt(
-                                waveData.fastCount * multiplier)),
+                        CalculateEnemyCount(
+                            waveData.fastCount),
                         waveData.fastSpawnInterval));
             }
 
-            // -----------------------------------------------------
+            // =====================================================
             // TANK
-            // -----------------------------------------------------
+            // =====================================================
 
             if (waveData.tankCount > 0 &&
+                tankEnemyPrefab != null &&
                 tankEnemyData != null)
             {
                 groups.Add(
                     new DynamicSpawnGroup(
-                        EnemyType.Tank,
+                        tankEnemyPrefab,
                         tankEnemyData,
-                        Mathf.Max(
-                            1,
-                            Mathf.RoundToInt(
-                                waveData.tankCount * multiplier)),
+                        CalculateEnemyCount(
+                            waveData.tankCount),
                         waveData.tankSpawnInterval));
             }
 
-            // -----------------------------------------------------
+            // =====================================================
             // ARMOR
-            // -----------------------------------------------------
+            // =====================================================
 
             if (waveData.armorCount > 0 &&
+                armorEnemyPrefab != null &&
                 armorEnemyData != null)
             {
                 groups.Add(
                     new DynamicSpawnGroup(
-                        EnemyType.Armor,
+                        armorEnemyPrefab,
                         armorEnemyData,
-                        Mathf.Max(
-                            1,
-                            Mathf.RoundToInt(
-                                waveData.armorCount * multiplier)),
+                        CalculateEnemyCount(
+                            waveData.armorCount),
                         waveData.armorSpawnInterval));
             }
 
             _activeSpawnGroupsCount =
                 groups.Count;
 
-            // -----------------------------------------------------
+            // =====================================================
             // EMPTY WAVE
-            // -----------------------------------------------------
+            // =====================================================
 
             if (_activeSpawnGroupsCount == 0)
             {
                 _isSpawning = false;
 
-                Debug.Log(
-                    $"[WaveManager] Wave {waveIndex + 1} has no enemies.");
-
                 EventBus<WaveCompletedEvent>.Raise(
-                    new WaveCompletedEvent(waveIndex));
+                    new WaveCompletedEvent(
+                        waveIndex));
 
                 yield break;
             }
 
-            // -----------------------------------------------------
-            // START ALL GROUPS
-            // -----------------------------------------------------
+            // =====================================================
+            // START GROUPS
+            // =====================================================
 
             for (int i = 0;
                  i < groups.Count;
                  i++)
             {
                 StartCoroutine(
-                    SpawnGroupCoroutine(groups[i]));
+                    SpawnGroupCoroutine(
+                        groups[i]));
             }
 
-            // -----------------------------------------------------
-            // WAIT UNTIL ALL GROUPS FINISH SPAWNING
-            // -----------------------------------------------------
+            // =====================================================
+            // WAIT FOR ALL GROUPS
+            // =====================================================
 
             while (_activeSpawnGroupsCount > 0)
             {
@@ -383,15 +604,32 @@ namespace TowerDefense.Core
             _isSpawning = false;
 
             Debug.Log(
-                $"[WaveManager] Wave {waveIndex + 1} finished spawning.");
+                $"[WaveManager] Wave " +
+                $"{waveIndex + 1} finished spawning.");
 
-            // IMPORTANT:
-            // This does NOT mean the wave is cleared yet.
-            // GameManager waits until ActiveEnemiesCount == 0.
             EventBus<WaveCompletedEvent>.Raise(
-                new WaveCompletedEvent(waveIndex));
+                new WaveCompletedEvent(
+                    waveIndex));
 
             _waveSpawnCoroutine = null;
+        }
+
+        // =========================================================
+        // ENEMY COUNT MULTIPLIER
+        // =========================================================
+
+        private int CalculateEnemyCount(
+            int originalCount)
+        {
+            int multiplier =
+                Mathf.Max(
+                    1,
+                    DifficultyManager.EnemyCountMultiplier);
+
+            return Mathf.Max(
+                1,
+                Mathf.RoundToInt(
+                    originalCount * multiplier));
         }
 
         // =========================================================
@@ -412,10 +650,13 @@ namespace TowerDefense.Core
                     : transform.position;
 
             for (int i = 0;
-                 i < group.count;
+                 i < group.Count;
                  i++)
             {
-                // Pause.
+                // -------------------------------------------------
+                // PAUSE
+                // -------------------------------------------------
+
                 while (GameManager.Instance != null &&
                        GameManager.Instance.CurrentState ==
                        GameManager.GameState.Pause)
@@ -423,7 +664,10 @@ namespace TowerDefense.Core
                     yield return null;
                 }
 
-                // Stop spawning if game ended.
+                // -------------------------------------------------
+                // GAME ENDED
+                // -------------------------------------------------
+
                 if (GameManager.Instance != null &&
                     GameManager.Instance.CurrentState !=
                     GameManager.GameState.Playing)
@@ -431,67 +675,79 @@ namespace TowerDefense.Core
                     break;
                 }
 
-                GameObject prefabToSpawn =
-                    GetPrefab(group.enemyType);
+                // -------------------------------------------------
+                // GET ENEMY
+                // -------------------------------------------------
 
-                if (prefabToSpawn != null &&
-                    ObjectPooler.Instance != null)
+                if (ObjectPooler.Instance == null)
                 {
-                    GameObject enemy =
-                        ObjectPooler.Instance.GetPooledObject(
-                            prefabToSpawn,
-                            spawnPosition,
-                            Quaternion.identity);
+                    Debug.LogError(
+                        "[WaveManager] ObjectPooler.Instance is null.");
 
-                    if (enemy != null)
-                    {
-                        // -------------------------------------------------
-                        // MOVEMENT
-                        // -------------------------------------------------
-
-                        EnemyMovement movement =
-                            enemy.GetComponent<EnemyMovement>();
-
-                        if (movement != null)
-                        {
-                            movement.Initialize(
-                                group.enemyData,
-                                waypointPath);
-                        }
-
-                        // -------------------------------------------------
-                        // HEALTH
-                        // -------------------------------------------------
-
-                        EnemyHealth health =
-                            enemy.GetComponent<EnemyHealth>();
-
-                        if (health != null)
-                        {
-                            health.Initialize(
-                                group.enemyData,
-                                DifficultyManager.HealthMultiplier,
-                                DifficultyManager.SpeedMultiplier);
-                        }
-
-                        // -------------------------------------------------
-                        // REGISTER ENEMY
-                        // -------------------------------------------------
-
-                        EventBus<EnemySpawnedEvent>.Raise(
-                            new EnemySpawnedEvent(enemy));
-                    }
+                    break;
                 }
 
-                // -----------------------------------------------------
-                // SPAWN INTERVAL
-                // -----------------------------------------------------
+                GameObject enemy =
+                    ObjectPooler.Instance.GetPooledObject(
+                        group.Prefab,
+                        spawnPosition,
+                        Quaternion.identity);
 
-                if (group.spawnInterval > 0f &&
-                    i < group.count - 1)
+                if (enemy == null)
+                {
+                    Debug.LogWarning(
+                        "[WaveManager] Failed to get " +
+                        "enemy from pool.");
+
+                    continue;
+                }
+
+                // -------------------------------------------------
+                // MOVEMENT
+                // -------------------------------------------------
+
+                EnemyMovement movement =
+                    enemy.GetComponent<EnemyMovement>();
+
+                if (movement != null)
+                {
+                    movement.Initialize(
+                        group.Data,
+                        waypointPath);
+                }
+
+                // -------------------------------------------------
+                // HEALTH
+                // -------------------------------------------------
+
+                EnemyHealth health =
+                    enemy.GetComponent<EnemyHealth>();
+
+                if (health != null)
+                {
+                    health.Initialize(
+                        group.Data,
+                        DifficultyManager.HealthMultiplier,
+                        DifficultyManager.SpeedMultiplier);
+                }
+
+                // -------------------------------------------------
+                // REGISTER ENEMY
+                // -------------------------------------------------
+
+                EventBus<EnemySpawnedEvent>.Raise(
+                    new EnemySpawnedEvent(
+                        enemy));
+
+                // -------------------------------------------------
+                // SPAWN INTERVAL
+                // -------------------------------------------------
+
+                if (group.SpawnInterval > 0f &&
+                    i < group.Count - 1)
                 {
                     yield return new WaitForSeconds(
-                        group.spawnInterval);
+                        group.SpawnInterval);
                 }
             }
 
@@ -499,29 +755,6 @@ namespace TowerDefense.Core
                 Mathf.Max(
                     0,
                     _activeSpawnGroupsCount - 1);
-        }
-
-        // =========================================================
-        // GET PREFAB
-        // =========================================================
-
-        private GameObject GetPrefab(
-            EnemyType type)
-        {
-            switch (type)
-            {
-                case EnemyType.Fast:
-                    return fastEnemyPrefab;
-
-                case EnemyType.Tank:
-                    return tankEnemyPrefab;
-
-                case EnemyType.Armor:
-                    return armorEnemyPrefab;
-
-                default:
-                    return basicEnemyPrefab;
-            }
         }
 
         // =========================================================
@@ -534,74 +767,49 @@ namespace TowerDefense.Core
             if (GameManager.Instance != null)
             {
                 _levelData =
-                    GameManager.Instance.ActiveLevelData;
+                    GameManager.Instance
+                    .ActiveLevelData;
             }
+
+            // Determine Endless Mode from the actual Challenge Setting.
+            // Do NOT use the level name: the player can enable/disable
+            // Endless Mode independently of the selected level.
+            IsEndlessMode =
+                PlayerPrefs.GetInt(
+                    "TowerDefense_EndlessMode",
+                    0) == 1;
+
+            Debug.Log(
+                $"[WaveManager] Endless Mode = {IsEndlessMode}");
+
+            // Always enable automatic wave progression.
+            autoStartNextWave = true;
+
+            // -----------------------------------------------------
+            // STOP OLD COROUTINES
+            // -----------------------------------------------------
 
             if (_waveSpawnCoroutine != null)
             {
-                StopCoroutine(_waveSpawnCoroutine);
+                StopCoroutine(
+                    _waveSpawnCoroutine);
+
                 _waveSpawnCoroutine = null;
             }
 
             if (_autoNextWaveCoroutine != null)
             {
-                StopCoroutine(_autoNextWaveCoroutine);
+                StopCoroutine(
+                    _autoNextWaveCoroutine);
+
                 _autoNextWaveCoroutine = null;
             }
 
             // -----------------------------------------------------
-            // LOAD WAVES FROM LEVEL DATA
+            // LOAD LEVEL WAVES
             // -----------------------------------------------------
 
-            if (_initialInspectorWaves.Count == 0 &&
-                _levelData != null &&
-                _levelData.Waves != null &&
-                _levelData.Waves.Count > 0)
-            {
-                waves.Clear();
-
-                foreach (var waveData in _levelData.Waves)
-                {
-                    if (waveData == null)
-                        continue;
-
-                    WaveSetup setup =
-                        new WaveSetup
-                        {
-                            basicCount =
-                                waveData.BasicCount,
-
-                            basicSpawnInterval =
-                                waveData.BasicSpawnInterval,
-
-                            fastCount =
-                                waveData.FastCount,
-
-                            fastSpawnInterval =
-                                waveData.FastSpawnInterval,
-
-                            tankCount =
-                                waveData.TankCount,
-
-                            tankSpawnInterval =
-                                waveData.TankSpawnInterval,
-
-                            armorCount =
-                                waveData.ArmorCount,
-
-                            armorSpawnInterval =
-                                waveData.ArmorSpawnInterval
-                        };
-
-                    waves.Add(setup);
-                }
-            }
-            else if (_initialInspectorWaves.Count > 0)
-            {
-                waves.Clear();
-                waves.AddRange(
-                    _initialInspectorWaves);
-            }
+            SyncWavesData(_levelData);
 
             // -----------------------------------------------------
             // RESET
@@ -610,23 +818,82 @@ namespace TowerDefense.Core
             _currentWaveIndex = -1;
 
             _isSpawning = false;
+
             _waitingForNextWave = false;
 
             _activeSpawnGroupsCount = 0;
 
             // -----------------------------------------------------
-            // STOP OLD COROUTINES
-            // -----------------------------------------------------
-
-            StopAllCoroutines();
-
-            // -----------------------------------------------------
-            // START WAVE 1
+            // START FIRST WAVE
             // -----------------------------------------------------
 
             StartCoroutine(
                 StartFirstWaveDelayed(
                     firstWaveDelay));
+        }
+
+        // =========================================================
+        // SYNC WAVES
+        // =========================================================
+
+        private void SyncWavesData(
+            LevelData levelData)
+        {
+            // If Inspector contains waves,
+            // restore Inspector configuration.
+            if (_initialInspectorWaves.Count > 0)
+            {
+                waves.Clear();
+
+                waves.AddRange(
+                    _initialInspectorWaves);
+
+                return;
+            }
+
+            // Otherwise load from LevelData.
+            if (levelData == null ||
+                levelData.Waves == null ||
+                levelData.Waves.Count == 0)
+            {
+                return;
+            }
+
+            waves.Clear();
+
+            foreach (var waveData in levelData.Waves)
+            {
+                if (waveData == null)
+                    continue;
+
+                waves.Add(
+                    new WaveSetup
+                    {
+                        basicCount =
+                            waveData.BasicCount,
+
+                        basicSpawnInterval =
+                            waveData.BasicSpawnInterval,
+
+                        fastCount =
+                            waveData.FastCount,
+
+                        fastSpawnInterval =
+                            waveData.FastSpawnInterval,
+
+                        tankCount =
+                            waveData.TankCount,
+
+                        tankSpawnInterval =
+                            waveData.TankSpawnInterval,
+
+                        armorCount =
+                            waveData.ArmorCount,
+
+                        armorSpawnInterval =
+                            waveData.ArmorSpawnInterval
+                    });
+            }
         }
 
         // =========================================================
@@ -636,7 +903,10 @@ namespace TowerDefense.Core
         private IEnumerator StartFirstWaveDelayed(
             float delay)
         {
-            yield return new WaitForSeconds(delay);
+            yield return new WaitForSeconds(
+                Mathf.Max(
+                    0f,
+                    delay));
 
             if (GameManager.Instance == null)
                 yield break;
@@ -653,47 +923,72 @@ namespace TowerDefense.Core
         // =========================================================
         // WAVE CLEARED
         // =========================================================
-
         private void OnWaveCleared(
             WaveClearedEvent evt)
         {
             Debug.Log(
-                $"[WaveManager] ===== WAVE {evt.WaveIndex + 1}/{waves.Count} CLEARED =====");
+                $"[WaveManager] ===== WAVE " +
+                $"{evt.WaveIndex + 1} CLEARED =====");
 
-            // Make sure this event belongs to current wave.
+            // Ignore an old/stale event.
             if (evt.WaveIndex != _currentWaveIndex)
             {
                 Debug.LogWarning(
-                    $"[WaveManager] Ignoring old WaveCleared event. " +
-                    $"Event={evt.WaveIndex}, Current={_currentWaveIndex}");
+                    $"[WaveManager] Ignoring old " +
+                    $"WaveCleared event. " +
+                    $"Event={evt.WaveIndex}, " +
+                    $"Current={_currentWaveIndex}");
 
                 return;
             }
 
-            // Final wave.
-            if (_currentWaveIndex >= waves.Count - 1)
+            // =====================================================
+            // FIXED WAVES
+            // =====================================================
+            if (!IsEndlessMode &&
+                _currentWaveIndex >= waves.Count - 1)
             {
                 Debug.Log(
-                    "[WaveManager] FINAL WAVE CLEARED.");
+                    "[WaveManager] FINAL FIXED WAVE CLEARED.");
 
+                // Stop after the final configured wave.
                 return;
             }
 
-            // Prevent duplicate scheduling.
-            if (_waitingForNextWave)
+            // =====================================================
+            // ENDLESS WAVES
+            // =====================================================
+            if (IsEndlessMode)
             {
+                Debug.Log(
+                    "[WaveManager] Endless mode active. " +
+                    "Scheduling next wave.");
+
+                ScheduleNextWave();
                 return;
             }
 
+            // =====================================================
+            // NORMAL / HARD / HELL
+            // =====================================================
             if (!autoStartNextWave)
             {
                 Debug.LogWarning(
-                    "[WaveManager] autoStartNextWave is OFF. " +
-                    "Forcing automatic next wave.");
-
-                // IMPORTANT:
-                // We intentionally continue anyway.
+                    "[WaveManager] autoStartNextWave " +
+                    "is OFF. Next wave will still be started.");
             }
+
+            ScheduleNextWave();
+        }
+
+        // =========================================================
+        // SCHEDULE NEXT WAVE
+        // =========================================================
+
+        private void ScheduleNextWave()
+        {
+            if (_waitingForNextWave)
+                return;
 
             if (_autoNextWaveCoroutine != null)
             {
@@ -709,19 +1004,20 @@ namespace TowerDefense.Core
         // =========================================================
         // AUTO START NEXT WAVE
         // =========================================================
-
         private IEnumerator AutoStartNextWaveCoroutine()
         {
             _waitingForNextWave = true;
 
             Debug.Log(
-                $"[WaveManager] Next wave in {waveInterval} seconds...");
+                $"[WaveManager] Next wave in " +
+                $"{waveInterval} seconds...");
 
             yield return new WaitForSeconds(
-                Mathf.Max(0f, waveInterval));
+                Mathf.Max(
+                    0f,
+                    waveInterval));
 
             _waitingForNextWave = false;
-
             _autoNextWaveCoroutine = null;
 
             if (GameManager.Instance == null)
@@ -733,7 +1029,6 @@ namespace TowerDefense.Core
                 yield break;
             }
 
-            // Safety check.
             if (GameManager.Instance.ActiveEnemiesCount > 0)
             {
                 Debug.LogWarning(
@@ -743,15 +1038,18 @@ namespace TowerDefense.Core
                 yield break;
             }
 
-            // Final safety check.
-            if (_currentWaveIndex >= waves.Count - 1)
+            // Fixed mode stops after the final configured wave.
+            if (!IsEndlessMode &&
+                _currentWaveIndex >= waves.Count - 1)
             {
+                Debug.Log(
+                    "[WaveManager] Fixed Waves finished.");
+
                 yield break;
             }
 
-            Debug.Log(
-                $"[WaveManager] ===== AUTO START WAVE {_currentWaveIndex + 2}/{waves.Count} =====");
-
+            // Endless mode generates a new wave automatically
+            // inside StartNextWave() when the configured waves end.
             StartNextWave();
         }
     }

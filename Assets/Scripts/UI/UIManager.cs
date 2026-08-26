@@ -98,6 +98,7 @@ namespace TowerDefense.UI
         private bool _enemyCountEnabled;
         private bool _timeLimitEnabled;
         private bool _oneLifeEnabled;
+        private bool _endlessModeEnabled;
 
         // Values are remembered even when the corresponding option is
         // temporarily disabled.
@@ -107,6 +108,7 @@ namespace TowerDefense.UI
         private Toggle _enemyCountToggle;
         private Toggle _timeLimitToggle;
         private Toggle _oneLifeToggle;
+        private Toggle _endlessModeToggle;
 
         private Button[] _enemyCountButtons;
         private Button[] _timeButtons;
@@ -116,6 +118,26 @@ namespace TowerDefense.UI
         private TextMeshProUGUI _enemyCountStatusText;
         private TextMeshProUGUI _timeStatusText;
         private TextMeshProUGUI _oneLifeStatusText;
+        private TextMeshProUGUI _endlessModeStatusText;
+        private TextMeshProUGUI _challengeSummaryText;
+
+        private readonly Dictionary<LevelData, TextMeshProUGUI>
+    _levelStatsTextByLevel =
+        new Dictionary<LevelData, TextMeshProUGUI>();
+
+        /// <summary>
+        /// True when Endless Mode was selected in Challenge Settings.
+        /// Stored in PlayerPrefs so the wave system can read the setting
+        /// after the game scene starts.
+        /// </summary>
+        public static bool IsEndlessModeEnabled
+        {
+            get => PlayerPrefs.GetInt("TowerDefense_EndlessMode", 0) == 1;
+            private set => PlayerPrefs.SetInt(
+                "TowerDefense_EndlessMode",
+                value ? 1 : 0
+            );
+        }
 
         // =========================================================
         // SELECTED OBJECTS
@@ -163,6 +185,15 @@ namespace TowerDefense.UI
 
             if (levels.Count == 0 && levelDataToPlay != null)
                 levels.Add(levelDataToPlay);
+
+            _endlessModeEnabled = false;
+
+PlayerPrefs.SetInt(
+    "TowerDefense_EndlessMode",
+    0
+);
+
+PlayerPrefs.Save();
 
             if (GameManager.Instance != null)
             {
@@ -528,10 +559,32 @@ namespace TowerDefense.UI
                 () => SelectDifficulty(difficulty)
             );
         }
-
         private void SelectDifficulty(DifficultyMode difficulty)
         {
             DifficultyManager.SetDifficulty(difficulty);
+
+            // =========================================================
+            // RESET ALL OPTIONAL CHALLENGE SETTINGS
+            // =========================================================
+            // A new difficulty selection starts with all optional
+            // modifiers OFF. This prevents Endless Mode from being
+            // carried over from a previous selection/session.
+            _enemyCountEnabled = false;
+            _timeLimitEnabled = false;
+            _oneLifeEnabled = false;
+            _endlessModeEnabled = false;
+
+            _selectedEnemyMultiplier = 2;
+            _selectedTimeLimitMinutes = 3f;
+
+            DifficultyManager.SetEnemyCountMultiplier(1);
+            DifficultyManager.SetTimeLimitMinutes(0f);
+            DifficultyManager.SetOneLifeMode(false);
+
+            // Explicitly clear the saved Endless state.
+            IsEndlessModeEnabled = false;
+            PlayerPrefs.SetInt("TowerDefense_EndlessMode", 0);
+            PlayerPrefs.Save();
 
             EnsureChallengeSettingsUI();
 
@@ -607,7 +660,11 @@ namespace TowerDefense.UI
             );
 
             // -----------------------------------------------------
-            // THREE INDEPENDENT MODIFIER CARDS
+            // FOUR INDEPENDENT OPTIONAL FEATURES
+            // 1. Enemy Count
+            // 2. Time Limit
+            // 3. One Life Challenge
+            // 4. Endless Waves
             // -----------------------------------------------------
 
             GameObject cards = new GameObject(
@@ -631,8 +688,8 @@ namespace TowerDefense.UI
             HorizontalLayoutGroup cardsLayout =
                 cards.AddComponent<HorizontalLayoutGroup>();
 
-            cardsLayout.spacing = 25f;
-            cardsLayout.padding = new RectOffset(10, 10, 5, 5);
+            cardsLayout.spacing = 12f;
+            cardsLayout.padding = new RectOffset(4, 4, 5, 5);
             cardsLayout.childAlignment = TextAnchor.MiddleCenter;
             cardsLayout.childControlWidth = true;
             cardsLayout.childControlHeight = true;
@@ -642,6 +699,7 @@ namespace TowerDefense.UI
             CreateEnemyCountCard(cards.transform);
             CreateTimeLimitCard(cards.transform);
             CreateOneLifeCard(cards.transform);
+            CreateEndlessModeCard(cards.transform);
 
             // -----------------------------------------------------
             // BOTTOM BUTTONS
@@ -671,6 +729,8 @@ namespace TowerDefense.UI
             _enemyCountEnabled = false;
             _timeLimitEnabled = false;
             _oneLifeEnabled = false;
+            _endlessModeEnabled = false;
+            IsEndlessModeEnabled = false;
 
             _selectedEnemyMultiplier = 2;
             _selectedTimeLimitMinutes = 3f;
@@ -908,9 +968,9 @@ namespace TowerDefense.UI
     LayoutElement inputElement =
         inputObject.AddComponent<LayoutElement>();
 
-    inputElement.preferredWidth = 145f;
+    inputElement.preferredWidth = 105f;
     inputElement.preferredHeight = 55f;
-    inputElement.minWidth = 145f;
+    inputElement.minWidth = 105f;
     inputElement.minHeight = 55f;
 
     Image inputImage =
@@ -1053,9 +1113,9 @@ namespace TowerDefense.UI
     LayoutElement applyElement =
         applyObject.AddComponent<LayoutElement>();
 
-    applyElement.preferredWidth = 100f;
+    applyElement.preferredWidth = 75f;
     applyElement.preferredHeight = 55f;
-    applyElement.minWidth = 100f;
+    applyElement.minWidth = 75f;
     applyElement.minHeight = 55f;
 
     Image applyImage =
@@ -1157,6 +1217,54 @@ namespace TowerDefense.UI
 
             _oneLifeToggle.onValueChanged.AddListener(
                 OnOneLifeToggleChanged
+            );
+        }
+
+        // =========================================================
+        // ENDLESS MODE CARD
+        // =========================================================
+
+        private void CreateEndlessModeCard(Transform parent)
+        {
+            GameObject card = CreateModifierCard(
+                parent,
+                "EndlessModeCard"
+            );
+
+            _endlessModeToggle = CreateToggle(
+                card.transform,
+                "EnableEndlessMode",
+                "ENDLESS MODE",
+                new Vector2(0f, 0.82f),
+                new Vector2(1f, 0.98f)
+            );
+
+            _endlessModeStatusText = CreateText(
+                card.transform,
+                "Status",
+                "OFF • Fixed wave count",
+                15,
+                FontStyles.Normal,
+                new Color(0.65f, 0.65f, 0.72f),
+                new Vector2(0.05f, 0.60f),
+                new Vector2(0.95f, 0.76f),
+                Vector2.zero
+            );
+
+            CreateText(
+                card.transform,
+                "Description",
+                "Waves continue forever\nSurvive as long as possible",
+                16,
+                FontStyles.Normal,
+                new Color(0.82f, 0.82f, 0.88f),
+                new Vector2(0.08f, 0.28f),
+                new Vector2(0.92f, 0.53f),
+                Vector2.zero
+            );
+
+            _endlessModeToggle.onValueChanged.AddListener(
+                OnEndlessModeToggleChanged
             );
         }
 
@@ -1501,6 +1609,24 @@ namespace TowerDefense.UI
 
             RefreshChallengeUI();
         }
+        private void OnEndlessModeToggleChanged(bool enabled)
+        {
+            _endlessModeEnabled = enabled;
+            IsEndlessModeEnabled = enabled;
+
+            // Always persist the current value explicitly.
+            PlayerPrefs.SetInt(
+                "TowerDefense_EndlessMode",
+                enabled ? 1 : 0
+            );
+            PlayerPrefs.Save();
+
+            RefreshChallengeUI();
+
+            Debug.Log(
+                $"[UIManager] Endless mode: {(enabled ? "ON" : "OFF")}"
+            );
+        }
 
         private void SelectEnemyMultiplier(int multiplier)
         {
@@ -1593,9 +1719,47 @@ namespace TowerDefense.UI
     );
 }
 
-        // =========================================================
-        // REFRESH CHALLENGE UI
-        // =========================================================
+      // =========================================================
+// REFRESH LEVEL CARD WAVE DISPLAY
+// =========================================================
+
+private void RefreshLevelCards()
+{
+    if (_levelStatsTextByLevel == null)
+        return;
+
+    foreach (var pair in _levelStatsTextByLevel)
+    {
+        LevelData lvl = pair.Key;
+        TextMeshProUGUI statsText = pair.Value;
+
+        if (lvl == null || statsText == null)
+            continue;
+
+        int waveCount =
+            lvl.Waves != null
+                ? lvl.Waves.Count
+                : 0;
+
+        string waveDisplay =
+            _endlessModeEnabled
+                ? "∞"
+                : waveCount.ToString();
+
+        string waveLabel =
+            _endlessModeEnabled
+                ? "ENDLESS WAVES"
+                : "TOTAL WAVES";
+
+        statsText.text =
+            $"STARTING GOLD\n" +
+            $"<color=#FFD700>{lvl.StartingGold} G</color>\n\n" +
+            $"BASE HP\n" +
+            $"<color=#FF5555>{lvl.BaseMaxHealth} HP</color>\n\n" +
+            $"{waveLabel}\n" +
+            $"<color=#55FFFF>{waveDisplay}</color>";
+    }
+}
 
         private void RefreshChallengeUI()
 {
@@ -1616,6 +1780,11 @@ namespace TowerDefense.UI
     if (_oneLifeToggle != null)
         _oneLifeToggle.SetIsOnWithoutNotify(
             _oneLifeEnabled
+        );
+
+    if (_endlessModeToggle != null)
+        _endlessModeToggle.SetIsOnWithoutNotify(
+            _endlessModeEnabled
         );
 
     // =========================================================
@@ -1642,8 +1811,38 @@ namespace TowerDefense.UI
     {
         _oneLifeStatusText.text =
             _oneLifeEnabled
-                ? "ON  •  One life only"
-                : "OFF  •  Normal lives";
+                ? "ON  •  One life challenge"
+                : "OFF  •  Normal base health";
+    }
+
+    if (_endlessModeStatusText != null)
+    {
+        _endlessModeStatusText.text =
+            _endlessModeEnabled
+                ? "ON  •  Infinite waves"
+                : "OFF  •  Fixed wave count";
+    }
+
+    if (_challengeSummaryText != null)
+    {
+        string enemySummary = _enemyCountEnabled
+            ? $"ENEMIES ×{_selectedEnemyMultiplier}"
+            : "ENEMIES NORMAL";
+
+        string timeSummary = _timeLimitEnabled
+            ? $"TIME {_selectedTimeLimitMinutes:0.##} MIN"
+            : "TIME UNLIMITED";
+
+        string lifeSummary = _oneLifeEnabled
+            ? "ONE LIFE"
+            : "NORMAL HEALTH";
+
+        string endlessSummary = _endlessModeEnabled
+            ? "ENDLESS WAVES"
+            : "FIXED WAVES";
+
+        _challengeSummaryText.text =
+            $"{enemySummary}   •   {timeSummary}   •   {lifeSummary}   •   {endlessSummary}";
     }
 
     // =========================================================
@@ -1701,6 +1900,7 @@ namespace TowerDefense.UI
         _customTimeApplyButton.interactable =
             _timeLimitEnabled;
     }
+    RefreshLevelCards();
 }
         // =========================================================
         // CHALLENGE NAVIGATION
@@ -1716,7 +1916,6 @@ namespace TowerDefense.UI
             if (_difficultySelectionPanel != null)
                 _difficultySelectionPanel.SetActive(true);
         }
-
         private void OnChallengeNextClicked()
         {
             // Make absolutely sure disabled modifiers have no effect.
@@ -1730,6 +1929,21 @@ namespace TowerDefense.UI
 
             DifficultyManager.SetOneLifeMode(
                 _oneLifeEnabled
+            );
+
+            // IMPORTANT:
+            // The Endless setting is independent from the selected level.
+            IsEndlessModeEnabled = _endlessModeEnabled;
+
+            PlayerPrefs.SetInt(
+                "TowerDefense_EndlessMode",
+                _endlessModeEnabled ? 1 : 0
+            );
+            PlayerPrefs.Save();
+
+            Debug.Log(
+                $"[UIManager] Final challenge settings: " +
+                $"Endless={_endlessModeEnabled}"
             );
 
             if (_challengeSettingsPanel != null)
@@ -1788,7 +2002,7 @@ namespace TowerDefense.UI
                 new Vector2(700f, 50f)
             );
 
-            CreateText(
+            _challengeSummaryText = CreateText(
                 _levelSelectionPanel.transform,
                 "ChallengeSummaryText",
                 "",
@@ -1797,8 +2011,10 @@ namespace TowerDefense.UI
                 new Color(0.75f, 0.8f, 0.88f),
                 new Vector2(0.5f, 0.75f),
                 new Vector2(0.5f, 0.75f),
-                new Vector2(900f, 45f)
+                new Vector2(1100f, 45f)
             );
+
+            RefreshChallengeUI();
 
             GameObject container = new GameObject(
                 "LevelsContainer",
@@ -1813,15 +2029,18 @@ namespace TowerDefense.UI
             RectTransform containerRect =
                 container.GetComponent<RectTransform>();
 
-            containerRect.anchorMin = new Vector2(0.1f, 0.25f);
-            containerRect.anchorMax = new Vector2(0.9f, 0.68f);
-            containerRect.offsetMin = Vector2.zero;
-            containerRect.offsetMax = Vector2.zero;
+            containerRect.anchorMin = new Vector2(0.035f, 0.22f);
+containerRect.anchorMax = new Vector2(0.965f, 0.70f);
+containerRect.offsetMin = Vector2.zero;
+containerRect.offsetMax = Vector2.zero;
 
-            HorizontalLayoutGroup layout =
-                container.AddComponent<HorizontalLayoutGroup>();
+HorizontalLayoutGroup layout =
+    container.AddComponent<HorizontalLayoutGroup>();
 
-            layout.spacing = 40f;
+layout.spacing = 14f;
+layout.padding = new RectOffset(0, 0, 0, 0);
+
+
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
@@ -1835,7 +2054,7 @@ namespace TowerDefense.UI
 
                 CreateLevelCard(container.transform, lvl);
             }
-
+            RefreshLevelCards();
             GameObject back = CreateSimpleButton(
                 _levelSelectionPanel.transform,
                 "BACK",
@@ -1856,184 +2075,384 @@ namespace TowerDefense.UI
             _levelSelectionPanel.SetActive(false);
         }
 
-        // =========================================================
-        // LEVEL CARD
-        // =========================================================
+     // =========================================================
+// LEVEL CARD
+// =========================================================
 
-        private void CreateLevelCard(
-            Transform parent,
-            LevelData lvl)
+private void CreateLevelCard(
+    Transform parent,
+    LevelData lvl)
+{
+    GameObject card = new GameObject(
+        $"Card_{lvl.LevelName}",
+        typeof(RectTransform),
+        typeof(CanvasRenderer),
+        typeof(Image)
+    );
+
+    card.transform.SetParent(parent, false);
+
+    // =========================================================
+    // CARD SIZE
+    // =========================================================
+
+    Image cardImage =
+        card.GetComponent<Image>();
+
+    cardImage.color =
+        new Color(0.14f, 0.14f, 0.20f, 1f);
+
+    LayoutElement cardElement =
+        card.AddComponent<LayoutElement>();
+
+    cardElement.preferredWidth = 165f;
+    cardElement.minWidth = 165f;
+
+    cardElement.preferredHeight = 350f;
+    cardElement.minHeight = 350f;
+
+    // =========================================================
+    // CARD LAYOUT
+    // =========================================================
+
+    VerticalLayoutGroup layout =
+        card.AddComponent<VerticalLayoutGroup>();
+
+    layout.padding =
+        new RectOffset(10, 10, 18, 12);
+
+    layout.spacing = 8f;
+
+    layout.childAlignment =
+        TextAnchor.UpperCenter;
+
+    layout.childControlWidth = true;
+    layout.childControlHeight = true;
+
+    layout.childForceExpandWidth = true;
+    layout.childForceExpandHeight = false;
+
+    // =========================================================
+    // LEVEL TITLE
+    // =========================================================
+
+    GameObject titleObject =
+        new GameObject(
+            "NameText",
+            typeof(RectTransform)
+        );
+
+    titleObject.transform.SetParent(
+        card.transform,
+        false
+    );
+
+    LayoutElement titleElement =
+        titleObject.AddComponent<LayoutElement>();
+
+    titleElement.preferredHeight = 45f;
+    titleElement.minHeight = 45f;
+
+    TextMeshProUGUI titleText =
+        titleObject.AddComponent<TextMeshProUGUI>();
+
+    titleText.text =
+        lvl.LevelName.ToUpper();
+
+    titleText.fontSize = 24f;
+    titleText.fontStyle =
+        FontStyles.Bold;
+
+    titleText.color =
+        Color.white;
+
+    titleText.alignment =
+        TextAlignmentOptions.Center;
+
+    titleText.enableWordWrapping = false;
+
+    titleText.overflowMode =
+        TextOverflowModes.Ellipsis;
+
+    // =========================================================
+    // STATS
+    // =========================================================
+
+    GameObject statsObject =
+        new GameObject(
+            "StatsText",
+            typeof(RectTransform)
+        );
+
+    statsObject.transform.SetParent(
+        card.transform,
+        false
+    );
+
+    LayoutElement statsElement =
+        statsObject.AddComponent<LayoutElement>();
+
+    statsElement.preferredHeight = 190f;
+    statsElement.minHeight = 190f;
+
+    TextMeshProUGUI statsText =
+        statsObject.AddComponent<TextMeshProUGUI>();
+
+    int waveCount =
+        lvl.Waves != null
+            ? lvl.Waves.Count
+            : 0;
+
+    string waveDisplay =
+        _endlessModeEnabled
+            ? "∞"
+            : waveCount.ToString();
+
+    string waveLabel =
+        _endlessModeEnabled
+            ? "ENDLESS WAVES"
+            : "TOTAL WAVES";
+
+    statsText.text =
+        $"STARTING GOLD\n" +
+        $"<color=#FFD700>{lvl.StartingGold} G</color>\n\n" +
+
+        $"BASE HP\n" +
+        $"<color=#FF5555>{lvl.BaseMaxHealth} HP</color>\n\n" +
+
+        $"{waveLabel}\n" +
+        $"<color=#55FFFF>{waveDisplay}</color>";
+
+    // Bigger text
+    statsText.fontSize = 17f;
+
+    statsText.lineSpacing = 4f;
+
+    statsText.color =
+        new Color(0.85f, 0.85f, 0.90f, 1f);
+
+    statsText.alignment =
+        TextAlignmentOptions.Center;
+
+    statsText.enableWordWrapping = true;
+
+    statsText.overflowMode =
+        TextOverflowModes.Ellipsis;
+
+    // =========================================================
+    // SAVE STATS REFERENCE
+    // =========================================================
+
+    if (_levelStatsTextByLevel.ContainsKey(lvl))
+    {
+        _levelStatsTextByLevel[lvl] =
+            statsText;
+    }
+    else
+    {
+        _levelStatsTextByLevel.Add(
+            lvl,
+            statsText
+        );
+    }
+
+    // =========================================================
+    // SPACER
+    // =========================================================
+
+    GameObject spacer =
+        new GameObject(
+            "Spacer",
+            typeof(RectTransform)
+        );
+
+    spacer.transform.SetParent(
+        card.transform,
+        false
+    );
+
+    LayoutElement spacerElement =
+        spacer.AddComponent<LayoutElement>();
+
+    spacerElement.flexibleHeight = 1f;
+
+    // =========================================================
+    // SELECT LEVEL BUTTON
+    // =========================================================
+
+    GameObject buttonObject =
+        new GameObject(
+            "PlayButton",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button)
+        );
+
+    buttonObject.transform.SetParent(
+        card.transform,
+        false
+    );
+
+    LayoutElement buttonElement =
+        buttonObject.AddComponent<LayoutElement>();
+
+    buttonElement.preferredHeight = 52f;
+    buttonElement.minHeight = 52f;
+
+    Image buttonImage =
+        buttonObject.GetComponent<Image>();
+
+    Color buttonColor =
+        new Color(
+            0.00f,
+            0.62f,
+            0.12f,
+            1f
+        );
+
+    buttonImage.color =
+        buttonColor;
+
+    Button button =
+        buttonObject.GetComponent<Button>();
+
+    ColorBlock colors =
+        button.colors;
+
+    colors.normalColor =
+        buttonColor;
+
+    colors.highlightedColor =
+        new Color(
+            0.10f,
+            0.75f,
+            0.25f,
+            1f
+        );
+
+    colors.pressedColor =
+        new Color(
+            0.00f,
+            0.48f,
+            0.08f,
+            1f
+        );
+
+    button.colors =
+        colors;
+
+    CreateText(
+        buttonObject.transform,
+        "Text",
+        "SELECT LEVEL",
+        15,
+        FontStyles.Bold,
+        Color.white,
+        Vector2.zero,
+        Vector2.one,
+        Vector2.zero
+    );
+
+    LevelData targetLevel =
+        lvl;
+
+    button.onClick.AddListener(
+        () => SelectAndPlayLevel(targetLevel)
+    );
+}
+
+
+       // =========================================================
+// START LEVEL
+// =========================================================
+
+private void SelectAndPlayLevel(LevelData levelData)
+{
+    if (levelData == null)
+    {
+        Debug.LogError(
+            "[UIManager] Selected LevelData is NULL!"
+        );
+
+        return;
+    }
+
+    // ---------------------------------------------------------
+    // SAVE THE FINAL ENDLESS SETTING
+    // ---------------------------------------------------------
+
+    bool endlessEnabled = _endlessModeEnabled;
+
+    IsEndlessModeEnabled = endlessEnabled;
+
+    PlayerPrefs.SetInt(
+        "TowerDefense_EndlessMode",
+        endlessEnabled ? 1 : 0
+    );
+
+    PlayerPrefs.Save();
+
+    Debug.Log(
+        $"[UIManager] Starting level: {levelData.LevelName} | " +
+        $"Endless = {endlessEnabled}"
+    );
+
+    // ---------------------------------------------------------
+    // HIDE MENUS
+    // ---------------------------------------------------------
+
+    if (_difficultySelectionPanel != null)
+        _difficultySelectionPanel.SetActive(false);
+
+    if (_challengeSettingsPanel != null)
+        _challengeSettingsPanel.SetActive(false);
+
+    if (_levelSelectionPanel != null)
+        _levelSelectionPanel.SetActive(false);
+
+    Time.timeScale = 1f;
+
+    // ---------------------------------------------------------
+    // START THE CORRECT GAME MODE
+    // ---------------------------------------------------------
+
+    if (GameManager.Instance != null)
+    {
+        if (endlessEnabled)
         {
-            GameObject card = new GameObject(
-                $"Card_{lvl.LevelName}",
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(Image)
+            Debug.Log(
+                "[UIManager] Starting ENDLESS MODE."
             );
 
-            card.transform.SetParent(parent, false);
-
-            Image cardImage = card.GetComponent<Image>();
-            cardImage.color = new Color(0.14f, 0.14f, 0.2f, 1f);
-
-            LayoutElement element =
-                card.AddComponent<LayoutElement>();
-
-            element.preferredWidth = 320f;
-            element.preferredHeight = 420f;
-
-            VerticalLayoutGroup layout =
-                card.AddComponent<VerticalLayoutGroup>();
-
-            layout.padding = new RectOffset(20, 20, 25, 25);
-            layout.spacing = 15f;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childControlHeight = false;
-            layout.childControlWidth = true;
-
-            CreateText(
-                card.transform,
-                "NameText",
-                lvl.LevelName.ToUpper(),
-                24,
-                FontStyles.Bold,
-                Color.white,
-                new Vector2(0f, 0f),
-                new Vector2(1f, 0f),
-                new Vector2(0f, 45f)
+            GameManager.Instance.StartEndlessMode(
+                levelData
+            );
+        }
+        else
+        {
+            Debug.Log(
+                "[UIManager] Starting FIXED WAVES MODE."
             );
 
-            GameObject statsObject = new GameObject(
-                "StatsText",
-                typeof(RectTransform)
-            );
-
-            statsObject.transform.SetParent(card.transform, false);
-
-            LayoutElement statsElement =
-                statsObject.AddComponent<LayoutElement>();
-
-            statsElement.preferredHeight = 210f;
-
-            TextMeshProUGUI statsText =
-                statsObject.AddComponent<TextMeshProUGUI>();
-
-            int waveCount =
-                lvl.Waves != null ? lvl.Waves.Count : 0;
-
-            statsText.text =
-                $"STARTING GOLD\n" +
-                $"<color=#FFD700>{lvl.StartingGold} G</color>\n\n" +
-                $"BASE HP\n" +
-                $"<color=#FF5555>{lvl.BaseMaxHealth} HP</color>\n\n" +
-                $"TOTAL WAVES\n" +
-                $"<color=#55FFFF>{waveCount}</color>";
-
-            statsText.fontSize = 18;
-            statsText.lineSpacing = 8f;
-            statsText.color = new Color(0.85f, 0.85f, 0.9f);
-            statsText.alignment = TextAlignmentOptions.Center;
-
-            GameObject spacer = new GameObject(
-                "Spacer",
-                typeof(RectTransform)
-            );
-
-            spacer.transform.SetParent(card.transform, false);
-
-            LayoutElement spacerElement =
-                spacer.AddComponent<LayoutElement>();
-
-            spacerElement.flexibleHeight = 1f;
-
-            GameObject buttonObject = new GameObject(
-                "PlayButton",
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(Image),
-                typeof(Button)
-            );
-
-            buttonObject.transform.SetParent(card.transform, false);
-
-            Image buttonImage =
-                buttonObject.GetComponent<Image>();
-
-            Color buttonColor =
-                new Color(0.12f, 0.75f, 0.38f, 1f);
-
-            buttonImage.color = buttonColor;
-
-            Button button =
-                buttonObject.GetComponent<Button>();
-
-            ColorBlock colors = button.colors;
-            colors.normalColor = buttonColor;
-            colors.highlightedColor =
-                new Color(0.15f, 0.85f, 0.45f, 1f);
-            colors.pressedColor =
-                new Color(0.08f, 0.65f, 0.3f, 1f);
-            button.colors = colors;
-
-            LayoutElement buttonElement =
-                buttonObject.AddComponent<LayoutElement>();
-
-            buttonElement.preferredHeight = 50f;
-
-            CreateText(
-                buttonObject.transform,
-                "Text",
-                "SELECT LEVEL",
-                18,
-                FontStyles.Bold,
-                Color.white,
-                Vector2.zero,
-                Vector2.one,
-                Vector2.zero
-            );
-
-            LevelData targetLevel = lvl;
-
-            button.onClick.AddListener(
-                () => SelectAndPlayLevel(targetLevel)
+            GameManager.Instance.StartLevel(
+                levelData
             );
         }
 
-        // =========================================================
-        // START LEVEL
-        // =========================================================
+        return;
+    }
 
-        private void SelectAndPlayLevel(LevelData levelData)
-        {
-            if (levelData == null)
-            {
-                Debug.LogError("[UIManager] Selected LevelData is NULL!");
-                return;
-            }
+    // ---------------------------------------------------------
+    // FALLBACK: LOAD SCENE
+    // ---------------------------------------------------------
 
-            if (_difficultySelectionPanel != null)
-                _difficultySelectionPanel.SetActive(false);
+    GameManager.startAsEndless = endlessEnabled;
 
-            if (_challengeSettingsPanel != null)
-                _challengeSettingsPanel.SetActive(false);
-
-            if (_levelSelectionPanel != null)
-                _levelSelectionPanel.SetActive(false);
-
-            Time.timeScale = 1f;
-
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.StartLevel(levelData);
-            }
-            else
-            {
-                UnityEngine.SceneManagement.SceneManager.LoadScene(
-                    levelData.LevelName
-                );
-            }
-        }
-
+    UnityEngine.SceneManagement.SceneManager.LoadScene(
+        levelData.LevelName
+    );
+}
         // =========================================================
         // SIMPLE BUTTON
         // =========================================================
