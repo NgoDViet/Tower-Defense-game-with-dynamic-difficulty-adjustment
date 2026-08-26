@@ -3,170 +3,109 @@ using UnityEngine;
 namespace TowerDefense.Core
 {
     /// <summary>
-    /// Global difficulty manager.
-    ///
-    /// Normal     : HP x1    | Speed x1
-    /// NormalPlus : HP x1.5  | Speed x1.15
-    /// Hard       : HP x2.5  | Speed x1.3
-    /// Hell       : HP x4    | Speed x1.5
+    /// Global difficulty/challenge settings.
+    /// UIManager is the only UI that controls these settings.
     /// </summary>
-    public class DifficultyManager : MonoBehaviour
+    public static class DifficultyManager
     {
-        public static DifficultyManager Instance { get; private set; }
+        private static DifficultyMode _difficulty = DifficultyMode.Normal;
+        private static int _enemyCountMultiplier = 1;
+        private static float _timeLimitMinutes = 0f;
+        private static bool _oneLifeMode = false;
 
-        // =========================================================
-        // CURRENT DIFFICULTY
-        // =========================================================
-
-        private static DifficultyMode currentDifficulty =
-            DifficultyMode.Normal;
-
-        public static DifficultyMode CurrentDifficulty
-        {
-            get
-            {
-                return currentDifficulty;
-            }
-        }
-
-        // =========================================================
-        // DIFFICULTY NAME
-        // =========================================================
+        public static DifficultyMode Difficulty => _difficulty;
+        public static int EnemyCountMultiplier => _enemyCountMultiplier;
+        public static float TimeLimitMinutes => _timeLimitMinutes;
+        public static bool OneLifeMode => _oneLifeMode;
 
         public static string DifficultyName
         {
             get
             {
-                switch (currentDifficulty)
+                switch (_difficulty)
                 {
-                    case DifficultyMode.Normal:
-                        return "Bình thường";
-
-                    case DifficultyMode.NormalPlus:
-                        return "Bình thường+";
-
-                    case DifficultyMode.Hard:
-                        return "Khó";
-
-                    case DifficultyMode.Hell:
-                        return "Địa ngục";
-
-                    default:
-                        return "Bình thường";
+                    case DifficultyMode.Normal: return "Normal";
+                    case DifficultyMode.NormalPlus: return "Normal+";
+                    case DifficultyMode.Hard: return "Hard";
+                    case DifficultyMode.Hell: return "Hell";
+                    default: return "Normal";
                 }
             }
         }
-
-        // =========================================================
-        // HP MULTIPLIER
-        // =========================================================
 
         public static float HealthMultiplier
         {
             get
             {
-                switch (currentDifficulty)
+                switch (_difficulty)
                 {
-                    case DifficultyMode.Normal:
-                        return 1f;
-
-                    case DifficultyMode.NormalPlus:
-                        return 1.5f;
-
-                    case DifficultyMode.Hard:
-                        return 2.5f;
-
-                    case DifficultyMode.Hell:
-                        return 4f;
-
-                    default:
-                        return 1f;
+                    case DifficultyMode.Normal: return 1f;
+                    case DifficultyMode.NormalPlus: return 1.5f;
+                    case DifficultyMode.Hard: return 2.5f;
+                    case DifficultyMode.Hell: return 4f;
+                    default: return 1f;
                 }
             }
         }
-
-        // =========================================================
-        // SPEED MULTIPLIER
-        // =========================================================
 
         public static float SpeedMultiplier
         {
             get
             {
-                switch (currentDifficulty)
+                switch (_difficulty)
                 {
-                    case DifficultyMode.Normal:
-                        return 1f;
-
-                    case DifficultyMode.NormalPlus:
-                        return 1.15f;
-
-                    case DifficultyMode.Hard:
-                        return 1.3f;
-
-                    case DifficultyMode.Hell:
-                        return 1.5f;
-
-                    default:
-                        return 1f;
+                    case DifficultyMode.Normal: return 1f;
+                    case DifficultyMode.NormalPlus: return 1.15f;
+                    case DifficultyMode.Hard: return 1.3f;
+                    case DifficultyMode.Hell: return 1.5f;
+                    default: return 1f;
                 }
             }
         }
 
-        // =========================================================
-        // UNITY
-        // =========================================================
-
-        private void Awake()
+        public static void SetDifficulty(DifficultyMode mode)
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            Instance = this;
-
-            DontDestroyOnLoad(gameObject);
-
-            Debug.Log(
-                $"[DifficultyManager] Started | " +
-                $"Difficulty = {DifficultyName} | " +
-                $"HP x{HealthMultiplier} | " +
-                $"Speed x{SpeedMultiplier}"
-            );
+            _difficulty = mode;
+            Debug.Log($"[DifficultyManager] Difficulty = {DifficultyName} | HP x{HealthMultiplier} | Speed x{SpeedMultiplier}");
         }
 
-        // =========================================================
-        // SET DIFFICULTY
-        // =========================================================
-
-        public static void SetDifficulty(DifficultyMode difficulty)
+        public static void SetEnemyCountMultiplier(int multiplier)
         {
-            currentDifficulty = difficulty;
-
-            Debug.Log(
-                $"[DifficultyManager] Difficulty changed -> " +
-                $"{DifficultyName} | " +
-                $"HP x{HealthMultiplier} | " +
-                $"Speed x{SpeedMultiplier}"
-            );
+            _enemyCountMultiplier = Mathf.Clamp(multiplier, 1, 5);
         }
 
-        // =========================================================
-        // APPLY MULTIPLIERS
-        // =========================================================
-
-        public static int ApplyHealth(int baseHealth)
+        public static void SetTimeLimitMinutes(float minutes)
         {
-            return Mathf.RoundToInt(
-                baseHealth * HealthMultiplier
-            );
+            _timeLimitMinutes = Mathf.Max(0f, minutes);
         }
 
-        public static float ApplySpeed(float baseSpeed)
+        public static void SetOneLifeMode(bool enabled)
         {
-            return baseSpeed * SpeedMultiplier;
+            _oneLifeMode = enabled;
+        }
+
+        public static string GetTimeDescription()
+        {
+            if (_timeLimitMinutes <= 0f)
+                return "Không giới hạn";
+
+            if (Mathf.Approximately(_timeLimitMinutes, Mathf.Round(_timeLimitMinutes)))
+                return $"{Mathf.RoundToInt(_timeLimitMinutes)} phút";
+
+            return $"{_timeLimitMinutes:0.##} phút";
+        }
+
+        public static string GetChallengeDescription()
+        {
+            return $"Độ khó: {DifficultyName} | Quái x{EnemyCountMultiplier} | Thời gian: {GetTimeDescription()} | Mạng: {(OneLifeMode ? "1 mạng" : "Nhiều mạng")}";
+        }
+
+        public static void ResetToDefaults()
+        {
+            _difficulty = DifficultyMode.Normal;
+            _enemyCountMultiplier = 1;
+            _timeLimitMinutes = 0f;
+            _oneLifeMode = false;
         }
     }
 }

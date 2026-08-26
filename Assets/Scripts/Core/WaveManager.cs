@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using TowerDefense.Data;
 using TowerDefense.Enemy;
 using TowerDefense.Pooling;
-using TowerDefense.UI;
+
 namespace TowerDefense.Core
 {
     [System.Serializable]
@@ -27,14 +27,9 @@ namespace TowerDefense.Core
         public float armorSpawnInterval;
     }
 
-    /// <summary>
-    /// Spawns waves of enemies configured directly inside this component.
-    /// Spawns enemies through the ObjectPooler at the starting waypoint of the path.
-    /// </summary>
     public class WaveManager : MonoBehaviour
     {
         [Header("References")]
-        [Tooltip("The waypoint path enemies will follow.")]
         [SerializeField] private WaypointPath waypointPath;
 
         [Header("Enemy Prefabs")]
@@ -44,307 +39,720 @@ namespace TowerDefense.Core
         [SerializeField] private GameObject armorEnemyPrefab;
 
         [Header("Enemy Specifications")]
-        [Tooltip("EnemyData configurations for each of the 4 types.")]
         [SerializeField] private EnemyData basicEnemyData;
         [SerializeField] private EnemyData fastEnemyData;
         [SerializeField] private EnemyData tankEnemyData;
         [SerializeField] private EnemyData armorEnemyData;
 
         [Header("Wave Controls")]
-        [Tooltip("If true, the next wave starts automatically after a delay.")]
         [SerializeField] private bool autoStartNextWave = true;
-        
-        [Tooltip("Delay in seconds between waves when auto-start is active.")]
         [SerializeField] private float waveInterval = 5f;
+        [SerializeField] private float firstWaveDelay = 3f;
 
         [Header("Waves Setup")]
-        [SerializeField] private List<WaveSetup> waves = new List<WaveSetup>();
+        [SerializeField] private List<WaveSetup> waves =
+            new List<WaveSetup>();
 
         private LevelData _levelData;
+
         private int _currentWaveIndex = -1;
-        private bool _isSpawning = false;
-        private int _activeSpawnGroupsCount = 0;
+
+        private bool _isSpawning;
+        private bool _waitingForNextWave;
+
+        private int _activeSpawnGroupsCount;
+
         private Coroutine _waveSpawnCoroutine;
-        private List<WaveSetup> _initialInspectorWaves = new List<WaveSetup>();
+        private Coroutine _autoNextWaveCoroutine;
+
+        private List<WaveSetup> _initialInspectorWaves =
+            new List<WaveSetup>();
+
+        public GameObject BasicEnemyPrefab
+        {
+            get => basicEnemyPrefab;
+            set => basicEnemyPrefab = value;
+        }
+
+        public GameObject FastEnemyPrefab
+        {
+            get => fastEnemyPrefab;
+            set => fastEnemyPrefab = value;
+        }
+
+        public GameObject TankEnemyPrefab
+        {
+            get => tankEnemyPrefab;
+            set => tankEnemyPrefab = value;
+        }
+
+        public GameObject ArmorEnemyPrefab
+        {
+            get => armorEnemyPrefab;
+            set => armorEnemyPrefab = value;
+        }
+
+        public EnemyData BasicEnemyData
+        {
+            get => basicEnemyData;
+            set => basicEnemyData = value;
+        }
+
+        public EnemyData FastEnemyData
+        {
+            get => fastEnemyData;
+            set => fastEnemyData = value;
+        }
+
+        public EnemyData TankEnemyData
+        {
+            get => tankEnemyData;
+            set => tankEnemyData = value;
+        }
+
+        public EnemyData ArmorEnemyData
+        {
+            get => armorEnemyData;
+            set => armorEnemyData = value;
+        }
+
+        public List<WaveSetup> Waves => waves;
+
+        // =========================================================
+        // AWAKE
+        // =========================================================
 
         private void Awake()
         {
-            // Store a copy of waves configured in the inspector at start
-            _initialInspectorWaves = new List<WaveSetup>(waves);
+            _initialInspectorWaves =
+                new List<WaveSetup>(waves);
         }
 
-        // Public properties to allow editor configurations
-        public GameObject BasicEnemyPrefab { get => basicEnemyPrefab; set => basicEnemyPrefab = value; }
-        public GameObject FastEnemyPrefab { get => fastEnemyPrefab; set => fastEnemyPrefab = value; }
-        public GameObject TankEnemyPrefab { get => tankEnemyPrefab; set => tankEnemyPrefab = value; }
-        public GameObject ArmorEnemyPrefab { get => armorEnemyPrefab; set => armorEnemyPrefab = value; }
-        public EnemyData BasicEnemyData { get => basicEnemyData; set => basicEnemyData = value; }
-        public EnemyData FastEnemyData { get => fastEnemyData; set => fastEnemyData = value; }
-        public EnemyData TankEnemyData { get => tankEnemyData; set => tankEnemyData = value; }
-        public EnemyData ArmorEnemyData { get => armorEnemyData; set => armorEnemyData = value; }
-        public List<WaveSetup> Waves => waves;
+        // =========================================================
+        // ENABLE
+        // =========================================================
 
         private void OnEnable()
         {
             EventBus<LevelStartedEvent>.Subscribe(OnLevelStarted);
+
             EventBus<WaveClearedEvent>.Subscribe(OnWaveCleared);
         }
+
+        // =========================================================
+        // DISABLE
+        // =========================================================
 
         private void OnDisable()
         {
             EventBus<LevelStartedEvent>.Unsubscribe(OnLevelStarted);
+
             EventBus<WaveClearedEvent>.Unsubscribe(OnWaveCleared);
-            
-            StopAllCoroutines();
+
+            if (_waveSpawnCoroutine != null)
+            {
+                StopCoroutine(_waveSpawnCoroutine);
+                _waveSpawnCoroutine = null;
+            }
+
+            if (_autoNextWaveCoroutine != null)
+            {
+                StopCoroutine(_autoNextWaveCoroutine);
+                _autoNextWaveCoroutine = null;
+            }
         }
 
-        /// <summary>
-        /// Requests to start the next wave immediately (useful for manual wave start buttons).
-        /// </summary>
+        // =========================================================
+        // START NEXT WAVE
+        // =========================================================
+
         public void StartNextWave()
         {
-            Debug.Log($"[WaveManager] StartNextWave called. _isSpawning={_isSpawning}, ActiveEnemies={GameManager.Instance?.ActiveEnemiesCount}, CurrentWave={_currentWaveIndex}, TotalWaves={waves.Count}");
-
+            // Don't start another wave while one is spawning.
             if (_isSpawning)
             {
-                Debug.LogWarning("[WaveManager] Cannot start next wave: A wave is currently spawning.");
+                Debug.Log(
+                    "[WaveManager] Cannot start next wave: still spawning.");
+
                 return;
             }
 
-            if (GameManager.Instance != null && GameManager.Instance.ActiveEnemiesCount > 0)
+            // Don't start another wave while waiting.
+            if (_waitingForNextWave)
             {
-                Debug.LogWarning($"[WaveManager] Cannot start next wave: There are still active {GameManager.Instance.ActiveEnemiesCount} enemies on the field.");
+                Debug.Log(
+                    "[WaveManager] Cannot start next wave: waiting.");
+
                 return;
             }
 
-            int nextWaveIndex = _currentWaveIndex + 1;
-            if (nextWaveIndex < waves.Count)
+            // Make sure there are no enemies remaining.
+            if (GameManager.Instance != null &&
+                GameManager.Instance.ActiveEnemiesCount > 0)
             {
-                _currentWaveIndex = nextWaveIndex;
-                Debug.Log($"[WaveManager] Transitioning to Wave {nextWaveIndex}. Starting SpawnWaveCoroutine.");
-                _waveSpawnCoroutine = StartCoroutine(SpawnWaveCoroutine(_currentWaveIndex, waves[_currentWaveIndex]));
+                Debug.Log(
+                    $"[WaveManager] Cannot start next wave: " +
+                    $"{GameManager.Instance.ActiveEnemiesCount} enemies remain.");
+
+                return;
             }
-            else
+
+            int nextWaveIndex =
+                _currentWaveIndex + 1;
+
+            // No more waves.
+            if (nextWaveIndex >= waves.Count)
             {
-                Debug.Log($"[WaveManager] All waves completed for this level. nextWaveIndex={nextWaveIndex}, waves.Count={waves.Count}");
+                Debug.Log(
+                    "[WaveManager] No more waves.");
+
+                return;
             }
+
+            _currentWaveIndex = nextWaveIndex;
+
+            Debug.Log(
+                $"[WaveManager] ===== STARTING WAVE {_currentWaveIndex + 1}/{waves.Count} =====");
+
+            _waveSpawnCoroutine =
+                StartCoroutine(
+                    SpawnWaveCoroutine(
+                        _currentWaveIndex,
+                        waves[_currentWaveIndex]));
         }
 
-        public struct DynamicSpawnGroup
+        // =========================================================
+        // DYNAMIC SPAWN GROUP
+        // =========================================================
+
+        private struct DynamicSpawnGroup
         {
             public EnemyType enemyType;
             public EnemyData enemyData;
             public int count;
             public float spawnInterval;
 
-            public DynamicSpawnGroup(EnemyType type, EnemyData data, int count, float interval)
+            public DynamicSpawnGroup(
+                EnemyType type,
+                EnemyData data,
+                int count,
+                float interval)
             {
-                this.enemyType = type;
-                this.enemyData = data;
+                enemyType = type;
+                enemyData = data;
                 this.count = count;
-                this.spawnInterval = interval;
+                spawnInterval = interval;
             }
         }
 
-        private IEnumerator SpawnWaveCoroutine(int waveIndex, WaveSetup waveData)
+        // =========================================================
+        // SPAWN WAVE
+        // =========================================================
+
+        private IEnumerator SpawnWaveCoroutine(
+            int waveIndex,
+            WaveSetup waveData)
         {
             _isSpawning = true;
-            Debug.Log($"[WaveManager] Wave {waveIndex} started spawning.");
-            
-            // Raise event that wave has started
-            EventBus<WaveStartedEvent>.Raise(new WaveStartedEvent(waveIndex, waves.Count));
+            _waitingForNextWave = false;
 
-            // Dynamically construct spawn groups from WaveSetup counts
-            List<DynamicSpawnGroup> groups = new List<DynamicSpawnGroup>();
-            
-            if (waveData.basicCount > 0 && basicEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Basic, basicEnemyData, waveData.basicCount, waveData.basicSpawnInterval));
-            if (waveData.fastCount > 0 && fastEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Fast, fastEnemyData, waveData.fastCount, waveData.fastSpawnInterval));
-            if (waveData.tankCount > 0 && tankEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Tank, tankEnemyData, waveData.tankCount, waveData.tankSpawnInterval));
-            if (waveData.armorCount > 0 && armorEnemyData != null)
-                groups.Add(new DynamicSpawnGroup(EnemyType.Armor, armorEnemyData, waveData.armorCount, waveData.armorSpawnInterval));
+            EventBus<WaveStartedEvent>.Raise(
+                new WaveStartedEvent(
+                    waveIndex,
+                    waves.Count));
 
-            _activeSpawnGroupsCount = groups.Count;
+            int multiplier =
+                DifficultyManager.EnemyCountMultiplier;
+
+            List<DynamicSpawnGroup> groups =
+                new List<DynamicSpawnGroup>();
+
+            // -----------------------------------------------------
+            // BASIC
+            // -----------------------------------------------------
+
+            if (waveData.basicCount > 0 &&
+                basicEnemyData != null)
+            {
+                groups.Add(
+                    new DynamicSpawnGroup(
+                        EnemyType.Basic,
+                        basicEnemyData,
+                        Mathf.Max(
+                            1,
+                            Mathf.RoundToInt(
+                                waveData.basicCount * multiplier)),
+                        waveData.basicSpawnInterval));
+            }
+
+            // -----------------------------------------------------
+            // FAST
+            // -----------------------------------------------------
+
+            if (waveData.fastCount > 0 &&
+                fastEnemyData != null)
+            {
+                groups.Add(
+                    new DynamicSpawnGroup(
+                        EnemyType.Fast,
+                        fastEnemyData,
+                        Mathf.Max(
+                            1,
+                            Mathf.RoundToInt(
+                                waveData.fastCount * multiplier)),
+                        waveData.fastSpawnInterval));
+            }
+
+            // -----------------------------------------------------
+            // TANK
+            // -----------------------------------------------------
+
+            if (waveData.tankCount > 0 &&
+                tankEnemyData != null)
+            {
+                groups.Add(
+                    new DynamicSpawnGroup(
+                        EnemyType.Tank,
+                        tankEnemyData,
+                        Mathf.Max(
+                            1,
+                            Mathf.RoundToInt(
+                                waveData.tankCount * multiplier)),
+                        waveData.tankSpawnInterval));
+            }
+
+            // -----------------------------------------------------
+            // ARMOR
+            // -----------------------------------------------------
+
+            if (waveData.armorCount > 0 &&
+                armorEnemyData != null)
+            {
+                groups.Add(
+                    new DynamicSpawnGroup(
+                        EnemyType.Armor,
+                        armorEnemyData,
+                        Mathf.Max(
+                            1,
+                            Mathf.RoundToInt(
+                                waveData.armorCount * multiplier)),
+                        waveData.armorSpawnInterval));
+            }
+
+            _activeSpawnGroupsCount =
+                groups.Count;
+
+            // -----------------------------------------------------
+            // EMPTY WAVE
+            // -----------------------------------------------------
 
             if (_activeSpawnGroupsCount == 0)
             {
-                // Edge case: Empty wave
                 _isSpawning = false;
-                EventBus<WaveCompletedEvent>.Raise(new WaveCompletedEvent(waveIndex));
+
+                Debug.Log(
+                    $"[WaveManager] Wave {waveIndex + 1} has no enemies.");
+
+                EventBus<WaveCompletedEvent>.Raise(
+                    new WaveCompletedEvent(waveIndex));
+
                 yield break;
             }
 
-            // Start all spawn groups in parallel
-            for (int i = 0; i < groups.Count; i++)
+            // -----------------------------------------------------
+            // START ALL GROUPS
+            // -----------------------------------------------------
+
+            for (int i = 0;
+                 i < groups.Count;
+                 i++)
             {
-                StartCoroutine(SpawnGroupCoroutine(waveIndex, groups[i]));
+                StartCoroutine(
+                    SpawnGroupCoroutine(groups[i]));
             }
 
-            // Wait until all parallel spawn groups have finished spawning
+            // -----------------------------------------------------
+            // WAIT UNTIL ALL GROUPS FINISH SPAWNING
+            // -----------------------------------------------------
+
             while (_activeSpawnGroupsCount > 0)
             {
                 yield return null;
             }
 
             _isSpawning = false;
-            Debug.Log($"[WaveManager] Wave {waveIndex} finished spawning all units.");
-            
-            // Raise event that wave spawning is completed
-            EventBus<WaveCompletedEvent>.Raise(new WaveCompletedEvent(waveIndex));
+
+            Debug.Log(
+                $"[WaveManager] Wave {waveIndex + 1} finished spawning.");
+
+            // IMPORTANT:
+            // This does NOT mean the wave is cleared yet.
+            // GameManager waits until ActiveEnemiesCount == 0.
+            EventBus<WaveCompletedEvent>.Raise(
+                new WaveCompletedEvent(waveIndex));
+
+            _waveSpawnCoroutine = null;
         }
 
-        private IEnumerator SpawnGroupCoroutine(int waveIndex, DynamicSpawnGroup group)
+        // =========================================================
+        // SPAWN GROUP
+        // =========================================================
+
+        private IEnumerator SpawnGroupCoroutine(
+            DynamicSpawnGroup group)
         {
-            Transform startWaypoint = waypointPath != null ? waypointPath.GetWaypoint(0) : null;
-            Vector3 spawnPosition = startWaypoint != null ? startWaypoint.position : transform.position;
+            Transform startWaypoint =
+                waypointPath != null
+                    ? waypointPath.GetWaypoint(0)
+                    : null;
 
-            for (int i = 0; i < group.count; i++)
+            Vector3 spawnPosition =
+                startWaypoint != null
+                    ? startWaypoint.position
+                    : transform.position;
+
+            for (int i = 0;
+                 i < group.count;
+                 i++)
             {
-                // Ensure the game is still playing/active
-                if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                // Pause.
+                while (GameManager.Instance != null &&
+                       GameManager.Instance.CurrentState ==
+                       GameManager.GameState.Pause)
                 {
-                    // If paused, wait until we resume playing
-                    while (GameManager.Instance.CurrentState != GameManager.GameState.Playing)
+                    yield return null;
+                }
+
+                // Stop spawning if game ended.
+                if (GameManager.Instance != null &&
+                    GameManager.Instance.CurrentState !=
+                    GameManager.GameState.Playing)
+                {
+                    break;
+                }
+
+                GameObject prefabToSpawn =
+                    GetPrefab(group.enemyType);
+
+                if (prefabToSpawn != null &&
+                    ObjectPooler.Instance != null)
+                {
+                    GameObject enemy =
+                        ObjectPooler.Instance.GetPooledObject(
+                            prefabToSpawn,
+                            spawnPosition,
+                            Quaternion.identity);
+
+                    if (enemy != null)
                     {
-                        yield return null;
+                        // -------------------------------------------------
+                        // MOVEMENT
+                        // -------------------------------------------------
+
+                        EnemyMovement movement =
+                            enemy.GetComponent<EnemyMovement>();
+
+                        if (movement != null)
+                        {
+                            movement.Initialize(
+                                group.enemyData,
+                                waypointPath);
+                        }
+
+                        // -------------------------------------------------
+                        // HEALTH
+                        // -------------------------------------------------
+
+                        EnemyHealth health =
+                            enemy.GetComponent<EnemyHealth>();
+
+                        if (health != null)
+                        {
+                            health.Initialize(
+                                group.enemyData,
+                                DifficultyManager.HealthMultiplier,
+                                DifficultyManager.SpeedMultiplier);
+                        }
+
+                        // -------------------------------------------------
+                        // REGISTER ENEMY
+                        // -------------------------------------------------
+
+                        EventBus<EnemySpawnedEvent>.Raise(
+                            new EnemySpawnedEvent(enemy));
                     }
                 }
 
-                GameObject prefabToSpawn = null;
-                switch (group.enemyType)
+                // -----------------------------------------------------
+                // SPAWN INTERVAL
+                // -----------------------------------------------------
+
+                if (group.spawnInterval > 0f &&
+                    i < group.count - 1)
                 {
-                    case EnemyType.Fast: prefabToSpawn = fastEnemyPrefab; break;
-                    case EnemyType.Tank: prefabToSpawn = tankEnemyPrefab; break;
-                    case EnemyType.Armor: prefabToSpawn = armorEnemyPrefab; break;
-                    default: prefabToSpawn = basicEnemyPrefab; break;
-                }
-
-                if (prefabToSpawn != null)
-                {
-                    // Retrieve from pool
-                    GameObject enemy = ObjectPooler.Instance.GetPooledObject(prefabToSpawn, spawnPosition, Quaternion.identity);
-
-                    // Initialize movement path and statistics
-                    EnemyMovement movement = enemy.GetComponent<EnemyMovement>();
-                    if (movement != null)
-                    {
-                        movement.Initialize(group.enemyData, waypointPath);
-                    }
-
-                  EnemyHealth health = enemy.GetComponent<EnemyHealth>();
-
-                  if (health != null)
-                    {
-                       health.Initialize(
-                       group.enemyData,
-                       DifficultyManager.HealthMultiplier,
-                       DifficultyManager.SpeedMultiplier
-                          );
-                    }
-                    // Fire spawned event (tells GameManager to increase active enemy count)
-                    EventBus<EnemySpawnedEvent>.Raise(new EnemySpawnedEvent(enemy));
-                }
-
-                // Wait interval before spawning the next enemy in this group
-                if (group.spawnInterval > 0 && i < group.count - 1)
-                {
-                    yield return new WaitForSeconds(group.spawnInterval);
+                    yield return new WaitForSeconds(
+                        group.spawnInterval);
                 }
             }
 
-            _activeSpawnGroupsCount--;
+            _activeSpawnGroupsCount =
+                Mathf.Max(
+                    0,
+                    _activeSpawnGroupsCount - 1);
         }
 
-        private void OnLevelStarted(LevelStartedEvent evt)
+        // =========================================================
+        // GET PREFAB
+        // =========================================================
+
+        private GameObject GetPrefab(
+            EnemyType type)
+        {
+            switch (type)
+            {
+                case EnemyType.Fast:
+                    return fastEnemyPrefab;
+
+                case EnemyType.Tank:
+                    return tankEnemyPrefab;
+
+                case EnemyType.Armor:
+                    return armorEnemyPrefab;
+
+                default:
+                    return basicEnemyPrefab;
+            }
+        }
+
+        // =========================================================
+        // LEVEL STARTED
+        // =========================================================
+
+        private void OnLevelStarted(
+            LevelStartedEvent evt)
         {
             if (GameManager.Instance != null)
             {
-                _levelData = GameManager.Instance.ActiveLevelData;
+                _levelData =
+                    GameManager.Instance.ActiveLevelData;
             }
-
-            // Force auto start next wave to true as requested
-            autoStartNextWave = true;
-
-            Debug.Log($"[WaveManager] OnLevelStarted. _levelData={(_levelData != null ? _levelData.name : "null")}, waves count in _levelData={(_levelData != null && _levelData.Waves != null ? _levelData.Waves.Count.ToString() : "null")}, initial inspector waves count={_initialInspectorWaves.Count}");
-
-            // Only sync waves list from LevelData if no waves are configured in the inspector
-            if (_initialInspectorWaves.Count == 0 && _levelData != null && _levelData.Waves != null && _levelData.Waves.Count > 0)
-            {
-                waves.Clear();
-                foreach (var waveData in _levelData.Waves)
-                {
-                    if (waveData == null) continue;
-                    WaveSetup setup = new WaveSetup();
-                    setup.basicCount = waveData.BasicCount;
-                    setup.basicSpawnInterval = waveData.BasicSpawnInterval;
-                    setup.fastCount = waveData.FastCount;
-                    setup.fastSpawnInterval = waveData.FastSpawnInterval;
-                    setup.tankCount = waveData.TankCount;
-                    setup.tankSpawnInterval = waveData.TankSpawnInterval;
-                    setup.armorCount = waveData.ArmorCount;
-                    setup.armorSpawnInterval = waveData.ArmorSpawnInterval;
-                    waves.Add(setup);
-                }
-                Debug.Log($"[WaveManager] Synchronized waves from LevelData. New waves count={waves.Count}");
-            }
-            else if (_initialInspectorWaves.Count > 0)
-            {
-                waves.Clear();
-                waves.AddRange(_initialInspectorWaves);
-                Debug.Log($"[WaveManager] Restored inspector waves (precedence rule). count={waves.Count}");
-            }
-            else
-            {
-                Debug.Log($"[WaveManager] LevelData waves not synced. Fallback to inspector waves. count={waves.Count}");
-            }
-
-            _currentWaveIndex = -1;
-            _isSpawning = false;
-            _activeSpawnGroupsCount = 0;
 
             if (_waveSpawnCoroutine != null)
             {
                 StopCoroutine(_waveSpawnCoroutine);
+                _waveSpawnCoroutine = null;
             }
+
+            if (_autoNextWaveCoroutine != null)
+            {
+                StopCoroutine(_autoNextWaveCoroutine);
+                _autoNextWaveCoroutine = null;
+            }
+
+            // -----------------------------------------------------
+            // LOAD WAVES FROM LEVEL DATA
+            // -----------------------------------------------------
+
+            if (_initialInspectorWaves.Count == 0 &&
+                _levelData != null &&
+                _levelData.Waves != null &&
+                _levelData.Waves.Count > 0)
+            {
+                waves.Clear();
+
+                foreach (var waveData in _levelData.Waves)
+                {
+                    if (waveData == null)
+                        continue;
+
+                    WaveSetup setup =
+                        new WaveSetup
+                        {
+                            basicCount =
+                                waveData.BasicCount,
+
+                            basicSpawnInterval =
+                                waveData.BasicSpawnInterval,
+
+                            fastCount =
+                                waveData.FastCount,
+
+                            fastSpawnInterval =
+                                waveData.FastSpawnInterval,
+
+                            tankCount =
+                                waveData.TankCount,
+
+                            tankSpawnInterval =
+                                waveData.TankSpawnInterval,
+
+                            armorCount =
+                                waveData.ArmorCount,
+
+                            armorSpawnInterval =
+                                waveData.ArmorSpawnInterval
+                        };
+
+                    waves.Add(setup);
+                }
+            }
+            else if (_initialInspectorWaves.Count > 0)
+            {
+                waves.Clear();
+                waves.AddRange(
+                    _initialInspectorWaves);
+            }
+
+            // -----------------------------------------------------
+            // RESET
+            // -----------------------------------------------------
+
+            _currentWaveIndex = -1;
+
+            _isSpawning = false;
+            _waitingForNextWave = false;
+
+            _activeSpawnGroupsCount = 0;
+
+            // -----------------------------------------------------
+            // STOP OLD COROUTINES
+            // -----------------------------------------------------
+
             StopAllCoroutines();
 
-            // Start first wave after a short preparation delay
-            StartCoroutine(StartFirstWaveDelayed(3f));
+            // -----------------------------------------------------
+            // START WAVE 1
+            // -----------------------------------------------------
+
+            StartCoroutine(
+                StartFirstWaveDelayed(
+                    firstWaveDelay));
         }
 
-        private IEnumerator StartFirstWaveDelayed(float delay)
+        // =========================================================
+        // FIRST WAVE DELAY
+        // =========================================================
+
+        private IEnumerator StartFirstWaveDelayed(
+            float delay)
         {
             yield return new WaitForSeconds(delay);
+
+            if (GameManager.Instance == null)
+                yield break;
+
+            if (GameManager.Instance.CurrentState !=
+                GameManager.GameState.Playing)
+            {
+                yield break;
+            }
+
             StartNextWave();
         }
 
-        private void OnWaveCleared(WaveClearedEvent evt)
+        // =========================================================
+        // WAVE CLEARED
+        // =========================================================
+
+        private void OnWaveCleared(
+            WaveClearedEvent evt)
         {
-            Debug.Log($"[WaveManager] OnWaveCleared event handler. evt.WaveIndex={evt.WaveIndex}, _currentWaveIndex={_currentWaveIndex}, autoStartNextWave={autoStartNextWave}, waves.Count={waves.Count}");
-            // Auto start next wave if configured and there are more waves left
-            if (autoStartNextWave && _currentWaveIndex < waves.Count - 1)
+            Debug.Log(
+                $"[WaveManager] ===== WAVE {evt.WaveIndex + 1}/{waves.Count} CLEARED =====");
+
+            // Make sure this event belongs to current wave.
+            if (evt.WaveIndex != _currentWaveIndex)
             {
-                Debug.Log($"[WaveManager] Auto-starting next wave in {waveInterval} seconds.");
-                StartCoroutine(AutoStartNextWaveCoroutine());
+                Debug.LogWarning(
+                    $"[WaveManager] Ignoring old WaveCleared event. " +
+                    $"Event={evt.WaveIndex}, Current={_currentWaveIndex}");
+
+                return;
             }
-            else
+
+            // Final wave.
+            if (_currentWaveIndex >= waves.Count - 1)
             {
-                Debug.Log($"[WaveManager] Will not auto-start next wave. autoStartNextWave={autoStartNextWave}, hasMoreWaves={_currentWaveIndex < waves.Count - 1}");
+                Debug.Log(
+                    "[WaveManager] FINAL WAVE CLEARED.");
+
+                return;
             }
+
+            // Prevent duplicate scheduling.
+            if (_waitingForNextWave)
+            {
+                return;
+            }
+
+            if (!autoStartNextWave)
+            {
+                Debug.LogWarning(
+                    "[WaveManager] autoStartNextWave is OFF. " +
+                    "Forcing automatic next wave.");
+
+                // IMPORTANT:
+                // We intentionally continue anyway.
+            }
+
+            if (_autoNextWaveCoroutine != null)
+            {
+                StopCoroutine(
+                    _autoNextWaveCoroutine);
+            }
+
+            _autoNextWaveCoroutine =
+                StartCoroutine(
+                    AutoStartNextWaveCoroutine());
         }
+
+        // =========================================================
+        // AUTO START NEXT WAVE
+        // =========================================================
 
         private IEnumerator AutoStartNextWaveCoroutine()
         {
-            yield return new WaitForSeconds(waveInterval);
-            
-            Debug.Log($"[WaveManager] AutoStartNextWaveCoroutine timer completed. CurrentState={GameManager.Instance?.CurrentState}");
-            // Only start if still in playing state (e.g. didn't pause/quit in between)
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameManager.GameState.Playing)
+            _waitingForNextWave = true;
+
+            Debug.Log(
+                $"[WaveManager] Next wave in {waveInterval} seconds...");
+
+            yield return new WaitForSeconds(
+                Mathf.Max(0f, waveInterval));
+
+            _waitingForNextWave = false;
+
+            _autoNextWaveCoroutine = null;
+
+            if (GameManager.Instance == null)
+                yield break;
+
+            if (GameManager.Instance.CurrentState !=
+                GameManager.GameState.Playing)
             {
-                StartNextWave();
+                yield break;
             }
+
+            // Safety check.
+            if (GameManager.Instance.ActiveEnemiesCount > 0)
+            {
+                Debug.LogWarning(
+                    "[WaveManager] Cannot start next wave: " +
+                    "enemies are still alive.");
+
+                yield break;
+            }
+
+            // Final safety check.
+            if (_currentWaveIndex >= waves.Count - 1)
+            {
+                yield break;
+            }
+
+            Debug.Log(
+                $"[WaveManager] ===== AUTO START WAVE {_currentWaveIndex + 2}/{waves.Count} =====");
+
+            StartNextWave();
         }
     }
 }

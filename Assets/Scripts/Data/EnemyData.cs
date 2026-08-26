@@ -161,7 +161,7 @@ namespace TowerDefense.Data
         }
 
         // =========================================================
-        // OLD COMPATIBILITY METHODS
+        // OLD COMPATIBILITY
         // =========================================================
 
         public int GetHealth(int difficulty)

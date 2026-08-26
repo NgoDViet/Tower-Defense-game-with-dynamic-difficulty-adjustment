@@ -6,9 +6,8 @@ using TowerDefense.Pooling;
 namespace TowerDefense.Enemy
 {
     /// <summary>
-    /// Base class managing enemy health, attack, armor,
-    /// movement speed, slow effect and death.
-    /// Uses the global DifficultyManager.
+    /// Handles enemy health, attack, armor, speed,
+    /// slow effect and death.
     /// </summary>
     public class EnemyHealth : MonoBehaviour
     {
@@ -17,7 +16,7 @@ namespace TowerDefense.Enemy
         protected EnemyData enemyData;
 
         // =========================================================
-        // INTERNAL DATA
+        // INTERNAL
         // =========================================================
 
         protected bool _isDead;
@@ -30,7 +29,6 @@ namespace TowerDefense.Enemy
 
         protected float _moveSpeed;
 
-        // Slow system
         protected float _slowMultiplier = 1f;
         protected float _slowTimer = 0f;
 
@@ -38,25 +36,32 @@ namespace TowerDefense.Enemy
         // PROPERTIES
         // =========================================================
 
-        public int Armor => _armor;
+        public int Armor =>
+            _armor;
 
-        public int Attack => _attack;
+        public int Attack =>
+            _attack;
 
         public float MoveSpeed =>
             _moveSpeed * _slowMultiplier;
 
-        public int CurrentHealth => _currentHealth;
+        public int CurrentHealth =>
+            _currentHealth;
 
         public int MaxHealth =>
             _maxHealth > 0
                 ? _maxHealth
-                : (enemyData != null
-                    ? enemyData.GetBaseHealthValue()
-                    : 10);
+                : (
+                    enemyData != null
+                        ? enemyData.GetBaseHealthValue()
+                        : 10
+                );
 
-        public bool IsDead => _isDead;
+        public bool IsDead =>
+            _isDead;
 
-        public EnemyData EnemyData => enemyData;
+        public EnemyData EnemyData =>
+            enemyData;
 
         // =========================================================
         // START
@@ -64,9 +69,14 @@ namespace TowerDefense.Enemy
 
         protected virtual void Start()
         {
-            if (enemyData != null && _maxHealth <= 0)
+            if (
+                enemyData != null &&
+                _maxHealth <= 0
+            )
             {
-                InitializeWithCurrentDifficulty(enemyData);
+                InitializeWithCurrentDifficulty(
+                    enemyData
+                );
             }
         }
 
@@ -89,25 +99,22 @@ namespace TowerDefense.Enemy
         }
 
         // =========================================================
-        // ENABLE
+        // ON ENABLE
         // =========================================================
 
         protected virtual void OnEnable()
         {
             _isDead = false;
 
-            // Reset slow effect when reused from Object Pool
             _slowMultiplier = 1f;
             _slowTimer = 0f;
 
-            if (_maxHealth > 0)
-            {
-                _currentHealth = _maxHealth;
-            }
+            // Don't use old HP blindly here.
+            // Initialize() will set correct difficulty HP.
         }
 
         // =========================================================
-        // INITIALIZE WITH GLOBAL DIFFICULTY
+        // INITIALIZE CURRENT DIFFICULTY
         // =========================================================
 
         public virtual void InitializeWithCurrentDifficulty(
@@ -149,60 +156,61 @@ namespace TowerDefense.Enemy
 
             enemyData = data;
 
-            // =====================================================
-            // RESET STATUS
-            // =====================================================
+            // -----------------------------------------------------
+            // RESET
+            // -----------------------------------------------------
 
             _isDead = false;
 
             _slowMultiplier = 1f;
             _slowTimer = 0f;
 
-            // =====================================================
+            // -----------------------------------------------------
             // HP
-            // =====================================================
+            // -----------------------------------------------------
 
             _maxHealth =
                 data.GetHealthWithMultiplier(
                     healthMultiplier
                 );
 
-            _currentHealth = _maxHealth;
+            _currentHealth =
+                _maxHealth;
 
-            // =====================================================
+            // -----------------------------------------------------
             // ATTACK
-            // =====================================================
+            // -----------------------------------------------------
 
             _attack =
                 data.GetBaseAttackValue();
 
-            // =====================================================
+            // -----------------------------------------------------
             // ARMOR
-            // =====================================================
+            // -----------------------------------------------------
 
             _armor =
                 data.GetBaseArmorValue();
 
-            // =====================================================
+            // -----------------------------------------------------
             // SPEED
-            // =====================================================
+            // -----------------------------------------------------
 
             _moveSpeed =
                 data.GetSpeedWithMultiplier(
                     speedMultiplier
                 );
 
-            // =====================================================
+            // -----------------------------------------------------
             // DEBUG
-            // =====================================================
+            // -----------------------------------------------------
 
             Debug.Log(
                 $"[EnemyHealth] {gameObject.name} initialized | " +
-                $"Difficulty: {DifficultyManager.DifficultyName} | " +
-                $"HP: {_maxHealth} | " +
-                $"Speed: {_moveSpeed:F2} | " +
-                $"Attack: {_attack} | " +
-                $"Armor: {_armor}"
+                $"Difficulty={DifficultyManager.DifficultyName} | " +
+                $"HP={_maxHealth} | " +
+                $"Speed={_moveSpeed:F2} | " +
+                $"Attack={_attack} | " +
+                $"Armor={_armor}"
             );
         }
 
@@ -215,7 +223,10 @@ namespace TowerDefense.Enemy
             int difficulty = 1)
         {
             float multiplier =
-                Mathf.Max(1f, difficulty);
+                Mathf.Max(
+                    1f,
+                    difficulty
+                );
 
             Initialize(
                 data,
@@ -225,10 +236,11 @@ namespace TowerDefense.Enemy
         }
 
         // =========================================================
-        // HEALTH
+        // SET HP
         // =========================================================
 
-        public void SetCurrentHealth(int health)
+        public void SetCurrentHealth(
+            int health)
         {
             _currentHealth =
                 Mathf.Clamp(
@@ -239,13 +251,11 @@ namespace TowerDefense.Enemy
         }
 
         // =========================================================
-        // DAMAGE
+        // NORMAL DAMAGE
         // =========================================================
 
-        /// <summary>
-        /// Normal damage. Armor reduces the damage.
-        /// </summary>
-        public virtual void TakeDamage(int damage)
+        public virtual void TakeDamage(
+            int damage)
         {
             if (_isDead)
                 return;
@@ -261,24 +271,27 @@ namespace TowerDefense.Enemy
                 );
 
             int actualDamage =
-    Mathf.CeilToInt(
-        finalDamage
-    );
+                Mathf.CeilToInt(
+                    finalDamage
+                );
 
-      int damageDealt =
-          Mathf.Min(
-         actualDamage,
-       _currentHealth
-    );
+            int damageDealt =
+                Mathf.Min(
+                    actualDamage,
+                    _currentHealth
+                );
 
-       _currentHealth -= damageDealt;
+            _currentHealth -=
+                damageDealt;
 
-       if (GameManager.Instance != null)
-    {
-        GameManager.Instance.RegisterDamage(
-        damageDealt
-       );
-    }
+            if (
+                GameManager.Instance != null
+            )
+            {
+                GameManager.Instance.RegisterDamage(
+                    damageDealt
+                );
+            }
 
             if (_currentHealth <= 0)
             {
@@ -291,10 +304,6 @@ namespace TowerDefense.Enemy
         // DAMAGE IGNORING ARMOR
         // =========================================================
 
-        /// <summary>
-        /// Damage that completely ignores enemy armor.
-        /// Used by Mage Tower.
-        /// </summary>
         public virtual void TakeDamageIgnoringArmor(
             int damage)
         {
@@ -305,19 +314,22 @@ namespace TowerDefense.Enemy
                 return;
 
             int damageDealt =
-    Mathf.Min(
-        damage,
-        _currentHealth
-    );
+                Mathf.Min(
+                    damage,
+                    _currentHealth
+                );
 
-_currentHealth -= damageDealt;
+            _currentHealth -=
+                damageDealt;
 
-if (GameManager.Instance != null)
-{
-    GameManager.Instance.RegisterDamage(
-        damageDealt
-    );
-}
+            if (
+                GameManager.Instance != null
+            )
+            {
+                GameManager.Instance.RegisterDamage(
+                    damageDealt
+                );
+            }
 
             if (_currentHealth <= 0)
             {
@@ -330,13 +342,6 @@ if (GameManager.Instance != null)
         // SLOW
         // =========================================================
 
-        /// <summary>
-        /// Applies a temporary slow effect.
-        ///
-        /// Example:
-        /// slowPercent = 0.3f
-        /// means enemy speed becomes 70%.
-        /// </summary>
         public virtual void ApplySlow(
             float slowPercent,
             float duration)
@@ -345,7 +350,9 @@ if (GameManager.Instance != null)
                 return;
 
             slowPercent =
-                Mathf.Clamp01(slowPercent);
+                Mathf.Clamp01(
+                    slowPercent
+                );
 
             duration =
                 Mathf.Max(
@@ -369,28 +376,38 @@ if (GameManager.Instance != null)
         // SLOW RESISTANCE
         // =========================================================
 
-        public void SetCanBeSlowed(bool value)
+        public void SetCanBeSlowed(
+            bool value)
         {
-            // Reserved for slow resistance system
+            // Reserved.
         }
 
         // =========================================================
-        // MODIFIERS
+        // MODIFY HEALTH
         // =========================================================
 
-        public void ModifyHealth(float multiplier)
+        public void ModifyHealth(
+            float multiplier)
         {
             _maxHealth =
                 Mathf.RoundToInt(
-                    _maxHealth * multiplier
+                    _maxHealth *
+                    multiplier
                 );
 
-            _currentHealth = _maxHealth;
+            _currentHealth =
+                _maxHealth;
         }
 
-        public void ModifyArmor(int addedArmor)
+        // =========================================================
+        // MODIFY ARMOR
+        // =========================================================
+
+        public void ModifyArmor(
+            int addedArmor)
         {
-            _armor += addedArmor;
+            _armor +=
+                addedArmor;
 
             _armor =
                 Mathf.Max(
@@ -399,17 +416,29 @@ if (GameManager.Instance != null)
                 );
         }
 
-        public void ModifyAttack(float multiplier)
+        // =========================================================
+        // MODIFY ATTACK
+        // =========================================================
+
+        public void ModifyAttack(
+            float multiplier)
         {
             _attack =
                 Mathf.RoundToInt(
-                    _attack * multiplier
+                    _attack *
+                    multiplier
                 );
         }
 
-        public void ModifySpeed(float multiplier)
+        // =========================================================
+        // MODIFY SPEED
+        // =========================================================
+
+        public void ModifySpeed(
+            float multiplier)
         {
-            _moveSpeed *= multiplier;
+            _moveSpeed *=
+                multiplier;
 
             _moveSpeed =
                 Mathf.Clamp(
@@ -447,7 +476,9 @@ if (GameManager.Instance != null)
                 $"Rewarded {goldReward} gold."
             );
 
-            if (ObjectPooler.Instance != null)
+            if (
+                ObjectPooler.Instance != null
+            )
             {
                 ObjectPooler.Instance.ReturnToPool(
                     gameObject
