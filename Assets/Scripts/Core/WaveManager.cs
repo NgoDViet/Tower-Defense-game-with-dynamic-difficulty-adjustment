@@ -50,7 +50,7 @@ namespace TowerDefense.Core
         private Coroutine _waveSpawnCoroutine;
         private List<WaveSetup> _initialInspectorWaves;
 
-        // Struct dùng nội bộ, lưu trực tiếp Prefab để tránh switch-case cồng kềnh
+        //Lưu trực tiếp tránh swtich-case nhiều lần, tối ưu hóa hiệu năng
         private struct DynamicSpawnGroup
         {
             public GameObject Prefab;
@@ -117,30 +117,28 @@ namespace TowerDefense.Core
             int waveNum = _currentWaveIndex + 1;
             float difficultyMultiplier = 1.0f;
 
-            // 1. Phân tích trạng thái người chơi thông qua GameManager
+
             if (GameManager.Instance != null)
             {
-                // Phạt (Tăng độ khó) nếu người chơi giữ được full máu
+
                 if (GameManager.Instance.CurrentHealth >= GameManager.Instance.ActiveLevelData.BaseMaxHealth)
                     difficultyMultiplier += 0.3f;
-                // Nương tay nếu người chơi sắp thua (dưới 30% máu)
+
                 else if (GameManager.Instance.CurrentHealth <= GameManager.Instance.ActiveLevelData.BaseMaxHealth * 0.3f)
                     difficultyMultiplier -= 0.3f;
-
-                // Tăng thêm độ khó nếu người chơi đang tích trữ quá nhiều tiền
-                if (GameManager.Instance.CurrentGold > 500)
+                if (GameManager.Instance.CurrentGold > 5000)
                     difficultyMultiplier += 0.2f;
             }
 
-            // 2. Tính toán tổng điểm Threat cho Wave này
+            // Tính toán tổng điểm Threat cho Wave này
             // Càng về sau Base Threat càng tăng
             int baseThreat = 20 + (waveNum * 5);
             int totalThreatPoints = Mathf.RoundToInt(baseThreat * difficultyMultiplier);
 
-            // 3. Mua sắm quái (Giả định giá: Basic = 1, Fast = 2, Tank = 3, Armor = 4)
+            // 3. Mua sắm quái dựa trên điểm threat 
             WaveSetup newWave = new WaveSetup();
 
-            // Dành khoảng 30% quỹ điểm cho quái Armor (xuất hiện từ wave 5)
+
             if (waveNum >= 5)
             {
                 int armorBudget = Mathf.RoundToInt(totalThreatPoints * 0.3f);
@@ -148,7 +146,6 @@ namespace TowerDefense.Core
                 totalThreatPoints -= newWave.armorCount * 4;
             }
 
-            // Dành 30% cho Tank (xuất hiện từ wave 3)
             if (waveNum >= 3)
             {
                 int tankBudget = Mathf.RoundToInt(totalThreatPoints * 0.3f);
@@ -219,18 +216,54 @@ namespace TowerDefense.Core
         {
             Vector3 spawnPosition = waypointPath != null ? waypointPath.GetWaypoint(0).position : transform.position;
 
+            // 1. TÍNH TOÁN CÁC HỆ SỐ SCALE CHO ENDLESS MODE
+            float healthMultiplier = 1f;
+            float attackMultiplier = 1f;
+            int bonusArmor = 0;
+            float speedMultiplier = 1f;
+
+            if (IsEndlessMode)
+            {
+                // Tính số wave hiện tại tính từ lúc bắt đầu endless
+                int endlessWaveCount = _currentWaveIndex - _initialInspectorWaves.Count + 1;
+                if (endlessWaveCount > 0)
+                {
+                    // Máu: Tăng 10% mỗi 3 round
+                    healthMultiplier += (endlessWaveCount / 3) * 0.1f;
+
+                    // Sát thương: Tăng 15% mỗi 5 round
+                    attackMultiplier += (endlessWaveCount / 5) * 0.15f;
+
+                    // Giáp: Cộng thêm 1 giáp phẳng mỗi 10 round
+                    bonusArmor += (endlessWaveCount / 10) * 1;
+
+                    // Tốc độ chạy: Tăng 5% mỗi 15 round
+                    speedMultiplier += (endlessWaveCount / 15) * 0.05f;
+                }
+            }
+
+            // 2. SINH QUÁI VÀ ÁP DỤNG THÔNG SỐ
             for (int i = 0; i < group.Count; i++)
             {
-                // Tối ưu: Không cần while check GameManager Pause nữa. 
-                // WaitForSeconds tự động dừng khi Time.timeScale = 0
-
                 GameObject enemy = ObjectPooler.Instance.GetPooledObject(group.Prefab, spawnPosition, Quaternion.identity);
 
                 if (enemy.TryGetComponent<EnemyMovement>(out var movement))
                     movement.Initialize(group.Data, waypointPath);
 
                 if (enemy.TryGetComponent<EnemyHealth>(out var health))
+                {
+                    // Khởi tạo các chỉ số gốc từ ScriptableObject trước
                     health.Initialize(group.Data);
+
+                    // Lần lượt áp dụng các buff nếu đang ở chế độ Endless và đạt mốc
+                    if (IsEndlessMode)
+                    {
+                        if (healthMultiplier > 1f) health.ModifyHealth(healthMultiplier);
+                        if (attackMultiplier > 1f) health.ModifyAttack(attackMultiplier);
+                        if (bonusArmor > 0) health.ModifyArmor(bonusArmor);
+                        if (speedMultiplier > 1f) health.ModifySpeed(speedMultiplier);
+                    }
+                }
 
                 EventBus<EnemySpawnedEvent>.Raise(new EnemySpawnedEvent(enemy));
 
@@ -242,7 +275,6 @@ namespace TowerDefense.Core
 
             _activeSpawnGroupsCount--;
         }
-
         private void OnLevelStarted(LevelStartedEvent evt)
         {
             var levelData = GameManager.Instance?.ActiveLevelData;
