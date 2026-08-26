@@ -62,9 +62,7 @@ namespace TowerDefense.Core
 
         [Header("Wave Controls")]
         [SerializeField] private bool autoStartNextWave = true;
-
         [SerializeField] private float waveInterval = 5f;
-
         [SerializeField] private float firstWaveDelay = 3f;
 
         // =========================================================
@@ -84,14 +82,18 @@ namespace TowerDefense.Core
 
         private int _currentWaveIndex = -1;
 
-        private bool _isSpawning;
+        // Số wave gốc của level.
+        // Ví dụ level có 6 wave:
+        // Wave 1-6 = Fixed
+        // Wave 7 = Endless 1
+        private int _baseWaveCount = 0;
 
+        private bool _isSpawning;
         private bool _waitingForNextWave;
 
         private int _activeSpawnGroupsCount;
 
         private Coroutine _waveSpawnCoroutine;
-
         private Coroutine _autoNextWaveCoroutine;
 
         private List<WaveSetup> _initialInspectorWaves =
@@ -160,11 +162,8 @@ namespace TowerDefense.Core
         private struct DynamicSpawnGroup
         {
             public GameObject Prefab;
-
             public EnemyData Data;
-
             public int Count;
-
             public float SpawnInterval;
 
             public DynamicSpawnGroup(
@@ -217,17 +216,13 @@ namespace TowerDefense.Core
 
             if (_waveSpawnCoroutine != null)
             {
-                StopCoroutine(
-                    _waveSpawnCoroutine);
-
+                StopCoroutine(_waveSpawnCoroutine);
                 _waveSpawnCoroutine = null;
             }
 
             if (_autoNextWaveCoroutine != null)
             {
-                StopCoroutine(
-                    _autoNextWaveCoroutine);
-
+                StopCoroutine(_autoNextWaveCoroutine);
                 _autoNextWaveCoroutine = null;
             }
         }
@@ -235,6 +230,7 @@ namespace TowerDefense.Core
         // =========================================================
         // START NEXT WAVE
         // =========================================================
+
         public void StartNextWave()
         {
             if (_isSpawning)
@@ -266,12 +262,13 @@ namespace TowerDefense.Core
                 return;
             }
 
-            int nextWaveIndex = _currentWaveIndex + 1;
+            int nextWaveIndex =
+                _currentWaveIndex + 1;
 
             // =====================================================
-            // FIXED WAVES
+            // FIXED MODE
             // =====================================================
-            // Endless OFF = only use waves configured for the level.
+
             if (!IsEndlessMode &&
                 nextWaveIndex >= waves.Count)
             {
@@ -283,31 +280,31 @@ namespace TowerDefense.Core
             }
 
             // =====================================================
-            // ENDLESS WAVES
+            // ENDLESS MODE
             // =====================================================
-            // Endless ON = generate a new wave before accessing
-            // waves[nextWaveIndex] when the configured waves end.
+
             if (IsEndlessMode &&
                 nextWaveIndex >= waves.Count)
             {
                 GenerateNextEndlessWave();
             }
 
-            // Safety check.
             if (nextWaveIndex >= waves.Count)
             {
                 Debug.LogError(
                     "[WaveManager] Cannot start wave. " +
-                    $"Index={nextWaveIndex}, Count={waves.Count}");
+                    $"Index={nextWaveIndex}, " +
+                    $"Count={waves.Count}");
 
                 return;
             }
 
-            _currentWaveIndex = nextWaveIndex;
+            _currentWaveIndex =
+                nextWaveIndex;
 
             Debug.Log(
                 $"[WaveManager] ===== STARTING WAVE " +
-                $"{_currentWaveIndex + 1} ===== " +
+                $"{_currentWaveIndex + 1} ===== | " +
                 $"Mode={(IsEndlessMode ? "ENDLESS" : "FIXED")}");
 
             _waveSpawnCoroutine =
@@ -328,9 +325,9 @@ namespace TowerDefense.Core
 
             float difficultyMultiplier = 1f;
 
-            // -----------------------------------------------------
+            // =====================================================
             // PLAYER PERFORMANCE DDA
-            // -----------------------------------------------------
+            // =====================================================
 
             if (GameManager.Instance != null &&
                 GameManager.Instance.ActiveLevelData != null)
@@ -348,18 +345,15 @@ namespace TowerDefense.Core
                     GameManager.Instance
                     .CurrentGold;
 
-                // Player has full HP.
                 if (currentHealth >= maxHealth)
                 {
                     difficultyMultiplier += 0.3f;
                 }
-                // Player is close to death.
                 else if (currentHealth <= maxHealth * 0.3f)
                 {
                     difficultyMultiplier -= 0.3f;
                 }
 
-                // Player has lots of gold.
                 if (currentGold > 500)
                 {
                     difficultyMultiplier += 0.2f;
@@ -371,9 +365,9 @@ namespace TowerDefense.Core
                     0.5f,
                     difficultyMultiplier);
 
-            // -----------------------------------------------------
+            // =====================================================
             // BASE THREAT
-            // -----------------------------------------------------
+            // =====================================================
 
             int baseThreat =
                 20 + (waveNum * 5);
@@ -383,12 +377,12 @@ namespace TowerDefense.Core
                     baseThreat *
                     difficultyMultiplier);
 
-            // -----------------------------------------------------
-            // ARMOR
-            // -----------------------------------------------------
-
             WaveSetup newWave =
                 new WaveSetup();
+
+            // =====================================================
+            // ARMOR
+            // =====================================================
 
             if (waveNum >= 5)
             {
@@ -403,9 +397,9 @@ namespace TowerDefense.Core
                     newWave.armorCount * 4;
             }
 
-            // -----------------------------------------------------
+            // =====================================================
             // TANK
-            // -----------------------------------------------------
+            // =====================================================
 
             if (waveNum >= 3)
             {
@@ -420,9 +414,9 @@ namespace TowerDefense.Core
                     newWave.tankCount * 3;
             }
 
-            // -----------------------------------------------------
+            // =====================================================
             // FAST
-            // -----------------------------------------------------
+            // =====================================================
 
             int fastBudget =
                 Mathf.RoundToInt(
@@ -434,18 +428,18 @@ namespace TowerDefense.Core
             totalThreatPoints -=
                 newWave.fastCount * 2;
 
-            // -----------------------------------------------------
+            // =====================================================
             // BASIC
-            // -----------------------------------------------------
+            // =====================================================
 
             newWave.basicCount =
                 Mathf.Max(
                     0,
                     totalThreatPoints);
 
-            // -----------------------------------------------------
-            // SPAWN INTERVAL
-            // -----------------------------------------------------
+            // =====================================================
+            // SPAWN SPEED
+            // =====================================================
 
             float spawnRateBase =
                 Mathf.Max(
@@ -468,9 +462,10 @@ namespace TowerDefense.Core
             waves.Add(newWave);
 
             Debug.Log(
-                $"[DDA] Wave {waveNum} | " +
-                $"Multiplier: {difficultyMultiplier} | " +
-                $"Threat: {baseThreat * difficultyMultiplier}");
+                $"[DDA] Generated Endless Wave " +
+                $"{waveNum} | " +
+                $"Multiplier={difficultyMultiplier:F2} | " +
+                $"Threat={baseThreat * difficultyMultiplier:F1}");
         }
 
         // =========================================================
@@ -482,7 +477,6 @@ namespace TowerDefense.Core
             WaveSetup waveData)
         {
             _isSpawning = true;
-
             _waitingForNextWave = false;
 
             EventBus<WaveStartedEvent>.Raise(
@@ -492,10 +486,6 @@ namespace TowerDefense.Core
 
             List<DynamicSpawnGroup> groups =
                 new List<DynamicSpawnGroup>();
-
-            // =====================================================
-            // BASIC
-            // =====================================================
 
             if (waveData.basicCount > 0 &&
                 basicEnemyPrefab != null &&
@@ -510,10 +500,6 @@ namespace TowerDefense.Core
                         waveData.basicSpawnInterval));
             }
 
-            // =====================================================
-            // FAST
-            // =====================================================
-
             if (waveData.fastCount > 0 &&
                 fastEnemyPrefab != null &&
                 fastEnemyData != null)
@@ -527,10 +513,6 @@ namespace TowerDefense.Core
                         waveData.fastSpawnInterval));
             }
 
-            // =====================================================
-            // TANK
-            // =====================================================
-
             if (waveData.tankCount > 0 &&
                 tankEnemyPrefab != null &&
                 tankEnemyData != null)
@@ -543,10 +525,6 @@ namespace TowerDefense.Core
                             waveData.tankCount),
                         waveData.tankSpawnInterval));
             }
-
-            // =====================================================
-            // ARMOR
-            // =====================================================
 
             if (waveData.armorCount > 0 &&
                 armorEnemyPrefab != null &&
@@ -564,10 +542,6 @@ namespace TowerDefense.Core
             _activeSpawnGroupsCount =
                 groups.Count;
 
-            // =====================================================
-            // EMPTY WAVE
-            // =====================================================
-
             if (_activeSpawnGroupsCount == 0)
             {
                 _isSpawning = false;
@@ -579,10 +553,6 @@ namespace TowerDefense.Core
                 yield break;
             }
 
-            // =====================================================
-            // START GROUPS
-            // =====================================================
-
             for (int i = 0;
                  i < groups.Count;
                  i++)
@@ -591,10 +561,6 @@ namespace TowerDefense.Core
                     SpawnGroupCoroutine(
                         groups[i]));
             }
-
-            // =====================================================
-            // WAIT FOR ALL GROUPS
-            // =====================================================
 
             while (_activeSpawnGroupsCount > 0)
             {
@@ -629,7 +595,67 @@ namespace TowerDefense.Core
             return Mathf.Max(
                 1,
                 Mathf.RoundToInt(
-                    originalCount * multiplier));
+                    originalCount *
+                    multiplier));
+        }
+
+        // =========================================================
+        // ENDLESS SCALING
+        // =========================================================
+
+        private void GetEndlessScaling(
+            out float healthMultiplier,
+            out float attackMultiplier,
+            out int bonusArmor,
+            out float speedMultiplier,
+            out int endlessWaveNumber)
+        {
+            healthMultiplier = 1f;
+            attackMultiplier = 1f;
+            bonusArmor = 0;
+            speedMultiplier = 1f;
+            endlessWaveNumber = 0;
+
+            if (!IsEndlessMode)
+                return;
+
+            // Nếu level có 6 wave:
+            // Wave 1-6 = Fixed
+            // Wave 7 = Endless 1
+            // Wave 8 = Endless 2
+            // Wave 9 = Endless 3
+
+            endlessWaveNumber =
+                _currentWaveIndex -
+                _baseWaveCount +
+                1;
+
+            endlessWaveNumber =
+                Mathf.Max(
+                    0,
+                    endlessWaveNumber);
+
+            if (endlessWaveNumber <= 0)
+                return;
+
+            // Mỗi 3 Endless wave: +10% HP
+            healthMultiplier +=
+                (endlessWaveNumber / 3) *
+                0.10f;
+
+            // Mỗi 5 Endless wave: +15% Attack
+            attackMultiplier +=
+                (endlessWaveNumber / 5) *
+                0.15f;
+
+            // Mỗi 10 Endless wave: +1 Armor
+            bonusArmor =
+                endlessWaveNumber / 10;
+
+            // Mỗi 15 Endless wave: +5% Speed
+            speedMultiplier +=
+                (endlessWaveNumber / 15) *
+                0.05f;
         }
 
         // =========================================================
@@ -649,14 +675,26 @@ namespace TowerDefense.Core
                     ? startWaypoint.position
                     : transform.position;
 
+            GetEndlessScaling(
+                out float endlessHealthMultiplier,
+                out float endlessAttackMultiplier,
+                out int endlessBonusArmor,
+                out float endlessSpeedMultiplier,
+                out int endlessWaveNumber);
+
+            Debug.Log(
+                $"[WaveManager] Spawn scaling | " +
+                $"Wave={_currentWaveIndex + 1} | " +
+                $"EndlessWave={endlessWaveNumber} | " +
+                $"HPx={endlessHealthMultiplier:F2} | " +
+                $"Attackx={endlessAttackMultiplier:F2} | " +
+                $"Armor+={endlessBonusArmor} | " +
+                $"Speedx={endlessSpeedMultiplier:F2}");
+
             for (int i = 0;
                  i < group.Count;
                  i++)
             {
-                // -------------------------------------------------
-                // PAUSE
-                // -------------------------------------------------
-
                 while (GameManager.Instance != null &&
                        GameManager.Instance.CurrentState ==
                        GameManager.GameState.Pause)
@@ -664,20 +702,12 @@ namespace TowerDefense.Core
                     yield return null;
                 }
 
-                // -------------------------------------------------
-                // GAME ENDED
-                // -------------------------------------------------
-
                 if (GameManager.Instance != null &&
                     GameManager.Instance.CurrentState !=
                     GameManager.GameState.Playing)
                 {
                     break;
                 }
-
-                // -------------------------------------------------
-                // GET ENEMY
-                // -------------------------------------------------
 
                 if (ObjectPooler.Instance == null)
                 {
@@ -696,8 +726,8 @@ namespace TowerDefense.Core
                 if (enemy == null)
                 {
                     Debug.LogWarning(
-                        "[WaveManager] Failed to get " +
-                        "enemy from pool.");
+                        "[WaveManager] Failed to get enemy " +
+                        "from pool.");
 
                     continue;
                 }
@@ -717,7 +747,7 @@ namespace TowerDefense.Core
                 }
 
                 // -------------------------------------------------
-                // HEALTH
+                // BASE DIFFICULTY
                 // -------------------------------------------------
 
                 EnemyHealth health =
@@ -729,6 +759,38 @@ namespace TowerDefense.Core
                         group.Data,
                         DifficultyManager.HealthMultiplier,
                         DifficultyManager.SpeedMultiplier);
+
+                    // -------------------------------------------------
+                    // ENDLESS ADDITIONAL SCALING
+                    // -------------------------------------------------
+
+                    if (IsEndlessMode &&
+                        endlessWaveNumber > 0)
+                    {
+                        if (endlessHealthMultiplier > 1f)
+                        {
+                            health.ModifyHealth(
+                                endlessHealthMultiplier);
+                        }
+
+                        if (endlessAttackMultiplier > 1f)
+                        {
+                            health.ModifyAttack(
+                                endlessAttackMultiplier);
+                        }
+
+                        if (endlessBonusArmor > 0)
+                        {
+                            health.ModifyArmor(
+                                endlessBonusArmor);
+                        }
+
+                        if (endlessSpeedMultiplier > 1f)
+                        {
+                            health.ModifySpeed(
+                                endlessSpeedMultiplier);
+                        }
+                    }
                 }
 
                 // -------------------------------------------------
@@ -767,22 +829,35 @@ namespace TowerDefense.Core
             if (GameManager.Instance != null)
             {
                 _levelData =
-                    GameManager.Instance
-                    .ActiveLevelData;
+                    GameManager.Instance.ActiveLevelData;
             }
 
-            // Determine Endless Mode from the actual Challenge Setting.
-            // Do NOT use the level name: the player can enable/disable
-            // Endless Mode independently of the selected level.
+            // Read saved setting.
             IsEndlessMode =
                 PlayerPrefs.GetInt(
                     "TowerDefense_EndlessMode",
                     0) == 1;
 
+            // GameManager is the final authority.
+            if (GameManager.Instance != null)
+            {
+                IsEndlessMode =
+                    GameManager.Instance.IsEndlessMode;
+            }
+
+            Debug.Log(
+                "[WaveManager] ================================");
+
+            Debug.Log(
+                $"[WaveManager] LEVEL STARTED: " +
+                $"{(_levelData != null ? _levelData.LevelName : "NULL")}");
+
             Debug.Log(
                 $"[WaveManager] Endless Mode = {IsEndlessMode}");
 
-            // Always enable automatic wave progression.
+            Debug.Log(
+                "[WaveManager] ================================");
+
             autoStartNextWave = true;
 
             // -----------------------------------------------------
@@ -806,21 +881,26 @@ namespace TowerDefense.Core
             }
 
             // -----------------------------------------------------
-            // LOAD LEVEL WAVES
+            // LOAD WAVE DATA
             // -----------------------------------------------------
 
             SyncWavesData(_levelData);
+
+            // Save original fixed wave count.
+            _baseWaveCount =
+                waves.Count;
+
+            Debug.Log(
+                $"[WaveManager] Base wave count = " +
+                $"{_baseWaveCount}");
 
             // -----------------------------------------------------
             // RESET
             // -----------------------------------------------------
 
             _currentWaveIndex = -1;
-
             _isSpawning = false;
-
             _waitingForNextWave = false;
-
             _activeSpawnGroupsCount = 0;
 
             // -----------------------------------------------------
@@ -839,9 +919,9 @@ namespace TowerDefense.Core
         private void SyncWavesData(
             LevelData levelData)
         {
-            // If Inspector contains waves,
-            // restore Inspector configuration.
-            if (_initialInspectorWaves.Count > 0)
+            // Inspector waves have priority.
+            if (_initialInspectorWaves != null &&
+                _initialInspectorWaves.Count > 0)
             {
                 waves.Clear();
 
@@ -851,11 +931,15 @@ namespace TowerDefense.Core
                 return;
             }
 
-            // Otherwise load from LevelData.
             if (levelData == null ||
                 levelData.Waves == null ||
                 levelData.Waves.Count == 0)
             {
+                Debug.LogWarning(
+                    "[WaveManager] No LevelData waves found.");
+
+                waves.Clear();
+
                 return;
             }
 
@@ -923,6 +1007,7 @@ namespace TowerDefense.Core
         // =========================================================
         // WAVE CLEARED
         // =========================================================
+
         private void OnWaveCleared(
             WaveClearedEvent evt)
         {
@@ -930,7 +1015,6 @@ namespace TowerDefense.Core
                 $"[WaveManager] ===== WAVE " +
                 $"{evt.WaveIndex + 1} CLEARED =====");
 
-            // Ignore an old/stale event.
             if (evt.WaveIndex != _currentWaveIndex)
             {
                 Debug.LogWarning(
@@ -943,21 +1027,22 @@ namespace TowerDefense.Core
             }
 
             // =====================================================
-            // FIXED WAVES
+            // FIXED MODE FINAL WAVE
             // =====================================================
+
             if (!IsEndlessMode &&
                 _currentWaveIndex >= waves.Count - 1)
             {
                 Debug.Log(
                     "[WaveManager] FINAL FIXED WAVE CLEARED.");
 
-                // Stop after the final configured wave.
                 return;
             }
 
             // =====================================================
-            // ENDLESS WAVES
+            // ENDLESS MODE
             // =====================================================
+
             if (IsEndlessMode)
             {
                 Debug.Log(
@@ -965,18 +1050,13 @@ namespace TowerDefense.Core
                     "Scheduling next wave.");
 
                 ScheduleNextWave();
+
                 return;
             }
 
             // =====================================================
-            // NORMAL / HARD / HELL
+            // FIXED MODE NON-FINAL
             // =====================================================
-            if (!autoStartNextWave)
-            {
-                Debug.LogWarning(
-                    "[WaveManager] autoStartNextWave " +
-                    "is OFF. Next wave will still be started.");
-            }
 
             ScheduleNextWave();
         }
@@ -1004,6 +1084,7 @@ namespace TowerDefense.Core
         // =========================================================
         // AUTO START NEXT WAVE
         // =========================================================
+
         private IEnumerator AutoStartNextWaveCoroutine()
         {
             _waitingForNextWave = true;
@@ -1038,9 +1119,9 @@ namespace TowerDefense.Core
                 yield break;
             }
 
-            // Fixed mode stops after the final configured wave.
             if (!IsEndlessMode &&
-                _currentWaveIndex >= waves.Count - 1)
+                _currentWaveIndex >=
+                waves.Count - 1)
             {
                 Debug.Log(
                     "[WaveManager] Fixed Waves finished.");
@@ -1048,8 +1129,6 @@ namespace TowerDefense.Core
                 yield break;
             }
 
-            // Endless mode generates a new wave automatically
-            // inside StartNextWave() when the configured waves end.
             StartNextWave();
         }
     }
