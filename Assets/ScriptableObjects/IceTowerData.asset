@@ -19,10 +19,16 @@ MonoBehaviour:
   range: 5
   fireRate: 1
   damage: 2
-  projectilePrefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
+  projectilePrefab: {fileID: 7978381930888403112, guid: 6b023090b02eba3418e46d2f37a46ddf, type: 3}
   projectileSpeed: 7
   explosionRadius: 1.5
   slowPercent: 0.3
   slowDuration: 2
   laserDamageInterval: 0.2
   laserWidth: 0.08
+  goldLevel1: 5
+  goldLevel2: 10
+  goldLevel3: 20
+  goldIntervalLevel1: 5
+  goldIntervalLevel2: 4
+  goldIntervalLevel3: 3
