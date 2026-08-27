@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using TowerDefense.Core;
 using TowerDefense.Data;
@@ -12,8 +13,16 @@ namespace TowerDefense.Enemy
     public class EnemyHealth : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField]
-        protected EnemyData enemyData;
+        [Tooltip("The EnemyData ScriptableObject containing max health and gold reward stats.")]
+        [SerializeField] protected EnemyData enemyData;
+
+        [Tooltip("Animator used for walk and death animations.")]
+        [SerializeField] private Animator animator;
+
+        [Header("Animation")]
+        [Tooltip("Time to wait before returning the enemy to the object pool.")]
+        [SerializeField] private float deathAnimationDuration = 0.5f;
+
 
         // =========================================================
         // INTERNAL
@@ -454,35 +463,51 @@ namespace TowerDefense.Enemy
 
         protected virtual void Die()
         {
-            if (_isDead)
-                return;
+            if (_isDead) return;
 
             _isDead = true;
 
-            int goldReward =
-                enemyData != null
-                    ? enemyData.GoldReward
-                    : 10;
+            int goldReward = enemyData != null
+                ? enemyData.GoldReward
+                : 10;
 
+            // Raise the death event
             EventBus<EnemyDiedEvent>.Raise(
-                new EnemyDiedEvent(
-                    gameObject,
-                    goldReward
-                )
+                new EnemyDiedEvent(gameObject, goldReward)
             );
 
             Debug.Log(
-                $"[EnemyHealth] {gameObject.name} died. " +
-                $"Rewarded {goldReward} gold."
+                $"[EnemyHealth] Enemy {gameObject.name} died. Rewarded {goldReward} gold."
             );
 
-            if (
-                ObjectPooler.Instance != null
-            )
+            // Play death animation
+            if (animator != null)
             {
-                ObjectPooler.Instance.ReturnToPool(
-                    gameObject
-                );
+                animator.SetTrigger("Die");
+
+                StartCoroutine(ReturnToPoolAfterDeath());
+            }
+            else
+            {
+                ReturnEnemyToPool();
+            }
+        }
+        private IEnumerator ReturnToPoolAfterDeath()
+        {
+            yield return new WaitForSeconds(deathAnimationDuration);
+
+            ReturnEnemyToPool();
+        }
+
+        /// <summary>
+        /// Returns the enemy to the object pool or destroys it
+        /// if no ObjectPooler exists.
+        /// </summary>
+        private void ReturnEnemyToPool()
+        {
+            if (ObjectPooler.Instance != null)
+            {
+                ObjectPooler.Instance.ReturnToPool(gameObject);
             }
             else
             {
