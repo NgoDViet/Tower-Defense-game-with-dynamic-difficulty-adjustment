@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 7197038360805180824}
   - component: {fileID: 8097125590381278934}
   - component: {fileID: 2255853815415646883}
+  - component: {fileID: 488997927172314766}
   m_Layer: 8
   m_Name: Enemy_Armor
   m_TagString: Enemy
@@ -39,7 +40,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &7783675181564954248
 SpriteRenderer:
-  serializedVersion: 2
+  serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -86,16 +87,17 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
-  m_Color: {r: 0.5, g: 0.6, b: 0.7, a: 1}
+  m_Sprite: {fileID: -8114485714709537875, guid: 74a029d4b5747014eb6b17985fabba01, type: 3}
+  m_Color: {r: 0.9622642, g: 0.9622642, b: 0.9622642, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 0.2, y: 0.2}
+  m_Size: {x: 0.51, y: 0.57}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []
 --- !u!58 &4104273557247242991
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -172,6 +174,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Enemy.EnemyHealth
   enemyData: {fileID: 0}
+  animator: {fileID: 0}
+  deathAnimationDuration: 0.5
 --- !u!114 &8097125590381278934
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -202,3 +206,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Enemy.ArmorEnemy
   enemyData: {fileID: 0}
+  animator: {fileID: 0}
+  deathAnimationDuration: 0.5
+--- !u!95 &488997927172314766
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7539093121017106743}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 71b3bd136a858234c832dbd84bdf9412, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
