@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: CannonTowerData
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.TowerData
   towerName: Cannon Tower
+  towerType: 3
   towerSprite: {fileID: 0}
   cost: 150
   range: 5.5
@@ -20,3 +21,14 @@ MonoBehaviour:
   damage: 8
   projectilePrefab: {fileID: 2422916599399913149, guid: 31963c8b5b6bdcb4b891e53a6d1425ab, type: 3}
   projectileSpeed: 6
+  explosionRadius: 1.5
+  slowPercent: 0.3
+  slowDuration: 2
+  laserDamageInterval: 0.2
+  laserWidth: 0.08
+  goldLevel1: 5
+  goldLevel2: 10
+  goldLevel3: 20
+  goldIntervalLevel1: 5
+  goldIntervalLevel2: 4
+  goldIntervalLevel3: 3
