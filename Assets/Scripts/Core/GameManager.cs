@@ -182,7 +182,7 @@ private float _passiveGoldTimer;
         // PASSIVE GOLD PROPERTIES
         // =========================================================
 
-      public int PassiveGoldAmount
+        public int PassiveGoldAmount
 {
     get
     {
