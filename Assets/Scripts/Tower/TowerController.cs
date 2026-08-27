@@ -78,7 +78,11 @@ namespace TowerDefense.Tower
         // ROTATION
         // =========================================================
 
-        [Header("Rotation (Optional)")]
+        [Header("Rotation")]
+
+        [Tooltip("The visual part of the tower that rotates toward enemies.")]
+        [SerializeField]
+        private Transform rotatingVisual;
 
         [Tooltip("Should the tower rotate towards the target?")]
         [SerializeField]
@@ -659,38 +663,30 @@ namespace TowerDefense.Tower
         // AIM
         // =========================================================
 
-        private void AimAtTarget(
-            Vector3 targetPosition)
+        private void AimAtTarget(Vector3 targetPosition)
         {
-            Vector3 direction =
-                (
-                    targetPosition -
-                    transform.position
-                ).normalized;
+            if (rotatingVisual == null)
+                return;
+
+            Vector3 direction = targetPosition - rotatingVisual.position;
 
             if (direction.sqrMagnitude <= 0.001f)
                 return;
 
             float targetAngle =
-                Mathf.Atan2(
-                    direction.y,
-                    direction.x
-                ) * Mathf.Rad2Deg;
+                Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
 
             Quaternion targetRotation =
                 Quaternion.AngleAxis(
-                    targetAngle +
-                    spriteAngleOffset,
+                    targetAngle + spriteAngleOffset,
                     Vector3.forward
                 );
 
-            transform.rotation =
-                Quaternion.Slerp(
-                    transform.rotation,
-                    targetRotation,
-                    rotationSpeed *
-                    Time.deltaTime
-                );
+            rotatingVisual.rotation = Quaternion.Slerp(
+                rotatingVisual.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
         }
 
 
