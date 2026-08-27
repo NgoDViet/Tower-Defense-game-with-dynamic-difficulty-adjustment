@@ -105,7 +105,7 @@ namespace TowerDefense.UI
         private bool _timeLimitEnabled;
         private bool _oneLifeEnabled;
         private bool _endlessModeEnabled;
-
+        private bool _passiveGoldEnabled = true;
         // Values are remembered even when the corresponding option is
         // temporarily disabled.
         private int _selectedEnemyMultiplier = 2;
@@ -115,6 +115,7 @@ namespace TowerDefense.UI
         private Toggle _timeLimitToggle;
         private Toggle _oneLifeToggle;
         private Toggle _endlessModeToggle;
+        private Toggle _passiveGoldToggle;
 
         private Button[] _enemyCountButtons;
         private Button[] _timeButtons;
@@ -126,6 +127,7 @@ namespace TowerDefense.UI
         private TextMeshProUGUI _oneLifeStatusText;
         private TextMeshProUGUI _endlessModeStatusText;
         private TextMeshProUGUI _challengeSummaryText;
+        private TextMeshProUGUI _passiveGoldStatusText;
 
         private readonly Dictionary<LevelData, TextMeshProUGUI>
     _levelStatsTextByLevel =
@@ -584,14 +586,14 @@ namespace TowerDefense.UI
             _timeLimitEnabled = false;
             _oneLifeEnabled = false;
             _endlessModeEnabled = false;
-
+            _passiveGoldEnabled = true;
             _selectedEnemyMultiplier = 2;
             _selectedTimeLimitMinutes = 3f;
 
             DifficultyManager.SetEnemyCountMultiplier(1);
             DifficultyManager.SetTimeLimitMinutes(0f);
             DifficultyManager.SetOneLifeMode(false);
-
+            DifficultyManager.SetPassiveGoldEnabled(true);
             // Explicitly clear the saved Endless state.
             IsEndlessModeEnabled = false;
             PlayerPrefs.SetInt("TowerDefense_EndlessMode", 0);
@@ -711,6 +713,7 @@ namespace TowerDefense.UI
             CreateTimeLimitCard(cards.transform);
             CreateOneLifeCard(cards.transform);
             CreateEndlessModeCard(cards.transform);
+            CreatePassiveGoldCard(cards.transform);
 
             // -----------------------------------------------------
             // BOTTOM BUTTONS
@@ -1278,7 +1281,103 @@ namespace TowerDefense.UI
                 OnEndlessModeToggleChanged
             );
         }
+private void CreatePassiveGoldCard(
+    Transform parent)
+{
+    GameObject card =
+        CreateModifierCard(
+            parent,
+            "PassiveGoldCard"
+        );
 
+
+    // =====================================================
+    // TOGGLE
+    // =====================================================
+
+    _passiveGoldToggle =
+        CreateToggle(
+            card.transform,
+            "EnablePassiveGold",
+            "GOLD OVER TIME",
+            new Vector2(0f, 0.82f),
+            new Vector2(1f, 0.98f)
+        );
+
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+
+    _passiveGoldStatusText =
+        CreateText(
+            card.transform,
+            "Status",
+            "ON • +10 G every 10 seconds",
+            15,
+            FontStyles.Normal,
+            new Color(
+                0.65f,
+                0.65f,
+                0.72f
+            ),
+            new Vector2(
+                0.05f,
+                0.60f
+            ),
+            new Vector2(
+                0.95f,
+                0.76f
+            ),
+            Vector2.zero
+        );
+
+
+    // =====================================================
+    // DESCRIPTION
+    // =====================================================
+
+    CreateText(
+        card.transform,
+        "Description",
+        "+10 G every 10 seconds\n" +
+        "Turn OFF for harder economy",
+        15,
+        FontStyles.Normal,
+        new Color(
+            0.82f,
+            0.82f,
+            0.88f
+        ),
+        new Vector2(
+            0.08f,
+            0.27f
+        ),
+        new Vector2(
+            0.92f,
+            0.54f
+        ),
+        Vector2.zero
+    );
+
+
+    // =====================================================
+    // EVENT
+    // =====================================================
+
+    _passiveGoldToggle.onValueChanged.AddListener(
+        OnPassiveGoldToggleChanged
+    );
+
+
+    // =====================================================
+    // DEFAULT
+    // =====================================================
+
+    _passiveGoldToggle.SetIsOnWithoutNotify(
+        true
+    );
+}
         // =========================================================
         // MODIFIER CARD
         // =========================================================
@@ -1638,7 +1737,30 @@ namespace TowerDefense.UI
                 $"[UIManager] Endless mode: {(enabled ? "ON" : "OFF")}"
             );
         }
+// =========================================================
+// PASSIVE GOLD TOGGLE
+// =========================================================
 
+private void OnPassiveGoldToggleChanged(
+    bool enabled)
+{
+    _passiveGoldEnabled =
+        enabled;
+
+
+    DifficultyManager.SetPassiveGoldEnabled(
+        enabled
+    );
+
+
+    RefreshChallengeUI();
+
+
+    Debug.Log(
+        $"[UIManager] Passive Gold: " +
+        $"{(enabled ? "ON" : "OFF")}"
+    );
+}
         private void SelectEnemyMultiplier(int multiplier)
         {
             _selectedEnemyMultiplier = multiplier;
@@ -1797,6 +1919,10 @@ private void RefreshLevelCards()
         _endlessModeToggle.SetIsOnWithoutNotify(
             _endlessModeEnabled
         );
+        if (_passiveGoldToggle != null)
+    _passiveGoldToggle.SetIsOnWithoutNotify(
+        _passiveGoldEnabled
+    );
 
     // =========================================================
     // STATUS TEXT
@@ -1833,6 +1959,13 @@ private void RefreshLevelCards()
                 ? "ON  •  Infinite waves"
                 : "OFF  •  Fixed wave count";
     }
+    if (_passiveGoldStatusText != null)
+{
+    _passiveGoldStatusText.text =
+        _passiveGoldEnabled
+            ? "ON  •  +10 G every 10 seconds"
+            : "OFF  •  No passive gold";
+}
 
     if (_challengeSummaryText != null)
     {
@@ -1848,12 +1981,24 @@ private void RefreshLevelCards()
             ? "ONE LIFE"
             : "NORMAL HEALTH";
 
-        string endlessSummary = _endlessModeEnabled
-            ? "ENDLESS WAVES"
-            : "FIXED WAVES";
+       string endlessSummary =
+    _endlessModeEnabled
+        ? "ENDLESS WAVES"
+        : "FIXED WAVES";
 
-        _challengeSummaryText.text =
-            $"{enemySummary}   •   {timeSummary}   •   {lifeSummary}   •   {endlessSummary}";
+
+string passiveGoldSummary =
+    _passiveGoldEnabled
+        ? "PASSIVE GOLD ON"
+        : "PASSIVE GOLD OFF";
+
+
+_challengeSummaryText.text =
+    $"{enemySummary}   •   " +
+    $"{timeSummary}   •   " +
+    $"{lifeSummary}   •   " +
+    $"{endlessSummary}   •   " +
+    $"{passiveGoldSummary}";
     }
 
     // =========================================================
@@ -1941,6 +2086,10 @@ private void RefreshLevelCards()
             DifficultyManager.SetOneLifeMode(
                 _oneLifeEnabled
             );
+
+            DifficultyManager.SetPassiveGoldEnabled(
+    _passiveGoldEnabled
+);
 
             // IMPORTANT:
             // The Endless setting is independent from the selected level.

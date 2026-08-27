@@ -452,42 +452,69 @@ namespace TowerDefense.Enemy
         // DEATH
         // =========================================================
 
-        protected virtual void Die()
-        {
-            if (_isDead)
-                return;
+   protected virtual void Die()
+{
+    if (_isDead)
+        return;
 
-            _isDead = true;
 
-            int goldReward =
-                enemyData != null
-                    ? enemyData.GoldReward
-                    : 10;
+    _isDead = true;
 
-            EventBus<EnemyDiedEvent>.Raise(
-                new EnemyDiedEvent(
-                    gameObject,
-                    goldReward
-                )
-            );
 
-            Debug.Log(
-                $"[EnemyHealth] {gameObject.name} died. " +
-                $"Rewarded {goldReward} gold."
-            );
+    int goldReward =
+        enemyData != null
+            ? enemyData.GoldReward
+            : 10;
 
-            if (
-                ObjectPooler.Instance != null
-            )
-            {
-                ObjectPooler.Instance.ReturnToPool(
-                    gameObject
-                );
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
-        }
+
+    goldReward =
+        Mathf.Max(
+            0,
+            goldReward
+        );
+
+
+    // ---------------------------------------------------------
+    // EVENT
+    // ---------------------------------------------------------
+
+    EventBus<EnemyDiedEvent>.Raise(
+        new EnemyDiedEvent(
+            gameObject,
+            goldReward
+        )
+    );
+
+
+    // ---------------------------------------------------------
+    // DEBUG
+    // ---------------------------------------------------------
+
+    Debug.Log(
+        $"[EnemyHealth] " +
+        $"{gameObject.name} died | " +
+        $"Base Reward={goldReward} G"
+    );
+
+
+    // ---------------------------------------------------------
+    // RETURN TO POOL
+    // ---------------------------------------------------------
+
+    if (
+        ObjectPooler.Instance != null
+    )
+    {
+        ObjectPooler.Instance.ReturnToPool(
+            gameObject
+        );
+    }
+    else
+    {
+        Destroy(
+            gameObject
+        );
+    }
+}
     }
 }
