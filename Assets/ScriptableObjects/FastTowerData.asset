@@ -13,10 +13,16 @@ MonoBehaviour:
   m_Name: FastTowerData
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.TowerData
   towerName: Fast Tower
+  towerType: 0
   towerSprite: {fileID: 0}
   cost: 130
   range: 4
   fireRate: 3.5
   damage: 4
-  projectilePrefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
+  projectilePrefab: {fileID: 7978381930888403112, guid: 5dc27a75461ed8f46b55f87f28007dbb, type: 3}
   projectileSpeed: 7
+  explosionRadius: 1.5
+  slowPercent: 0.3
+  slowDuration: 2
+  laserDamageInterval: 0.2
+  laserWidth: 0.08
