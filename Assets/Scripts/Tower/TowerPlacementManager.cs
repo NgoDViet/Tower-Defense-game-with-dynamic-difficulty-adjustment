@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using TMPro;
 
 using TowerDefense.Core;
@@ -35,22 +36,20 @@ namespace TowerDefense.Tower
 
         public TowerInvestmentData(int purchase)
         {
-            purchaseCost =
-                Mathf.Max(
-                    0,
-                    purchase
-                );
+            purchaseCost = Mathf.Max(
+                0,
+                purchase
+            );
 
             upgradeInvested = 0;
         }
 
         public void AddUpgrade(int cost)
         {
-            upgradeInvested +=
-                Mathf.Max(
-                    0,
-                    cost
-                );
+            upgradeInvested += Mathf.Max(
+                0,
+                cost
+            );
         }
     }
 
@@ -103,13 +102,12 @@ namespace TowerDefense.Tower
 
         [Header("Radial Tower Menu")]
 
+        // Tăng vùng click
         [SerializeField]
-        private float radialMenuRadius =
-            105f;
+        private float radialMenuRadius = 145f;
 
         [SerializeField]
-        private float radialButtonSize =
-            70f;
+        private float radialButtonSize = 120f;
 
         [SerializeField]
         private Color radialButtonColor =
@@ -166,8 +164,7 @@ namespace TowerDefense.Tower
 
         [SerializeField]
         [Range(0.1f, 1f)]
-        private float sellRefundRate =
-            0.75f;
+        private float sellRefundRate = 0.75f;
 
 
         // =========================================================
@@ -253,23 +250,17 @@ namespace TowerDefense.Tower
         // =========================================================
 
         private GameObject _previewInstance;
-
         private TowerData _activeTowerData;
-
         private GameObject _towerPrefab;
-
         private SpriteRenderer _previewRenderer;
-
         private bool _isPlacing;
 
         private WaypointPath _cachedPath;
 
-        private readonly List<GameObject>
-            _placedTowers =
+        private readonly List<GameObject> _placedTowers =
             new List<GameObject>();
 
-        private TextMeshProUGUI
-            _warningTextInstance;
+        private TextMeshProUGUI _warningTextInstance;
 
 
         // =========================================================
@@ -277,9 +268,7 @@ namespace TowerDefense.Tower
         // =========================================================
 
         private GameObject _radialMenu;
-
         private BuildSite _selectedBuildSite;
-
         private Canvas _canvas;
 
 
@@ -288,19 +277,15 @@ namespace TowerDefense.Tower
         // =========================================================
 
         private BuildSite _infoBuildSite;
-
         private TowerController _infoTowerController;
 
         private TextMeshProUGUI _towerInfoTitle;
-
         private TextMeshProUGUI _towerInfoStats;
 
         private Button _upgradeButton;
-
         private Button _sellInfoButton;
 
         private TextMeshProUGUI _upgradeButtonText;
-
         private TextMeshProUGUI _sellButtonText;
 
 
@@ -310,8 +295,8 @@ namespace TowerDefense.Tower
 
         private readonly Dictionary<
             GameObject,
-            TowerInvestmentData>
-            _towerInvestments =
+            TowerInvestmentData
+        > _towerInvestments =
             new Dictionary<
                 GameObject,
                 TowerInvestmentData
@@ -420,278 +405,32 @@ namespace TowerDefense.Tower
         // AWAKE
         // =========================================================
 
-       private void Awake()
-{
-    if (
-        Instance != null &&
-        Instance != this
-    )
-    {
-        Destroy(gameObject);
-        return;
-    }
-
-    Instance = this;
-
-    DontDestroyOnLoad(gameObject);
-
-#if UNITY_EDITOR
-
-    LoadTowerAssetsInEditor();
-
-    EnsureGoldTowerDataLoaded();
-
-#endif
-
-    Debug.Log(
-        "[TowerPlacementManager] GOLD DATA CHECK | " +
-        (
-            goldTowerData != null
-                ? $"Name={goldTowerData.TowerName} | " +
-                  $"Type={goldTowerData.Type} | " +
-                  $"Cost={goldTowerData.Cost}"
-                : "NULL"
-        )
-    );
-}
-
-
-        // =========================================================
-        // LOAD ASSETS
-        // =========================================================
-
-#if UNITY_EDITOR
-
-private void LoadTowerAssetsInEditor()
-{
-    // =========================================================
-    // BASIC
-    // =========================================================
-
-    if (defaultTowerData == null)
-    {
-        defaultTowerData =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-                "Assets/ScriptableObjects/TestTowerData.asset"
-            );
-    }
-
-    if (defaultTowerPrefab == null)
-    {
-        defaultTowerPrefab =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Prefabs/Tower.prefab"
-            );
-    }
-
-    // =========================================================
-    // FAST
-    // =========================================================
-
-    if (fastTowerData == null)
-    {
-        fastTowerData =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-                "Assets/ScriptableObjects/FastTowerData.asset"
-            );
-    }
-
-    if (fastTowerPrefab == null)
-    {
-        fastTowerPrefab =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Prefabs/FastTower.prefab"
-            );
-    }
-
-    // =========================================================
-    // GOLD
-    // =========================================================
-
-   // =========================================================
-// GOLD TOWER - FORCE LOAD CORRECT ASSETS
-// =========================================================
-
-goldTowerData =
-    UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-        "Assets/ScriptableObjects/GoldTowerData.asset"
-    );
-
-goldTowerPrefab =
-    UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-        "Assets/Prefabs/GoldTower.prefab"
-    );
-
-if (goldTowerData == null)
-{
-    Debug.LogError(
-        "[TowerPlacementManager] " +
-        "GoldTowerData.asset NOT FOUND at: " +
-        "Assets/ScriptableObjects/GoldTowerData.asset"
-    );
-}
-else
-{
-    Debug.Log(
-        "[TowerPlacementManager] GOLD DATA LOADED | " +
-        $"Name={goldTowerData.TowerName} | " +
-        $"Type={goldTowerData.Type} | " +
-        $"Cost={goldTowerData.Cost} | " +
-        $"Lv1Gold={goldTowerData.GetGoldPerTick(1)} | " +
-        $"Lv2Gold={goldTowerData.GetGoldPerTick(2)} | " +
-        $"Lv3Gold={goldTowerData.GetGoldPerTick(3)}"
-    );
-}
-
-if (goldTowerPrefab == null)
-{
-    Debug.LogError(
-        "[TowerPlacementManager] " +
-        "GoldTower.prefab NOT FOUND at: " +
-        "Assets/Prefabs/GoldTower.prefab"
-    );
-}
-
-    // =========================================================
-    // CANNON
-    // =========================================================
-
-    if (cannonTowerData == null)
-    {
-        cannonTowerData =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-                "Assets/ScriptableObjects/CannonTowerData.asset"
-            );
-    }
-
-    if (cannonTowerPrefab == null)
-    {
-        cannonTowerPrefab =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Prefabs/CannonTower.prefab"
-            );
-    }
-
-    // =========================================================
-    // ICE
-    // =========================================================
-
-    if (iceTowerData == null)
-    {
-        iceTowerData =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-                "Assets/ScriptableObjects/IceTowerData.asset"
-            );
-    }
-
-    if (iceTowerPrefab == null)
-    {
-        iceTowerPrefab =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Prefabs/IceTower.prefab"
-            );
-    }
-
-    // =========================================================
-    // LASER
-    // =========================================================
-
-    if (laserTowerData == null)
-    {
-        laserTowerData =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-                "Assets/ScriptableObjects/LaserTowerData.asset"
-            );
-    }
-
-    if (laserTowerPrefab == null)
-    {
-        laserTowerPrefab =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Prefabs/LaserTower.prefab"
-            );
-    }
-
-    // =========================================================
-    // DEBUG
-    // =========================================================
-
-    Debug.Log(
-        "[TowerPlacementManager] Tower assets loaded | " +
-        $"BasicData={(defaultTowerData != null ? defaultTowerData.name : "NULL")} | " +
-        $"FastData={(fastTowerData != null ? fastTowerData.name : "NULL")} | " +
-        $"GoldData={(goldTowerData != null ? goldTowerData.name : "NULL")} | " +
-        $"CannonData={(cannonTowerData != null ? cannonTowerData.name : "NULL")} | " +
-        $"IceData={(iceTowerData != null ? iceTowerData.name : "NULL")} | " +
-        $"LaserData={(laserTowerData != null ? laserTowerData.name : "NULL")}"
-    );
-}
-
-#endif
-#if UNITY_EDITOR
-
-private void EnsureGoldTowerDataLoaded()
-{
-    // Nếu reference hiện tại đã đúng thì dùng luôn
-    if (goldTowerData != null &&
-        goldTowerData.Type == TowerType.Gold &&
-        goldTowerData.Cost > 0)
-    {
-        return;
-    }
-
-    // Tìm tất cả TowerData trong project
-    string[] guids =
-        UnityEditor.AssetDatabase.FindAssets(
-            "t:TowerData"
-        );
-
-    foreach (string guid in guids)
-    {
-        string path =
-            UnityEditor.AssetDatabase.GUIDToAssetPath(
-                guid
-            );
-
-        TowerData data =
-            UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-                path
-            );
-
-        if (data == null)
-            continue;
-
-        // Tìm đúng Gold Tower
-        if (
-            data.Type == TowerType.Gold &&
-            data.TowerName == "Gold Tower"
-        )
+        private void Awake()
         {
-            goldTowerData = data;
+            if (
+                Instance != null &&
+                Instance != this
+            )
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            Instance = this;
+
+            DontDestroyOnLoad(gameObject);
+
+#if UNITY_EDITOR
+            LoadTowerAssetsInEditor();
+            EnsureGoldTowerDataLoaded();
+#endif
+
+            EnsureUIInputSystem();
 
             Debug.Log(
-                "[TowerPlacementManager] " +
-                $"FOUND GOLD DATA | " +
-                $"Path={path} | " +
-                $"Name={data.TowerName} | " +
-                $"Type={data.Type} | " +
-                $"Cost={data.Cost} | " +
-                $"Lv1={data.GetGoldPerTick(1)} | " +
-                $"Lv2={data.GetGoldPerTick(2)} | " +
-                $"Lv3={data.GetGoldPerTick(3)}"
+                "[TowerPlacementManager] Initialized."
             );
-
-            return;
         }
-    }
-
-    Debug.LogError(
-        "[TowerPlacementManager] " +
-        "Cannot find Gold Tower Data!"
-    );
-}
-
-#endif
 
 
         // =========================================================
@@ -732,13 +471,103 @@ private void EnsureGoldTowerDataLoaded()
             _canvas =
                 FindAnyObjectByType<Canvas>();
 
-            HideOldShopPanel();
+            EnsureUIInputSystem();
 
+            HideOldShopPanel();
             EnsureExistingInfoPanel();
 
             CloseTowerInfoPanel();
-
             CloseRadialMenu();
+        }
+
+
+        // =========================================================
+        // UI INPUT SYSTEM
+        // =========================================================
+
+        private void EnsureUIInputSystem()
+        {
+            if (_canvas == null)
+            {
+                _canvas =
+                    FindAnyObjectByType<Canvas>();
+            }
+
+            // -----------------------------------------------------
+            // EVENT SYSTEM
+            // -----------------------------------------------------
+
+            EventSystem eventSystem =
+                EventSystem.current;
+
+            if (eventSystem == null)
+            {
+                eventSystem =
+                    FindAnyObjectByType<EventSystem>();
+            }
+
+            if (eventSystem == null)
+            {
+                GameObject eventSystemObject =
+                    new GameObject(
+                        "EventSystem",
+                        typeof(EventSystem)
+                    );
+
+                eventSystem =
+                    eventSystemObject.GetComponent<
+                        EventSystem
+                    >();
+
+                // Dùng InputSystem nếu package mới tồn tại.
+                #if ENABLE_INPUT_SYSTEM
+                eventSystemObject.AddComponent<
+                    UnityEngine.InputSystem.UI.InputSystemUIInputModule
+                >();
+                #else
+                eventSystemObject.AddComponent<
+                    StandaloneInputModule
+                >();
+                #endif
+
+                Debug.Log(
+                    "[TowerPlacementManager] " +
+                    "EventSystem created."
+                );
+            }
+
+            if (eventSystem != null)
+            {
+                eventSystem.enabled = true;
+            }
+
+
+            // -----------------------------------------------------
+            // CANVAS RAYCASTER
+            // -----------------------------------------------------
+
+            if (_canvas == null)
+                return;
+
+            GraphicRaycaster raycaster =
+                _canvas.GetComponent<
+                    GraphicRaycaster
+                >();
+
+            if (raycaster == null)
+            {
+                raycaster =
+                    _canvas.gameObject.AddComponent<
+                        GraphicRaycaster
+                    >();
+
+                Debug.Log(
+                    "[TowerPlacementManager] " +
+                    "GraphicRaycaster added."
+                );
+            }
+
+            raycaster.enabled = true;
         }
 
 
@@ -751,14 +580,12 @@ private void EnsureGoldTowerDataLoaded()
             if (GameManager.Instance == null)
                 return;
 
-
             if (
                 GameManager.Instance.CurrentState !=
                 GameManager.GameState.Playing
             )
             {
                 CloseRadialMenu();
-
                 CloseTowerInfoPanel();
 
                 if (_isPlacing)
@@ -769,15 +596,12 @@ private void EnsureGoldTowerDataLoaded()
                 return;
             }
 
-
             if (_isPlacing)
                 return;
-
 
             if (_infoTowerController != null)
             {
                 if (
-                    _infoTowerController == null ||
                     !_infoTowerController
                         .gameObject
                         .activeInHierarchy
@@ -794,946 +618,169 @@ private void EnsureGoldTowerDataLoaded()
 
 
         // =========================================================
-        // ENSURE INFO PANEL
+        // ASSET LOADING
         // =========================================================
 
-        private void EnsureExistingInfoPanel()
+#if UNITY_EDITOR
+
+        private void LoadTowerAssetsInEditor()
         {
-            // -----------------------------------------------------
-            // Already found
-            // -----------------------------------------------------
-
-            if (infoPanel != null)
+            if (defaultTowerData == null)
             {
-                FindInfoPanelComponents();
-                return;
-            }
-
-
-            // -----------------------------------------------------
-            // FIND CANVAS
-            // -----------------------------------------------------
-
-            if (_canvas == null)
-            {
-                _canvas =
-                    FindAnyObjectByType<Canvas>();
-            }
-
-            if (_canvas == null)
-            {
-                Debug.LogError(
-                    "[TowerPlacementManager] " +
-                    "Canvas not found."
-                );
-
-                return;
-            }
-
-
-            // -----------------------------------------------------
-            // FIND GAMEPLAY HUD
-            // -----------------------------------------------------
-
-            Transform gameplayHUD =
-                _canvas.transform.Find(
-                    "GameplayHUDPanel"
-                );
-
-            if (gameplayHUD == null)
-            {
-                Debug.LogError(
-                    "[TowerPlacementManager] " +
-                    "GameplayHUDPanel not found."
-                );
-
-                return;
-            }
-
-
-            // -----------------------------------------------------
-            // IMPORTANT:
-            // ONLY USE ONE INFO PANEL.
-            // -----------------------------------------------------
-
-            Transform existingInfoPanel =
-                gameplayHUD.Find(
-                    "InfoPanel"
-                );
-
-
-            // -----------------------------------------------------
-            // ASK UIMANAGER TO CREATE IT
-            // -----------------------------------------------------
-
-            if (existingInfoPanel == null)
-            {
-                UIManager uiManager =
-                    FindAnyObjectByType<UIManager>();
-
-                if (uiManager != null)
-                {
-                    uiManager.EnsureInfoPanel();
-
-                    existingInfoPanel =
-                        gameplayHUD.Find(
-                            "InfoPanel"
+                defaultTowerData =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<TowerData>(
+                            "Assets/ScriptableObjects/TestTowerData.asset"
                         );
-                }
             }
 
-
-            if (existingInfoPanel == null)
+            if (defaultTowerPrefab == null)
             {
-                Debug.LogError(
-                    "[TowerPlacementManager] " +
-                    "InfoPanel could not be created."
-                );
-
-                return;
+                defaultTowerPrefab =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<GameObject>(
+                            "Assets/Prefabs/Tower.prefab"
+                        );
             }
 
 
-            infoPanel =
-                existingInfoPanel.gameObject;
+            if (fastTowerData == null)
+            {
+                fastTowerData =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<TowerData>(
+                            "Assets/ScriptableObjects/FastTowerData.asset"
+                        );
+            }
+
+            if (fastTowerPrefab == null)
+            {
+                fastTowerPrefab =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<GameObject>(
+                            "Assets/Prefabs/FastTower.prefab"
+                        );
+            }
 
 
-            FindInfoPanelComponents();
+            EnsureGoldTowerDataLoaded();
 
 
-            infoPanel.SetActive(false);
+            if (cannonTowerData == null)
+            {
+                cannonTowerData =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<TowerData>(
+                            "Assets/ScriptableObjects/CannonTowerData.asset"
+                        );
+            }
+
+            if (cannonTowerPrefab == null)
+            {
+                cannonTowerPrefab =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<GameObject>(
+                            "Assets/Prefabs/CannonTower.prefab"
+                        );
+            }
+
+
+            if (iceTowerData == null)
+            {
+                iceTowerData =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<TowerData>(
+                            "Assets/ScriptableObjects/IceTowerData.asset"
+                        );
+            }
+
+            if (iceTowerPrefab == null)
+            {
+                iceTowerPrefab =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<GameObject>(
+                            "Assets/Prefabs/IceTower.prefab"
+                        );
+            }
+
+
+            if (laserTowerData == null)
+            {
+                laserTowerData =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<TowerData>(
+                            "Assets/ScriptableObjects/LaserTowerData.asset"
+                        );
+            }
+
+            if (laserTowerPrefab == null)
+            {
+                laserTowerPrefab =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<GameObject>(
+                            "Assets/Prefabs/LaserTower.prefab"
+                        );
+            }
         }
 
 
-        // =========================================================
-        // FIND INFO COMPONENTS
-        // =========================================================
-
-        private void FindInfoPanelComponents()
+        private void EnsureGoldTowerDataLoaded()
         {
-            if (infoPanel == null)
+            if (
+                goldTowerData != null &&
+                goldTowerData.Type == TowerType.Gold
+            )
+            {
                 return;
-
-
-            // =====================================================
-            // PANEL
-            // =====================================================
-
-            RectTransform panelRect =
-                infoPanel.GetComponent<
-                    RectTransform
-                >();
-
-            if (panelRect != null)
-            {
-                panelRect.anchorMin =
-                    new Vector2(
-                        1f,
-                        0.5f
-                    );
-
-                panelRect.anchorMax =
-                    new Vector2(
-                        1f,
-                        0.5f
-                    );
-
-                panelRect.pivot =
-                    new Vector2(
-                        1f,
-                        0.5f
-                    );
-
-                panelRect.anchoredPosition =
-                    new Vector2(
-                        -25f,
-                        0f
-                    );
-
-                panelRect.sizeDelta =
-                    new Vector2(
-                        420f,
-                        320f
-                    );
             }
 
-
-            // =====================================================
-            // BACKGROUND
-            // =====================================================
-
-            Image panelImage =
-                infoPanel.GetComponent<Image>();
-
-            if (panelImage != null)
-            {
-                panelImage.color =
-                    new Color(
-                        0.04f,
-                        0.06f,
-                        0.10f,
-                        0.97f
-                    );
-
-                panelImage.raycastTarget =
-                    true;
-            }
-
-
-            // =====================================================
-            // TITLE
-            // =====================================================
-
-            Transform titleTransform =
-                infoPanel.transform.Find(
-                    "Title"
+            string[] guids =
+                UnityEditor.AssetDatabase.FindAssets(
+                    "t:TowerData"
                 );
 
-            if (titleTransform != null)
+            foreach (string guid in guids)
             {
-                _towerInfoTitle =
-                    titleTransform.GetComponent<
-                        TextMeshProUGUI
-                    >();
+                string path =
+                    UnityEditor.AssetDatabase
+                        .GUIDToAssetPath(guid);
 
-                RectTransform titleRect =
-                    titleTransform.GetComponent<
-                        RectTransform
-                    >();
+                TowerData data =
+                    UnityEditor.AssetDatabase
+                        .LoadAssetAtPath<TowerData>(
+                            path
+                        );
 
-                if (titleRect != null)
+                if (data == null)
+                    continue;
+
+                if (data.Type == TowerType.Gold)
                 {
-                    titleRect.anchorMin =
-                        new Vector2(
-                            0f,
-                            1f
-                        );
-
-                    titleRect.anchorMax =
-                        new Vector2(
-                            1f,
-                            1f
-                        );
-
-                    titleRect.pivot =
-                        new Vector2(
-                            0.5f,
-                            1f
-                        );
-
-                    titleRect.offsetMin =
-                        new Vector2(
-                            25f,
-                            -60f
-                        );
-
-                    titleRect.offsetMax =
-                        new Vector2(
-                            -55f,
-                            -12f
-                        );
-                }
-
-
-                if (_towerInfoTitle != null)
-                {
-                    _towerInfoTitle.fontSize =
-                        21f;
-
-                    _towerInfoTitle.fontStyle =
-                        FontStyles.Bold;
-
-                    _towerInfoTitle.color =
-                        Color.white;
-
-                    _towerInfoTitle.alignment =
-                        TextAlignmentOptions.Center;
-
-                    _towerInfoTitle.enableWordWrapping =
-                        false;
-
-                    _towerInfoTitle.overflowMode =
-                        TextOverflowModes.Ellipsis;
-
-                    _towerInfoTitle.raycastTarget =
-                        false;
-                }
-            }
-
-
-            // =====================================================
-            // STATS
-            // =====================================================
-
-            Transform statsTransform =
-                infoPanel.transform.Find(
-                    "Stats"
-                );
-
-            if (statsTransform != null)
-            {
-                _towerInfoStats =
-                    statsTransform.GetComponent<
-                        TextMeshProUGUI
-                    >();
-
-                RectTransform statsRect =
-                    statsTransform.GetComponent<
-                        RectTransform
-                    >();
-
-                if (statsRect != null)
-                {
-                    statsRect.anchorMin =
-                        new Vector2(
-                            0f,
-                            0f
-                        );
-
-                    statsRect.anchorMax =
-                        new Vector2(
-                            1f,
-                            1f
-                        );
-
-                    statsRect.pivot =
-                        new Vector2(
-                            0.5f,
-                            0.5f
-                        );
-
-                    statsRect.offsetMin =
-                        new Vector2(
-                            30f,
-                            105f
-                        );
-
-                    statsRect.offsetMax =
-                        new Vector2(
-                            -30f,
-                            -65f
-                        );
-                }
-
-
-                if (_towerInfoStats != null)
-                {
-                    _towerInfoStats.fontSize =
-                        18f;
-
-                    _towerInfoStats.fontStyle =
-                        FontStyles.Bold;
-
-                    _towerInfoStats.color =
-                        Color.white;
-
-                    _towerInfoStats.alignment =
-                        TextAlignmentOptions.TopLeft;
-
-                    _towerInfoStats.enableWordWrapping =
-                        false;
-
-                    _towerInfoStats.overflowMode =
-                        TextOverflowModes.Overflow;
-
-                    _towerInfoStats.lineSpacing =
-                        8f;
-
-                    _towerInfoStats.raycastTarget =
-                        false;
-                }
-            }
-
-
-            // =====================================================
-            // UPGRADE BUTTON
-            // =====================================================
-
-            Transform upgradeTransform =
-                infoPanel.transform.Find(
-                    "UpgradeButton"
-                );
-
-            if (upgradeTransform != null)
-            {
-                _upgradeButton =
-                    upgradeTransform.GetComponent<
-                        Button
-                    >();
-
-                RectTransform upgradeRect =
-                    upgradeTransform.GetComponent<
-                        RectTransform
-                    >();
-
-                if (upgradeRect != null)
-                {
-                    upgradeRect.anchorMin =
-                        new Vector2(
-                            0.5f,
-                            0f
-                        );
-
-                    upgradeRect.anchorMax =
-                        new Vector2(
-                            0.5f,
-                            0f
-                        );
-
-                    upgradeRect.pivot =
-                        new Vector2(
-                            0.5f,
-                            0f
-                        );
-
-                    upgradeRect.anchoredPosition =
-                        new Vector2(
-                            0f,
-                            58f
-                        );
-
-                    upgradeRect.sizeDelta =
-                        new Vector2(
-                            350f,
-                            45f
-                        );
-                }
-
-
-                if (_upgradeButton != null)
-                {
-                    _upgradeButton.onClick
-                        .RemoveListener(
-                            OnUpgradeButtonClicked
-                        );
-
-                    _upgradeButton.onClick
-                        .AddListener(
-                            OnUpgradeButtonClicked
-                        );
-
-
-                    _upgradeButtonText =
-                        _upgradeButton
-                            .GetComponentInChildren<
-                                TextMeshProUGUI
-                            >();
-
-
-                    if (_upgradeButtonText != null)
-                    {
-                        _upgradeButtonText.fontSize =
-                            16f;
-
-                        _upgradeButtonText.fontStyle =
-                            FontStyles.Bold;
-
-                        _upgradeButtonText.color =
-                            Color.white;
-
-                        _upgradeButtonText.alignment =
-                            TextAlignmentOptions.Center;
-
-                        _upgradeButtonText
-                            .enableWordWrapping =
-                            false;
-
-                        _upgradeButtonText
-                            .raycastTarget =
-                            false;
-                    }
-                }
-            }
-
-
-            // =====================================================
-            // SELL
-            // =====================================================
-
-            EnsureSellButton();
-        }
-
-
-        // =========================================================
-        // SELL BUTTON
-        // =========================================================
-
-        private void EnsureSellButton()
-        {
-            if (infoPanel == null)
-                return;
-
-
-            Transform sellTransform =
-                infoPanel.transform.Find(
-                    "SellButton"
-                );
-
-
-            // =====================================================
-            // EXISTING
-            // =====================================================
-
-            if (sellTransform != null)
-            {
-                _sellInfoButton =
-                    sellTransform.GetComponent<Button>();
-
-
-                if (_sellInfoButton != null)
-                {
-                    _sellInfoButton.onClick
-                        .RemoveListener(
-                            OnSellInfoButtonClicked
-                        );
-
-                    _sellInfoButton.onClick
-                        .AddListener(
-                            OnSellInfoButtonClicked
-                        );
-
-
-                    _sellButtonText =
-                        _sellInfoButton
-                            .GetComponentInChildren<
-                                TextMeshProUGUI
-                            >();
-
-
-                    RectTransform rect =
-                        sellTransform.GetComponent<
-                            RectTransform
-                        >();
-
-                    if (rect != null)
-                    {
-                        rect.anchorMin =
-                            new Vector2(
-                                0.5f,
-                                0f
-                            );
-
-                        rect.anchorMax =
-                            new Vector2(
-                                0.5f,
-                                0f
-                            );
-
-                        rect.pivot =
-                            new Vector2(
-                                0.5f,
-                                0f
-                            );
-
-                        rect.anchoredPosition =
-                            new Vector2(
-                                0f,
-                                8f
-                            );
-
-                        rect.sizeDelta =
-                            new Vector2(
-                                350f,
-                                45f
-                            );
-                    }
-
-
-                    if (_sellButtonText != null)
-                    {
-                        _sellButtonText.fontSize =
-                            16f;
-
-                        _sellButtonText.fontStyle =
-                            FontStyles.Bold;
-
-                        _sellButtonText.color =
-                            Color.white;
-
-                        _sellButtonText.alignment =
-                            TextAlignmentOptions.Center;
-
-                        _sellButtonText
-                            .enableWordWrapping =
-                            false;
-
-                        _sellButtonText
-                            .raycastTarget =
-                            false;
-                    }
+                    goldTowerData = data;
 
                     return;
                 }
             }
 
-
-            // =====================================================
-            // CREATE
-            // =====================================================
-
-            GameObject buttonObject =
-                new GameObject(
-                    "SellButton",
-                    typeof(RectTransform),
-                    typeof(CanvasRenderer),
-                    typeof(Image),
-                    typeof(Button)
-                );
-
-
-            buttonObject.transform.SetParent(
-                infoPanel.transform,
-                false
+            Debug.LogError(
+                "[TowerPlacementManager] " +
+                "Cannot find Gold TowerData."
             );
-
-
-            RectTransform buttonRect =
-                buttonObject.GetComponent<
-                    RectTransform
-                >();
-
-            buttonRect.anchorMin =
-                new Vector2(
-                    0.5f,
-                    0f
-                );
-
-            buttonRect.anchorMax =
-                new Vector2(
-                    0.5f,
-                    0f
-                );
-
-            buttonRect.pivot =
-                new Vector2(
-                    0.5f,
-                    0f
-                );
-
-            buttonRect.anchoredPosition =
-                new Vector2(
-                    0f,
-                    8f
-                );
-
-            buttonRect.sizeDelta =
-                new Vector2(
-                    350f,
-                    45f
-                );
-
-
-            Image image =
-                buttonObject.GetComponent<Image>();
-
-            image.color =
-                sellButtonColor;
-
-            image.raycastTarget =
-                true;
-
-
-            _sellInfoButton =
-                buttonObject.GetComponent<Button>();
-
-
-            ColorBlock colors =
-                _sellInfoButton.colors;
-
-            colors.normalColor =
-                sellButtonColor;
-
-            colors.highlightedColor =
-                sellButtonHighlightColor;
-
-            colors.pressedColor =
-                new Color(
-                    sellButtonColor.r * 0.7f,
-                    sellButtonColor.g * 0.7f,
-                    sellButtonColor.b * 0.7f,
-                    1f
-                );
-
-            colors.selectedColor =
-                sellButtonHighlightColor;
-
-            colors.disabledColor =
-                new Color(
-                    0.25f,
-                    0.25f,
-                    0.25f,
-                    0.8f
-                );
-
-            _sellInfoButton.colors =
-                colors;
-
-
-            // =====================================================
-            // SELL TEXT
-            // =====================================================
-
-            GameObject textObject =
-                new GameObject(
-                    "Text",
-                    typeof(RectTransform)
-                );
-
-
-            textObject.transform.SetParent(
-                buttonObject.transform,
-                false
-            );
-
-
-            RectTransform textRect =
-                textObject.GetComponent<
-                    RectTransform
-                >();
-
-            textRect.anchorMin =
-                Vector2.zero;
-
-            textRect.anchorMax =
-                Vector2.one;
-
-            textRect.offsetMin =
-                Vector2.zero;
-
-            textRect.offsetMax =
-                Vector2.zero;
-
-
-            TextMeshProUGUI text =
-                textObject.AddComponent<
-                    TextMeshProUGUI
-                >();
-
-
-            text.text =
-                "SELL";
-
-            text.font =
-                TMP_Settings.defaultFontAsset;
-
-            text.fontSize =
-                16f;
-
-            text.fontStyle =
-                FontStyles.Bold;
-
-            text.color =
-                Color.white;
-
-            text.alignment =
-                TextAlignmentOptions.Center;
-
-            text.raycastTarget =
-                false;
-
-            text.enableWordWrapping =
-                false;
-
-
-            _sellButtonText =
-                text;
-
-
-            _sellInfoButton.onClick
-                .AddListener(
-                    OnSellInfoButtonClicked
-                );
         }
+
+#endif
 
 
         // =========================================================
-        // INVESTMENT
-        // =========================================================
-
-        private void RegisterTowerInvestment(
-            GameObject tower,
-            int purchaseCost)
-        {
-            if (tower == null)
-                return;
-
-
-            _towerInvestments.Remove(
-                tower
-            );
-
-
-            _towerInvestments.Add(
-                tower,
-                new TowerInvestmentData(
-                    purchaseCost
-                )
-            );
-
-
-            Debug.Log(
-                "[SELL] REGISTER | " +
-                $"Tower={tower.name} | " +
-                $"Purchase={purchaseCost}"
-            );
-        }
-
-
-        private void AddUpgradeInvestment(
-            GameObject tower,
-            int upgradeCost)
-        {
-            if (tower == null)
-                return;
-
-
-            upgradeCost =
-                Mathf.Max(
-                    0,
-                    upgradeCost
-                );
-
-
-            TowerInvestmentData investment;
-
-
-            if (
-                !_towerInvestments.TryGetValue(
-                    tower,
-                    out investment
-                )
-            )
-            {
-                TowerController controller =
-                    tower.GetComponent<
-                        TowerController
-                    >();
-
-
-                int purchaseCost =
-                    controller != null &&
-                    controller.TowerData != null
-                        ? controller.TowerData.Cost
-                        : 0;
-
-
-                investment =
-                    new TowerInvestmentData(
-                        purchaseCost
-                    );
-
-
-                _towerInvestments.Add(
-                    tower,
-                    investment
-                );
-            }
-
-
-            investment.AddUpgrade(
-                upgradeCost
-            );
-
-
-            Debug.Log(
-                "[SELL] UPGRADE | " +
-                $"Tower={tower.name} | " +
-                $"Upgrade={upgradeCost} | " +
-                $"Total={investment.TotalInvested}"
-            );
-        }
-
-
-        private TowerInvestmentData GetInvestment(
-            GameObject tower)
-        {
-            if (tower == null)
-                return null;
-
-
-            TowerInvestmentData investment;
-
-
-            if (
-                _towerInvestments.TryGetValue(
-                    tower,
-                    out investment
-                )
-            )
-            {
-                return investment;
-            }
-
-
-            return null;
-        }
-
-
-        private int GetTotalInvestedCost(
-            GameObject tower)
-        {
-            TowerInvestmentData investment =
-                GetInvestment(
-                    tower
-                );
-
-
-            if (investment != null)
-            {
-                return investment.TotalInvested;
-            }
-
-
-            TowerController controller =
-                tower != null
-                    ? tower.GetComponent<
-                        TowerController
-                    >()
-                    : null;
-
-
-            if (
-                controller == null ||
-                controller.TowerData == null
-            )
-            {
-                return 0;
-            }
-
-
-            return controller.TowerData.Cost;
-        }
-
-
-        private int GetSellRefund(
-            GameObject tower)
-        {
-            int totalInvested =
-                GetTotalInvestedCost(
-                    tower
-                );
-
-
-            return Mathf.Max(
-                0,
-                Mathf.RoundToInt(
-                    totalInvested *
-                    sellRefundRate
-                )
-            );
-        }
-
-
-        // =========================================================
-        // RADIAL MENU
+        // OPEN RADIAL MENU
         // =========================================================
 
         public void OpenRadialMenu(
-            BuildSite site)
+            BuildSite site
+        )
         {
             if (site == null)
                 return;
-
 
             if (
                 site.IsOccupied &&
@@ -1745,57 +792,32 @@ private void EnsureGoldTowerDataLoaded()
                         TowerController
                     >();
 
-
                 if (controller != null)
                 {
                     CloseRadialMenu();
-
 
                     ShowTowerInfoPanel(
                         site,
                         controller
                     );
 
-
                     return;
                 }
             }
 
-
-            if (
-                _radialMenu != null &&
-                _radialMenu.activeSelf &&
-                _selectedBuildSite == site
-            )
-            {
-                CloseRadialMenu();
-
-                return;
-            }
-
-
             CloseTowerInfoPanel();
-
 
             _selectedBuildSite =
                 site;
 
-
             CreateRadialMenu();
-
 
             if (_radialMenu == null)
                 return;
 
+            _radialMenu.transform.SetAsLastSibling();
 
-            _radialMenu.transform
-                .SetAsLastSibling();
-
-
-            _radialMenu.SetActive(
-                true
-            );
-
+            _radialMenu.SetActive(true);
 
             PositionRadialMenu(
                 site
@@ -1809,19 +831,20 @@ private void EnsureGoldTowerDataLoaded()
 
         private void CreateRadialMenu()
         {
-            #if UNITY_EDITOR
-    EnsureGoldTowerDataLoaded();
+            EnsureUIInputSystem();
+
+#if UNITY_EDITOR
+            EnsureGoldTowerDataLoaded();
 #endif
+
             if (_radialMenu != null)
                 return;
-
 
             if (_canvas == null)
             {
                 _canvas =
                     FindAnyObjectByType<Canvas>();
             }
-
 
             if (_canvas == null)
             {
@@ -1834,24 +857,27 @@ private void EnsureGoldTowerDataLoaded()
             }
 
 
+            // -----------------------------------------------------
+            // MENU ROOT
+            // -----------------------------------------------------
+
             _radialMenu =
                 new GameObject(
                     "TowerRadialMenu",
                     typeof(RectTransform)
                 );
 
-
             _radialMenu.transform.SetParent(
                 _canvas.transform,
                 false
             );
 
+            _radialMenu.transform.SetAsLastSibling();
 
             RectTransform menuRect =
                 _radialMenu.GetComponent<
                     RectTransform
                 >();
-
 
             menuRect.anchorMin =
                 new Vector2(
@@ -1871,15 +897,19 @@ private void EnsureGoldTowerDataLoaded()
                     0.5f
                 );
 
-
             menuRect.sizeDelta =
                 new Vector2(
                     radialMenuRadius * 2f +
                     radialButtonSize,
+
                     radialMenuRadius * 2f +
                     radialButtonSize
                 );
 
+
+            // -----------------------------------------------------
+            // BUTTONS
+            // -----------------------------------------------------
 
             CreateRadialTowerButton(
                 "BasicTowerButton",
@@ -1888,7 +918,6 @@ private void EnsureGoldTowerDataLoaded()
                 defaultTowerPrefab,
                 180f
             );
-
 
             CreateRadialTowerButton(
                 "FastTowerButton",
@@ -1899,35 +928,31 @@ private void EnsureGoldTowerDataLoaded()
             );
 
 
-           TowerData finalGoldData = goldTowerData;
-GameObject finalGoldPrefab = goldTowerPrefab;
+            TowerData finalGoldData =
+                goldTowerData;
+
+            GameObject finalGoldPrefab =
+                goldTowerPrefab;
 
 #if UNITY_EDITOR
-if (finalGoldData == null)
-{
-    finalGoldData =
-        UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-            "Assets/ScriptableObjects/GoldTowerData.asset"
-        );
-}
 
-if (finalGoldPrefab == null)
-{
-    finalGoldPrefab =
-        UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-            "Assets/Prefabs/GoldTower.prefab"
-        );
-}
+            if (finalGoldData == null)
+            {
+                EnsureGoldTowerDataLoaded();
+
+                finalGoldData =
+                    goldTowerData;
+            }
+
 #endif
 
-CreateRadialTowerButton(
-    "GoldTowerButton",
-    "GOLD",
-    finalGoldData,
-    finalGoldPrefab,
-    60f
-);
-
+            CreateRadialTowerButton(
+                "GoldTowerButton",
+                "GOLD",
+                finalGoldData,
+                finalGoldPrefab,
+                60f
+            );
 
             CreateRadialTowerButton(
                 "CannonTowerButton",
@@ -1937,7 +962,6 @@ CreateRadialTowerButton(
                 0f
             );
 
-
             CreateRadialTowerButton(
                 "IceTowerButton",
                 "ICE",
@@ -1945,7 +969,6 @@ CreateRadialTowerButton(
                 iceTowerPrefab,
                 300f
             );
-
 
             CreateRadialTowerButton(
                 "LaserTowerButton",
@@ -1961,7 +984,7 @@ CreateRadialTowerButton(
 
 
         // =========================================================
-        // RADIAL BUTTON
+        // CREATE RADIAL TOWER BUTTON
         // =========================================================
 
         private void CreateRadialTowerButton(
@@ -1969,22 +992,9 @@ CreateRadialTowerButton(
             string title,
             TowerData data,
             GameObject prefab,
-            float angle)
-        {
-            if (title == "GOLD")
-{
-    Debug.Log(
-        "[GOLD BUTTON] " +
-        (
-            data != null
-                ? $"DATA OK | " +
-                  $"Name={data.TowerName} | " +
-                  $"Type={data.Type} | " +
-                  $"Cost={data.Cost}"
-                : "DATA IS NULL"
+            float angle
         )
-    );
-}
+        {
             GameObject buttonObject =
                 new GameObject(
                     objectName,
@@ -1994,18 +1004,20 @@ CreateRadialTowerButton(
                     typeof(Button)
                 );
 
-
             buttonObject.transform.SetParent(
                 _radialMenu.transform,
                 false
             );
 
 
+            // -----------------------------------------------------
+            // RECT
+            // -----------------------------------------------------
+
             RectTransform rect =
                 buttonObject.GetComponent<
                     RectTransform
                 >();
-
 
             rect.anchorMin =
                 new Vector2(
@@ -2025,21 +1037,20 @@ CreateRadialTowerButton(
                     0.5f
                 );
 
-
             float radians =
                 angle *
                 Mathf.Deg2Rad;
-
 
             rect.anchoredPosition =
                 new Vector2(
                     Mathf.Cos(radians) *
                     radialMenuRadius,
+
                     Mathf.Sin(radians) *
                     radialMenuRadius
                 );
 
-
+            // Tăng hitbox
             rect.sizeDelta =
                 new Vector2(
                     radialButtonSize,
@@ -2047,27 +1058,39 @@ CreateRadialTowerButton(
                 );
 
 
-            Image image =
-                buttonObject.GetComponent<Image>();
+            // -----------------------------------------------------
+            // IMAGE
+            // -----------------------------------------------------
 
+            Image image =
+                buttonObject.GetComponent<
+                    Image
+                >();
 
             image.color =
                 radialButtonColor;
 
-
             image.raycastTarget =
                 true;
 
+
+            // -----------------------------------------------------
+            // BUTTON
+            // -----------------------------------------------------
 
             Button button =
                 buttonObject.GetComponent<
                     Button
                 >();
 
+            button.enabled =
+                true;
+
+            button.interactable =
+                true;
 
             ColorBlock colors =
                 button.colors;
-
 
             colors.normalColor =
                 radialButtonColor;
@@ -2086,14 +1109,21 @@ CreateRadialTowerButton(
             colors.selectedColor =
                 radialButtonHighlightColor;
 
+            colors.disabledColor =
+                new Color(
+                    0.25f,
+                    0.25f,
+                    0.25f,
+                    0.8f
+                );
 
             button.colors =
                 colors;
 
 
-            // =====================================================
+            // -----------------------------------------------------
             // ICON
-            // =====================================================
+            // -----------------------------------------------------
 
             GameObject iconObject =
                 new GameObject(
@@ -2102,31 +1132,27 @@ CreateRadialTowerButton(
                     typeof(Image)
                 );
 
-
             iconObject.transform.SetParent(
                 buttonObject.transform,
                 false
             );
-
 
             RectTransform iconRect =
                 iconObject.GetComponent<
                     RectTransform
                 >();
 
-
             iconRect.anchorMin =
                 new Vector2(
-                    0.12f,
+                    0.10f,
                     0.28f
                 );
 
             iconRect.anchorMax =
                 new Vector2(
-                    0.88f,
-                    0.9f
+                    0.90f,
+                    0.92f
                 );
-
 
             iconRect.offsetMin =
                 Vector2.zero;
@@ -2134,17 +1160,17 @@ CreateRadialTowerButton(
             iconRect.offsetMax =
                 Vector2.zero;
 
-
             Image icon =
-                iconObject.GetComponent<Image>();
-
+                iconObject.GetComponent<
+                    Image
+                >();
 
             icon.preserveAspect =
                 true;
 
+            // KHÔNG chặn click
             icon.raycastTarget =
                 false;
-
 
             if (prefab != null)
             {
@@ -2152,7 +1178,6 @@ CreateRadialTowerButton(
                     prefab.GetComponent<
                         SpriteRenderer
                     >();
-
 
                 if (sr != null)
                 {
@@ -2162,9 +1187,9 @@ CreateRadialTowerButton(
             }
 
 
-            // =====================================================
+            // -----------------------------------------------------
             // TEXT
-            // =====================================================
+            // -----------------------------------------------------
 
             GameObject textObject =
                 new GameObject(
@@ -2172,18 +1197,15 @@ CreateRadialTowerButton(
                     typeof(RectTransform)
                 );
 
-
             textObject.transform.SetParent(
                 buttonObject.transform,
                 false
             );
 
-
             RectTransform textRect =
                 textObject.GetComponent<
                     RectTransform
                 >();
-
 
             textRect.anchorMin =
                 new Vector2(
@@ -2194,9 +1216,8 @@ CreateRadialTowerButton(
             textRect.anchorMax =
                 new Vector2(
                     1f,
-                    0.32f
+                    0.30f
                 );
-
 
             textRect.offsetMin =
                 Vector2.zero;
@@ -2204,44 +1225,27 @@ CreateRadialTowerButton(
             textRect.offsetMax =
                 Vector2.zero;
 
-
             TextMeshProUGUI text =
                 textObject.AddComponent<
                     TextMeshProUGUI
                 >();
 
+            string towerName =
+                data != null
+                    ? data.TowerName
+                    : title;
 
-        string towerName;
-
-int cost;
-
-if (data != null)
-{
-    towerName =
-        data.TowerName;
-
-    cost =
-        data.Cost;
-}
-else
-{
-    towerName =
-        title;
-
-    cost =
-        0;
-
-    Debug.LogError(
-        "[TowerPlacementManager] " +
-        $"{title} TowerData is NULL!"
-    );
-}
-
+            int cost =
+                data != null
+                    ? data.Cost
+                    : 0;
 
             text.text =
                 $"{towerName}\n" +
                 $"<color=#FFD700>{cost} G</color>";
 
+            text.font =
+                TMP_Settings.defaultFontAsset;
 
             text.fontSize =
                 11f;
@@ -2255,23 +1259,28 @@ else
             text.alignment =
                 TextAlignmentOptions.Center;
 
-            text.raycastTarget =
-                false;
-
             text.enableWordWrapping =
                 false;
 
+            // KHÔNG chặn click
+            text.raycastTarget =
+                false;
+
+
+            // -----------------------------------------------------
+            // CLICK
+            // -----------------------------------------------------
 
             TowerData targetData =
                 data;
 
-
             GameObject targetPrefab =
                 prefab;
 
+            button.onClick.RemoveAllListeners();
 
             button.onClick.AddListener(
-                () =>
+                delegate
                 {
                     OnTowerButtonClicked(
                         targetData,
@@ -2287,7 +1296,8 @@ else
         // =========================================================
 
         private void PositionRadialMenu(
-            BuildSite site)
+            BuildSite site
+        )
         {
             if (
                 _radialMenu == null ||
@@ -2298,16 +1308,13 @@ else
                 return;
             }
 
-
             RectTransform canvasRect =
                 _canvas.GetComponent<
                     RectTransform
                 >();
 
-
             if (canvasRect == null)
                 return;
-
 
             Camera eventCamera =
                 _canvas.renderMode ==
@@ -2315,260 +1322,229 @@ else
                     ? null
                     : _canvas.worldCamera;
 
-
             Camera worldCamera =
                 Camera.main;
 
-
             if (worldCamera == null)
                 return;
-
 
             Vector2 screenPosition =
                 worldCamera.WorldToScreenPoint(
                     site.transform.position
                 );
 
-
             Vector2 localPosition;
-
 
             if (
                 !RectTransformUtility
-                .ScreenPointToLocalPointInRectangle(
-                    canvasRect,
-                    screenPosition,
-                    eventCamera,
-                    out localPosition
-                )
+                    .ScreenPointToLocalPointInRectangle(
+                        canvasRect,
+                        screenPosition,
+                        eventCamera,
+                        out localPosition
+                    )
             )
             {
                 return;
             }
-
 
             RectTransform menuRect =
                 _radialMenu.GetComponent<
                     RectTransform
                 >();
 
-
             if (menuRect == null)
                 return;
 
-
-            menuRect.anchorMin =
-                new Vector2(
-                    0.5f,
-                    0.5f
-                );
-
-            menuRect.anchorMax =
-                new Vector2(
-                    0.5f,
-                    0.5f
-                );
-
-            menuRect.pivot =
-                new Vector2(
-                    0.5f,
-                    0.5f
-                );
-
-
             menuRect.anchoredPosition =
                 localPosition;
+
+            // Đảm bảo nằm trên cùng
+            _radialMenu.transform.SetAsLastSibling();
         }
 
 
         // =========================================================
-        // TOWER BUTTON
+        // TOWER BUTTON CLICK
         // =========================================================
 
-       private void OnTowerButtonClicked(
-    TowerData data,
-    GameObject prefab)
-{
-    if (_selectedBuildSite == null)
-    {
-        CloseRadialMenu();
-        return;
-    }
-
-    // =========================================================
-    // GOLD FALLBACK
-    // =========================================================
-
-    if (data == null &&
-        prefab != null)
-    {
-        TowerController prefabController =
-            prefab.GetComponent<TowerController>();
-
-        if (prefabController != null &&
-            prefabController.TowerData != null)
+        private void OnTowerButtonClicked(
+            TowerData data,
+            GameObject prefab
+        )
         {
-            data =
-                prefabController.TowerData;
-        }
-    }
+            if (_selectedBuildSite == null)
+            {
+                return;
+            }
 
-    // =========================================================
-    // GOLD DATA FALLBACK
-    // =========================================================
 
-    if (data == null)
-    {
-#if UNITY_EDITOR
-        if (prefab != null &&
-            prefab.name.Contains("Gold"))
-        {
-            data =
-                UnityEditor.AssetDatabase.LoadAssetAtPath<TowerData>(
-                    "Assets/ScriptableObjects/GoldTowerData.asset"
+            // -----------------------------------------------------
+            // DATA FALLBACK
+            // -----------------------------------------------------
+
+            if (
+                data == null &&
+                prefab != null
+            )
+            {
+                TowerController prefabController =
+                    prefab.GetComponent<
+                        TowerController
+                    >();
+
+                if (
+                    prefabController != null &&
+                    prefabController.TowerData != null
+                )
+                {
+                    data =
+                        prefabController.TowerData;
+                }
+            }
+
+
+            // -----------------------------------------------------
+            // CHECK DATA
+            // -----------------------------------------------------
+
+            if (data == null)
+            {
+                Debug.LogError(
+                    "[TowerPlacementManager] " +
+                    "TowerData is NULL!"
                 );
+
+                ShowWarningMessage(
+                    "Tower data is missing!"
+                );
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // CHECK PREFAB
+            // -----------------------------------------------------
+
+            if (prefab == null)
+            {
+                Debug.LogError(
+                    "[TowerPlacementManager] " +
+                    $"{data.TowerName} prefab is NULL!"
+                );
+
+                ShowWarningMessage(
+                    "Tower prefab is missing!"
+                );
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // CHECK SITE
+            // -----------------------------------------------------
+
+            if (
+                _selectedBuildSite.IsOccupied
+            )
+            {
+                ShowWarningMessage(
+                    "Build site is occupied!"
+                );
+
+                CloseRadialMenu();
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // CHECK GAME MANAGER
+            // -----------------------------------------------------
+
+            if (
+                GameManager.Instance == null
+            )
+            {
+                Debug.LogError(
+                    "[TowerPlacementManager] " +
+                    "GameManager.Instance is NULL!"
+                );
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // CHECK GOLD
+            // -----------------------------------------------------
+
+            if (
+                GameManager.Instance.CurrentGold <
+                data.Cost
+            )
+            {
+                ShowWarningMessage(
+                    "Insufficient gold!"
+                );
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // DIRECT PURCHASE
+            // -----------------------------------------------------
+
+            BuildTowerAtSite(
+                _selectedBuildSite,
+                data,
+                prefab
+            );
         }
-#endif
-    }
-
-    // =========================================================
-    // CHECK DATA
-    // =========================================================
-
-    if (data == null)
-    {
-        Debug.LogError(
-            "[TowerPlacementManager] GOLD TowerData is NULL!"
-        );
-
-        ShowWarningMessage(
-            "Gold Tower data is missing!"
-        );
-
-        CloseRadialMenu();
-        return;
-    }
-
-    // =========================================================
-    // CHECK PREFAB
-    // =========================================================
-
-    if (prefab == null)
-    {
-        Debug.LogError(
-            $"[TowerPlacementManager] " +
-            $"{data.TowerName} prefab is NULL!"
-        );
-
-        ShowWarningMessage(
-            "Gold Tower prefab is missing!"
-        );
-
-        return;
-    }
-
-    // =========================================================
-    // CHECK SITE
-    // =========================================================
-
-    if (_selectedBuildSite.IsOccupied)
-    {
-        ShowWarningMessage(
-            "Build site is occupied!"
-        );
-
-        return;
-    }
-
-    // =========================================================
-    // CHECK GOLD
-    // =========================================================
-
-    if (
-        GameManager.Instance != null &&
-        GameManager.Instance.CurrentGold < data.Cost
-    )
-    {
-        ShowWarningMessage(
-            "Insufficient gold!"
-        );
-
-        return;
-    }
-
-    // =========================================================
-    // BUILD
-    // =========================================================
-
-    BuildTowerAtSite(
-        _selectedBuildSite,
-        data,
-        prefab
-    );
-}
 
 
         // =========================================================
         // GET / CREATE TOWER CONTROLLER
         // =========================================================
 
-       private TowerController GetOrCreateTowerController(
-    GameObject tower,
-    TowerData data)
-{
-    if (tower == null)
-    {
-        Debug.LogError(
-            "[TowerPlacementManager] Tower is NULL."
-        );
+        private TowerController GetOrCreateTowerController(
+            GameObject tower,
+            TowerData data
+        )
+        {
+            if (
+                tower == null ||
+                data == null
+            )
+            {
+                return null;
+            }
 
-        return null;
-    }
+            TowerController controller =
+                tower.GetComponent<
+                    TowerController
+                >();
 
-    if (data == null)
-    {
-        Debug.LogError(
-            "[TowerPlacementManager] TowerData is NULL."
-        );
+            if (controller == null)
+            {
+                controller =
+                    tower.AddComponent<
+                        TowerController
+                    >();
+            }
 
-        return null;
-    }
+            controller.InitializeTowerData(
+                data
+            );
 
-    TowerController controller =
-        tower.GetComponent<TowerController>();
+            controller.enabled =
+                true;
 
-    if (controller == null)
-    {
-        controller =
-            tower.AddComponent<TowerController>();
-
-        Debug.Log(
-            $"[TowerPlacementManager] Added TowerController to {tower.name}"
-        );
-    }
-
-    // =========================================================
-    // FORCE ĐÚNG TOWER DATA VỪA ĐƯỢC MUA
-    // =========================================================
-
-    controller.InitializeTowerData(data);
-
-    controller.enabled = true;
-
-    Debug.Log(
-        $"[TowerPlacementManager] Tower initialized | " +
-        $"Tower={tower.name} | " +
-        $"Data={data.name} | " +
-        $"TowerName={data.TowerName} | " +
-        $"Type={data.Type} | " +
-        $"Cost={data.Cost} | " +
-        $"Gold Lv1={data.GetGoldPerTick(1)} | " +
-        $"Gold Lv2={data.GetGoldPerTick(2)} | " +
-        $"Gold Lv3={data.GetGoldPerTick(3)}"
-    );
-
-    return controller;
-}
+            return controller;
+        }
 
 
         // =========================================================
@@ -2578,7 +1554,8 @@ else
         private void BuildTowerAtSite(
             BuildSite site,
             TowerData data,
-            GameObject prefab)
+            GameObject prefab
+        )
         {
             if (
                 site == null ||
@@ -2590,12 +1567,33 @@ else
             }
 
 
+            // -----------------------------------------------------
+            // PAY FIRST
+            // -----------------------------------------------------
+
+            if (
+                GameManager.Instance == null
+            )
+            {
+                return;
+            }
+
+            if (
+                GameManager.Instance.CurrentGold <
+                data.Cost
+            )
+            {
+                ShowWarningMessage(
+                    "Insufficient gold!"
+                );
+
+                return;
+            }
+
             bool paid =
-                GameManager.Instance == null ||
                 GameManager.Instance.TrySpendGold(
                     data.Cost
                 );
-
 
             if (!paid)
             {
@@ -2607,6 +1605,10 @@ else
             }
 
 
+            // -----------------------------------------------------
+            // CREATE TOWER
+            // -----------------------------------------------------
+
             GameObject newTower =
                 Instantiate(
                     prefab,
@@ -2614,6 +1616,20 @@ else
                     Quaternion.identity
                 );
 
+            if (newTower == null)
+            {
+                // Hoàn tiền nếu instantiate thất bại
+                GameManager.Instance.AddGold(
+                    data.Cost
+                );
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // NAME
+            // -----------------------------------------------------
 
             newTower.name =
                 $"{data.TowerName}_" +
@@ -2625,10 +1641,13 @@ else
                     );
 
 
+            // -----------------------------------------------------
+            // REGISTER
+            // -----------------------------------------------------
+
             _placedTowers.Add(
                 newTower
             );
-
 
             RegisterTowerInvestment(
                 newTower,
@@ -2636,10 +1655,18 @@ else
             );
 
 
+            // -----------------------------------------------------
+            // OCCUPY
+            // -----------------------------------------------------
+
             site.SetOccupied(
                 newTower
             );
 
+
+            // -----------------------------------------------------
+            // CONTROLLER
+            // -----------------------------------------------------
 
             TowerController controller =
                 GetOrCreateTowerController(
@@ -2648,30 +1675,41 @@ else
                 );
 
 
+            // -----------------------------------------------------
+            // SPRITE
+            // -----------------------------------------------------
+
             CopyTowerSpriteColor(
                 newTower,
                 prefab
             );
 
 
+            // -----------------------------------------------------
+            // CLOSE MENU IMMEDIATELY
+            // -----------------------------------------------------
+
+            BuildSite purchasedSite =
+                site;
+
             CloseRadialMenu();
 
 
-            // =====================================================
-            // SHOW INFO IMMEDIATELY
-            // =====================================================
+            // -----------------------------------------------------
+            // INFO
+            // -----------------------------------------------------
 
             if (controller != null)
             {
                 ShowTowerInfoPanel(
-                    site,
+                    purchasedSite,
                     controller
                 );
 
-
                 UIManager uiManager =
-                    FindAnyObjectByType<UIManager>();
-
+                    FindAnyObjectByType<
+                        UIManager
+                    >();
 
                 if (uiManager != null)
                 {
@@ -2680,6 +1718,14 @@ else
                     );
                 }
             }
+
+
+            Debug.Log(
+                "[TowerPlacementManager] " +
+                $"TOWER PURCHASED | " +
+                $"Tower={data.TowerName} | " +
+                $"Cost={data.Cost}"
+            );
         }
 
 
@@ -2689,21 +1735,19 @@ else
 
         private void CopyTowerSpriteColor(
             GameObject target,
-            GameObject prefab)
+            GameObject prefab
+        )
         {
             if (target == null)
                 return;
-
 
             SpriteRenderer sr =
                 target.GetComponent<
                     SpriteRenderer
                 >();
 
-
             if (sr == null)
                 return;
-
 
             SpriteRenderer prefabSR =
                 prefab != null
@@ -2711,7 +1755,6 @@ else
                         SpriteRenderer
                     >()
                     : null;
-
 
             sr.color =
                 prefabSR != null
@@ -2721,12 +1764,696 @@ else
 
 
         // =========================================================
+        // INVESTMENT
+        // =========================================================
+
+        private void RegisterTowerInvestment(
+            GameObject tower,
+            int purchaseCost
+        )
+        {
+            if (tower == null)
+                return;
+
+            _towerInvestments.Remove(
+                tower
+            );
+
+            _towerInvestments.Add(
+                tower,
+                new TowerInvestmentData(
+                    purchaseCost
+                )
+            );
+        }
+
+
+        private void AddUpgradeInvestment(
+            GameObject tower,
+            int upgradeCost
+        )
+        {
+            if (tower == null)
+                return;
+
+            upgradeCost =
+                Mathf.Max(
+                    0,
+                    upgradeCost
+                );
+
+            TowerInvestmentData investment;
+
+            if (
+                !_towerInvestments.TryGetValue(
+                    tower,
+                    out investment
+                )
+            )
+            {
+                TowerController controller =
+                    tower.GetComponent<
+                        TowerController
+                    >();
+
+                int purchaseCost =
+                    controller != null &&
+                    controller.TowerData != null
+                        ? controller.TowerData.Cost
+                        : 0;
+
+                investment =
+                    new TowerInvestmentData(
+                        purchaseCost
+                    );
+
+                _towerInvestments.Add(
+                    tower,
+                    investment
+                );
+            }
+
+            investment.AddUpgrade(
+                upgradeCost
+            );
+        }
+
+
+        private TowerInvestmentData GetInvestment(
+            GameObject tower
+        )
+        {
+            if (tower == null)
+                return null;
+
+            TowerInvestmentData investment;
+
+            if (
+                _towerInvestments.TryGetValue(
+                    tower,
+                    out investment
+                )
+            )
+            {
+                return investment;
+            }
+
+            return null;
+        }
+
+
+        private int GetTotalInvestedCost(
+            GameObject tower
+        )
+        {
+            TowerInvestmentData investment =
+                GetInvestment(
+                    tower
+                );
+
+            if (investment != null)
+            {
+                return investment.TotalInvested;
+            }
+
+            TowerController controller =
+                tower != null
+                    ? tower.GetComponent<
+                        TowerController
+                    >()
+                    : null;
+
+            if (
+                controller == null ||
+                controller.TowerData == null
+            )
+            {
+                return 0;
+            }
+
+            return controller.TowerData.Cost;
+        }
+
+
+        private int GetSellRefund(
+            GameObject tower
+        )
+        {
+            int totalInvested =
+                GetTotalInvestedCost(
+                    tower
+                );
+
+            return Mathf.Max(
+                0,
+                Mathf.RoundToInt(
+                    totalInvested *
+                    sellRefundRate
+                )
+            );
+        }
+
+
+        // =========================================================
+        // INFO PANEL
+        // =========================================================
+
+        private void EnsureExistingInfoPanel()
+        {
+            if (infoPanel != null)
+            {
+                FindInfoPanelComponents();
+                return;
+            }
+
+            if (_canvas == null)
+            {
+                _canvas =
+                    FindAnyObjectByType<Canvas>();
+            }
+
+            if (_canvas == null)
+                return;
+
+            Transform gameplayHUD =
+                _canvas.transform.Find(
+                    "GameplayHUDPanel"
+                );
+
+            if (gameplayHUD == null)
+                return;
+
+            Transform existingInfoPanel =
+                gameplayHUD.Find(
+                    "InfoPanel"
+                );
+
+            if (
+                existingInfoPanel == null
+            )
+            {
+                UIManager uiManager =
+                    FindAnyObjectByType<
+                        UIManager
+                    >();
+
+                if (uiManager != null)
+                {
+                    uiManager.EnsureInfoPanel();
+
+                    existingInfoPanel =
+                        gameplayHUD.Find(
+                            "InfoPanel"
+                        );
+                }
+            }
+
+            if (
+                existingInfoPanel == null
+            )
+            {
+                return;
+            }
+
+            infoPanel =
+                existingInfoPanel.gameObject;
+
+            FindInfoPanelComponents();
+
+            infoPanel.SetActive(false);
+        }
+
+
+      private void FindInfoPanelComponents()
+{
+    if (infoPanel == null)
+        return;
+
+    // =========================================================
+    // PANEL
+    // =========================================================
+
+    RectTransform panelRect =
+        infoPanel.GetComponent<RectTransform>();
+
+    if (panelRect != null)
+    {
+        panelRect.anchorMin =
+            new Vector2(1f, 0.5f);
+
+        panelRect.anchorMax =
+            new Vector2(1f, 0.5f);
+
+        panelRect.pivot =
+            new Vector2(1f, 0.5f);
+
+        panelRect.anchoredPosition =
+            new Vector2(-25f, 0f);
+
+        // Panel vừa đủ cho toàn bộ nội dung
+        panelRect.sizeDelta =
+            new Vector2(430f, 330f);
+    }
+
+    // =========================================================
+    // BACKGROUND
+    // =========================================================
+
+    Image panelImage =
+        infoPanel.GetComponent<Image>();
+
+    if (panelImage != null)
+    {
+        panelImage.raycastTarget = true;
+    }
+
+    // =========================================================
+    // TITLE
+    // =========================================================
+
+    Transform titleTransform =
+        infoPanel.transform.Find("Title");
+
+    if (titleTransform != null)
+    {
+        _towerInfoTitle =
+            titleTransform.GetComponent<TextMeshProUGUI>();
+
+        RectTransform titleRect =
+            titleTransform.GetComponent<RectTransform>();
+
+        if (titleRect != null)
+        {
+            titleRect.anchorMin =
+                new Vector2(0f, 0.8f);
+
+            titleRect.anchorMax =
+                new Vector2(1f, 0.96f);
+
+            titleRect.offsetMin =
+                new Vector2(15f, 0f);
+
+            titleRect.offsetMax =
+                new Vector2(-15f, 0f);
+        }
+
+        if (_towerInfoTitle != null)
+        {
+            _towerInfoTitle.fontSize =
+                20f;
+
+            _towerInfoTitle.fontStyle =
+                FontStyles.Bold;
+
+            _towerInfoTitle.color =
+                Color.white;
+
+            _towerInfoTitle.alignment =
+                TextAlignmentOptions.Center;
+
+            _towerInfoTitle.enableWordWrapping =
+                false;
+
+            _towerInfoTitle.overflowMode =
+                TextOverflowModes.Ellipsis;
+
+            _towerInfoTitle.raycastTarget =
+                false;
+        }
+    }
+
+    // =========================================================
+    // STATS
+    // =========================================================
+
+    Transform statsTransform =
+        infoPanel.transform.Find("Stats");
+
+    if (statsTransform != null)
+    {
+        _towerInfoStats =
+            statsTransform.GetComponent<TextMeshProUGUI>();
+
+        RectTransform statsRect =
+            statsTransform.GetComponent<RectTransform>();
+
+        if (statsRect != null)
+        {
+            statsRect.anchorMin =
+                new Vector2(0.08f, 0.42f);
+
+            statsRect.anchorMax =
+                new Vector2(0.92f, 0.76f);
+
+            statsRect.offsetMin =
+                Vector2.zero;
+
+            statsRect.offsetMax =
+                Vector2.zero;
+        }
+
+        if (_towerInfoStats != null)
+        {
+            _towerInfoStats.fontSize =
+                17f;
+
+            _towerInfoStats.fontStyle =
+                FontStyles.Bold;
+
+            _towerInfoStats.color =
+                Color.white;
+
+            _towerInfoStats.alignment =
+                TextAlignmentOptions.TopLeft;
+
+            _towerInfoStats.enableWordWrapping =
+                false;
+
+            _towerInfoStats.overflowMode =
+                TextOverflowModes.Overflow;
+
+            _towerInfoStats.lineSpacing =
+                8f;
+
+            _towerInfoStats.raycastTarget =
+                false;
+        }
+    }
+
+    // =========================================================
+    // UPGRADE BUTTON
+    // =========================================================
+
+    Transform upgradeTransform =
+        infoPanel.transform.Find("UpgradeButton");
+
+    if (upgradeTransform != null)
+    {
+        _upgradeButton =
+            upgradeTransform.GetComponent<Button>();
+
+        RectTransform upgradeRect =
+            upgradeTransform.GetComponent<RectTransform>();
+
+        if (upgradeRect != null)
+        {
+            upgradeRect.anchorMin =
+                new Vector2(0.5f, 0.19f);
+
+            upgradeRect.anchorMax =
+                new Vector2(0.5f, 0.19f);
+
+            upgradeRect.pivot =
+                new Vector2(0.5f, 0.5f);
+
+            upgradeRect.anchoredPosition =
+                Vector2.zero;
+
+            // Nhỏ hơn panel => không bị tràn
+            upgradeRect.sizeDelta =
+                new Vector2(320f, 42f);
+        }
+
+        if (_upgradeButton != null)
+        {
+            _upgradeButton.interactable =
+                true;
+
+            _upgradeButton.onClick
+                .RemoveListener(
+                    OnUpgradeButtonClicked
+                );
+
+            _upgradeButton.onClick
+                .AddListener(
+                    OnUpgradeButtonClicked
+                );
+
+            _upgradeButtonText =
+                _upgradeButton
+                    .GetComponentInChildren<
+                        TextMeshProUGUI
+                    >();
+
+            if (_upgradeButtonText != null)
+            {
+                _upgradeButtonText.fontSize =
+                    15f;
+
+                _upgradeButtonText.fontStyle =
+                    FontStyles.Bold;
+
+                _upgradeButtonText.alignment =
+                    TextAlignmentOptions.Center;
+
+                _upgradeButtonText.raycastTarget =
+                    false;
+            }
+        }
+    }
+
+    // =========================================================
+    // SELL BUTTON
+    // =========================================================
+
+    EnsureSellButton();
+}
+
+
+        // =========================================================
+        // SELL BUTTON
+        // =========================================================
+
+      private void EnsureSellButton()
+{
+    if (infoPanel == null)
+        return;
+
+    Transform sellTransform =
+        infoPanel.transform.Find(
+            "SellButton"
+        );
+
+    // =========================================================
+    // EXISTING BUTTON
+    // =========================================================
+
+    if (sellTransform != null)
+    {
+        _sellInfoButton =
+            sellTransform.GetComponent<Button>();
+
+        if (_sellInfoButton != null)
+        {
+            RectTransform rect =
+                sellTransform.GetComponent<RectTransform>();
+
+            if (rect != null)
+            {
+                rect.anchorMin =
+                    new Vector2(0.5f, 0.05f);
+
+                rect.anchorMax =
+                    new Vector2(0.5f, 0.05f);
+
+                rect.pivot =
+                    new Vector2(0.5f, 0.5f);
+
+                rect.anchoredPosition =
+                    Vector2.zero;
+
+                rect.sizeDelta =
+                    new Vector2(320f, 42f);
+            }
+
+            _sellInfoButton.interactable =
+                true;
+
+            _sellInfoButton.onClick
+                .RemoveListener(
+                    OnSellInfoButtonClicked
+                );
+
+            _sellInfoButton.onClick
+                .AddListener(
+                    OnSellInfoButtonClicked
+                );
+
+            _sellButtonText =
+                _sellInfoButton
+                    .GetComponentInChildren<
+                        TextMeshProUGUI
+                    >();
+
+            if (_sellButtonText != null)
+            {
+                _sellButtonText.fontSize =
+                    15f;
+
+                _sellButtonText.fontStyle =
+                    FontStyles.Bold;
+
+                _sellButtonText.alignment =
+                    TextAlignmentOptions.Center;
+
+                _sellButtonText.raycastTarget =
+                    false;
+            }
+
+            return;
+        }
+    }
+
+    // =========================================================
+    // CREATE SELL BUTTON
+    // =========================================================
+
+    GameObject buttonObject =
+        new GameObject(
+            "SellButton",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button)
+        );
+
+    buttonObject.transform.SetParent(
+        infoPanel.transform,
+        false
+    );
+
+    RectTransform buttonRect =
+        buttonObject.GetComponent<RectTransform>();
+
+    buttonRect.anchorMin =
+        new Vector2(0.5f, 0.07f);
+
+    buttonRect.anchorMax =
+        new Vector2(0.5f, 0.07f);
+
+    buttonRect.pivot =
+        new Vector2(0.5f, 0.5f);
+
+    buttonRect.anchoredPosition =
+        Vector2.zero;
+
+    buttonRect.sizeDelta =
+        new Vector2(300f, 40f);
+
+    Image image =
+        buttonObject.GetComponent<Image>();
+
+    image.color =
+        sellButtonColor;
+
+    image.raycastTarget =
+        true;
+
+    _sellInfoButton =
+        buttonObject.GetComponent<Button>();
+
+    _sellInfoButton.interactable =
+        true;
+
+    ColorBlock colors =
+        _sellInfoButton.colors;
+
+    colors.normalColor =
+        sellButtonColor;
+
+    colors.highlightedColor =
+        sellButtonHighlightColor;
+
+    colors.pressedColor =
+        new Color(
+            sellButtonColor.r * 0.7f,
+            sellButtonColor.g * 0.7f,
+            sellButtonColor.b * 0.7f,
+            1f
+        );
+
+    colors.selectedColor =
+        sellButtonHighlightColor;
+
+    _sellInfoButton.colors =
+        colors;
+
+    // =========================================================
+    // SELL TEXT
+    // =========================================================
+
+    GameObject textObject =
+        new GameObject(
+            "Text",
+            typeof(RectTransform)
+        );
+
+    textObject.transform.SetParent(
+        buttonObject.transform,
+        false
+    );
+
+    RectTransform textRect =
+        textObject.GetComponent<RectTransform>();
+
+    textRect.anchorMin =
+        Vector2.zero;
+
+    textRect.anchorMax =
+        Vector2.one;
+
+    textRect.offsetMin =
+        Vector2.zero;
+
+    textRect.offsetMax =
+        Vector2.zero;
+
+    TextMeshProUGUI text =
+        textObject.AddComponent<
+            TextMeshProUGUI
+        >();
+
+    text.text =
+        "SELL";
+
+    text.font =
+        TMP_Settings.defaultFontAsset;
+
+    text.fontSize =
+        15f;
+
+    text.fontStyle =
+        FontStyles.Bold;
+
+    text.color =
+        Color.white;
+
+    text.alignment =
+        TextAlignmentOptions.Center;
+
+    text.enableWordWrapping =
+        false;
+
+    text.raycastTarget =
+        false;
+
+    _sellButtonText =
+        text;
+
+    _sellInfoButton.onClick
+        .AddListener(
+            OnSellInfoButtonClicked
+        );
+}
+
+        // =========================================================
         // SHOW INFO
         // =========================================================
 
         private void ShowTowerInfoPanel(
             BuildSite site,
-            TowerController controller)
+            TowerController controller
+        )
         {
             if (
                 site == null ||
@@ -2736,42 +2463,25 @@ else
                 return;
             }
 
-
             EnsureExistingInfoPanel();
-
 
             if (infoPanel == null)
                 return;
 
-
             CloseRadialMenu();
-
 
             _infoBuildSite =
                 site;
 
-
             _infoTowerController =
                 controller;
-
 
             infoPanel.transform
                 .SetAsLastSibling();
 
-
-            infoPanel.SetActive(
-                true
-            );
-
+            infoPanel.SetActive(true);
 
             UpdateTowerInfoPanel();
-
-
-            Debug.Log(
-                "[TowerPlacementManager] " +
-                "Showing tower info: " +
-                controller.gameObject.name
-            );
         }
 
 
@@ -2779,182 +2489,136 @@ else
         // UPDATE INFO
         // =========================================================
 
-        private void UpdateTowerInfoPanel()
+       private void UpdateTowerInfoPanel()
+{
+    if (
+        infoPanel == null ||
+        _infoTowerController == null
+    )
+    {
+        return;
+    }
+
+    TowerController controller =
+        _infoTowerController;
+
+    if (controller == null)
+    {
+        CloseTowerInfoPanel();
+        return;
+    }
+
+    TowerData data =
+        controller.TowerData;
+
+    if (data == null)
+        return;
+
+    // =========================================================
+    // TITLE
+    // =========================================================
+
+    if (_towerInfoTitle != null)
+    {
+        _towerInfoTitle.text =
+            $"{data.TowerName.ToUpper()} " +
+            $"(LVL {controller.CurrentLevel})";
+    }
+
+    // =========================================================
+    // STATS
+    // =========================================================
+
+    if (_towerInfoStats != null)
+    {
+        if (data.Type == TowerType.Gold)
         {
-            if (
-                infoPanel == null ||
-                _infoTowerController == null
-            )
-            {
-                return;
-            }
+            _towerInfoStats.text =
+                $"GOLD        <color=#FFD700>" +
+                $"+{controller.CurrentGoldPerTick} G</color>\n" +
 
+                $"INTERVAL    <color=#55FFFF>" +
+                $"{controller.GoldInterval:0.#} SEC</color>\n" +
 
-            TowerController controller =
-                _infoTowerController;
-
-
-            if (
-                controller == null ||
-                controller.gameObject == null
-            )
-            {
-                CloseTowerInfoPanel();
-                return;
-            }
-
-
-            TowerData data =
-                controller.TowerData;
-
-
-            if (data == null)
-                return;
-
-
-            string towerName =
-                data.TowerName;
-
-
-            // =====================================================
-            // TITLE
-            // =====================================================
-
-            if (_towerInfoTitle != null)
-            {
-                _towerInfoTitle.text =
-                    $"{towerName.ToUpper()} " +
-                    $"(LVL {controller.CurrentLevel})";
-            }
-
-
-            // =====================================================
-            // GOLD TOWER
-            // =====================================================
-
-            if (
-                data.Type ==
-                TowerType.Gold
-            )
-            {
-                if (_towerInfoStats != null)
-                {
-                    _towerInfoStats.text =
-                        $"GOLD: <color=#FFD700>" +
-                        $"+{controller.CurrentGoldPerTick} G</color>\n\n" +
-
-                        $"INTERVAL: <color=#55FFFF>" +
-                        $"{controller.GoldInterval:0.#} SEC</color>\n\n" +
-
-                        $"TYPE: <color=#55FF55>" +
-                        $"PASSIVE INCOME</color>";
-                }
-            }
-
-
-            // =====================================================
-            // NORMAL COMBAT TOWERS
-            // =====================================================
-
-            else
-            {
-                if (_towerInfoStats != null)
-                {
-                    _towerInfoStats.text =
-                        $"DAMAGE: <color=#FFD700>" +
-                        $"{controller.CurrentDamage}</color>\n\n" +
-
-                        $"FIRE RATE: <color=#55FFFF>" +
-                        $"{data.FireRate:0.##}/s</color>\n\n" +
-
-                        $"RANGE: <color=#55FF55>" +
-                        $"{controller.CurrentRange:0.##}</color>";
-                }
-            }
-
-
-            // =====================================================
-            // UPGRADE
-            // =====================================================
-
-            bool canUpgrade =
-                controller.CurrentLevel <
-                controller.MaxLevel;
-
-
-            int upgradeCost =
-                canUpgrade
-                    ? Mathf.Max(
-                        0,
-                        controller.UpgradeCost
-                    )
-                    : 0;
-
-
-            if (_upgradeButtonText != null)
-            {
-                if (!canUpgrade)
-                {
-                    _upgradeButtonText.text =
-                        "MAX LEVEL";
-                }
-                else
-                {
-                    _upgradeButtonText.text =
-                        $"UPGRADE ({upgradeCost} G)";
-                }
-            }
-
-
-            bool enoughGold =
-                GameManager.Instance == null ||
-                GameManager.Instance.CurrentGold >=
-                upgradeCost;
-
-
-            if (_upgradeButton != null)
-            {
-                _upgradeButton.interactable =
-                    canUpgrade &&
-                    enoughGold;
-            }
-
-
-            // =====================================================
-            // SELL
-            // =====================================================
-
-            int refund =
-                GetSellRefund(
-                    controller.gameObject
-                );
-
-
-            if (_sellButtonText != null)
-            {
-                if (controller.IsPreBuilt)
-                {
-                    _sellButtonText.text =
-                        "CANNOT SELL";
-                }
-                else
-                {
-                    _sellButtonText.text =
-                        $"SELL ({refund} G)";
-                }
-            }
-
-
-            if (_sellInfoButton != null)
-            {
-                _sellInfoButton.interactable =
-                    !controller.IsPreBuilt;
-            }
+                $"TYPE        <color=#55FF55>" +
+                $"PASSIVE INCOME</color>";
         }
+        else
+        {
+            _towerInfoStats.text =
+                $"DAMAGE      <color=#FFD700>" +
+                $"{controller.CurrentDamage}</color>\n" +
 
+                $"FIRE RATE   <color=#55FFFF>" +
+                $"{data.FireRate:0.##}/s</color>\n" +
+
+                $"RANGE       <color=#55FF55>" +
+                $"{controller.CurrentRange:0.##}</color>";
+        }
+    }
+
+    // =========================================================
+    // UPGRADE
+    // =========================================================
+
+    bool canUpgrade =
+        controller.CurrentLevel <
+        controller.MaxLevel;
+
+    int upgradeCost =
+        canUpgrade
+            ? Mathf.Max(
+                0,
+                controller.UpgradeCost
+            )
+            : 0;
+
+    if (_upgradeButtonText != null)
+    {
+        _upgradeButtonText.text =
+            canUpgrade
+                ? $"UPGRADE ({upgradeCost} G)"
+                : "MAX LEVEL";
+    }
+
+    bool enoughGold =
+        GameManager.Instance == null ||
+        GameManager.Instance.CurrentGold >=
+        upgradeCost;
+
+    if (_upgradeButton != null)
+    {
+        _upgradeButton.interactable =
+            canUpgrade &&
+            enoughGold;
+    }
+
+    // =========================================================
+    // SELL
+    // =========================================================
+
+    int refund =
+        GetSellRefund(
+            controller.gameObject
+        );
+
+    if (_sellButtonText != null)
+    {
+        _sellButtonText.text =
+            controller.IsPreBuilt
+                ? "CANNOT SELL"
+                : $"SELL ({refund} G)";
+    }
+
+    if (_sellInfoButton != null)
+    {
+        _sellInfoButton.interactable =
+            !controller.IsPreBuilt;
+    }
+}
 
         // =========================================================
-        // UPGRADE CLICK
+        // UPGRADE
         // =========================================================
 
         private void OnUpgradeButtonClicked()
@@ -2964,14 +2628,11 @@ else
                 _infoTowerController == null
             )
             {
-                CloseTowerInfoPanel();
                 return;
             }
 
-
             TowerController controller =
                 _infoTowerController;
-
 
             if (
                 controller.CurrentLevel >=
@@ -2982,18 +2643,14 @@ else
                     "Tower is already max level."
                 );
 
-                UpdateTowerInfoPanel();
-
                 return;
             }
-
 
             int upgradeCost =
                 Mathf.Max(
                     0,
                     controller.UpgradeCost
                 );
-
 
             if (
                 GameManager.Instance != null &&
@@ -3008,13 +2665,11 @@ else
                 return;
             }
 
-
             bool paid =
                 GameManager.Instance == null ||
                 GameManager.Instance.TrySpendGold(
                     upgradeCost
                 );
-
 
             if (!paid)
             {
@@ -3025,33 +2680,27 @@ else
                 return;
             }
 
-
             controller.LevelUp();
-
 
             AddUpgradeInvestment(
                 controller.gameObject,
                 upgradeCost
             );
 
-
             UpdateTowerInfoPanel();
         }
 
 
         // =========================================================
-        // SELL CLICK
+        // SELL
         // =========================================================
 
         private void OnSellInfoButtonClicked()
         {
             if (_infoBuildSite == null)
             {
-                CloseTowerInfoPanel();
-
                 return;
             }
-
 
             SellTower(
                 _infoBuildSite
@@ -3059,16 +2708,12 @@ else
         }
 
 
-        // =========================================================
-        // SELL TOWER
-        // =========================================================
-
         private void SellTower(
-            BuildSite site)
+            BuildSite site
+        )
         {
             if (site == null)
                 return;
-
 
             if (
                 !site.IsOccupied ||
@@ -3084,26 +2729,16 @@ else
                 return;
             }
 
-
             GameObject towerObject =
                 site.OccupyingTower;
-
 
             TowerController controller =
                 towerObject.GetComponent<
                     TowerController
                 >();
 
-
             if (controller == null)
-            {
-                ShowWarningMessage(
-                    "Tower controller not found."
-                );
-
                 return;
-            }
-
 
             if (controller.IsPreBuilt)
             {
@@ -3114,63 +2749,31 @@ else
                 return;
             }
 
-
             int refund =
                 GetSellRefund(
                     towerObject
                 );
-
 
             string towerName =
                 controller.TowerData != null
                     ? controller.TowerData.TowerName
                     : towerObject.name;
 
-
-            // =====================================================
-            // CLEAR SITE
-            // =====================================================
-
             site.ClearOccupied();
-
-
-            // =====================================================
-            // REMOVE INVESTMENT
-            // =====================================================
 
             _towerInvestments.Remove(
                 towerObject
             );
 
-
-            // =====================================================
-            // REMOVE LIST
-            // =====================================================
-
             _placedTowers.Remove(
                 towerObject
             );
 
-
-            // =====================================================
-            // CLOSE UI
-            // =====================================================
-
             CloseTowerInfoPanel();
-
-
-            // =====================================================
-            // DESTROY
-            // =====================================================
 
             Destroy(
                 towerObject
             );
-
-
-            // =====================================================
-            // REFUND
-            // =====================================================
 
             if (
                 refund > 0 &&
@@ -3181,7 +2784,6 @@ else
                     refund
                 );
             }
-
 
             Debug.Log(
                 "[SELL] SOLD | " +
@@ -3200,16 +2802,12 @@ else
             _infoBuildSite =
                 null;
 
-
             _infoTowerController =
                 null;
 
-
             if (infoPanel != null)
             {
-                infoPanel.SetActive(
-                    false
-                );
+                infoPanel.SetActive(false);
             }
         }
 
@@ -3223,12 +2821,9 @@ else
             _selectedBuildSite =
                 null;
 
-
             if (_radialMenu != null)
             {
-                _radialMenu.SetActive(
-                    false
-                );
+                _radialMenu.SetActive(false);
             }
         }
 
@@ -3240,7 +2835,6 @@ else
         private void CloseAllSiteUI()
         {
             CloseRadialMenu();
-
             CloseTowerInfoPanel();
         }
 
@@ -3250,36 +2844,30 @@ else
         // =========================================================
 
         private void OnLevelStarted(
-            LevelStartedEvent evt)
+            LevelStartedEvent evt
+        )
         {
             CloseAllSiteUI();
 
-
             ClearPlacedTowers();
-
 
             ClearBuildSites();
 
-
             _towerInvestments.Clear();
-
 
             _cachedPath =
                 FindAnyObjectByType<WaypointPath>();
 
-
             _canvas =
                 FindAnyObjectByType<Canvas>();
 
+            EnsureUIInputSystem();
 
             HideOldShopPanel();
 
-
             EnsureExistingInfoPanel();
 
-
             CloseTowerInfoPanel();
-
 
             CloseRadialMenu();
         }
@@ -3294,34 +2882,26 @@ else
             Canvas canvas =
                 FindAnyObjectByType<Canvas>();
 
-
             if (canvas == null)
                 return;
-
 
             Transform gameplayHUD =
                 canvas.transform.Find(
                     "GameplayHUDPanel"
                 );
 
-
             if (gameplayHUD == null)
                 return;
-
 
             Transform shopPanel =
                 gameplayHUD.transform.Find(
                     "ShopPanel"
                 );
 
-
             if (shopPanel == null)
                 return;
 
-
-            shopPanel.gameObject.SetActive(
-                false
-            );
+            shopPanel.gameObject.SetActive(false);
         }
 
 
@@ -3338,21 +2918,16 @@ else
             {
                 if (tower != null)
                 {
-                    Destroy(
-                        tower
-                    );
+                    Destroy(tower);
                 }
             }
 
-
             _placedTowers.Clear();
-
 
             TowerController[] activeTowers =
                 FindObjectsByType<TowerController>(
                     FindObjectsSortMode.None
                 );
-
 
             foreach (
                 TowerController tower
@@ -3361,7 +2936,6 @@ else
             {
                 if (tower == null)
                     continue;
-
 
                 if (tower.IsPreBuilt)
                 {
@@ -3374,7 +2948,6 @@ else
                     );
                 }
             }
-
 
             _towerInvestments.Clear();
         }
@@ -3391,12 +2964,10 @@ else
                     FindObjectsSortMode.None
                 );
 
-
             TowerController[] activeTowers =
                 FindObjectsByType<TowerController>(
                     FindObjectsSortMode.None
                 );
-
 
             foreach (
                 BuildSite site
@@ -3406,10 +2977,8 @@ else
                 if (site == null)
                     continue;
 
-
                 bool isOccupiedByPreBuilt =
                     false;
-
 
                 if (
                     site.IsOccupied &&
@@ -3417,10 +2986,10 @@ else
                 )
                 {
                     TowerController controller =
-                        site.OccupyingTower.GetComponent<
-                            TowerController
-                        >();
-
+                        site.OccupyingTower
+                            .GetComponent<
+                                TowerController
+                            >();
 
                     if (
                         controller != null &&
@@ -3432,7 +3001,6 @@ else
                     }
                 }
 
-
                 if (!isOccupiedByPreBuilt)
                 {
                     foreach (
@@ -3443,10 +3011,8 @@ else
                         if (tower == null)
                             continue;
 
-
                         if (!tower.IsPreBuilt)
                             continue;
-
 
                         float distance =
                             Vector2.Distance(
@@ -3454,23 +3020,19 @@ else
                                 tower.transform.position
                             );
 
-
                         if (distance < 0.2f)
                         {
                             site.SetOccupied(
                                 tower.gameObject
                             );
 
-
                             isOccupiedByPreBuilt =
                                 true;
-
 
                             break;
                         }
                     }
                 }
-
 
                 if (!isOccupiedByPreBuilt)
                 {
@@ -3486,35 +3048,31 @@ else
 
         public void StartPlacement(
             TowerData data,
-            GameObject prefab)
+            GameObject prefab
+        )
         {
             if (data == null)
             {
-                Debug.LogWarning(
-                    "[TowerPlacementManager] " +
-                    "TowerData is missing."
+                ShowWarningMessage(
+                    "Tower data is missing."
                 );
 
                 return;
             }
-
 
             if (prefab == null)
             {
-                Debug.LogWarning(
-                    "[TowerPlacementManager] " +
-                    "TowerPrefab is missing."
+                ShowWarningMessage(
+                    "Tower prefab is missing."
                 );
 
                 return;
             }
-
 
             if (_isPlacing)
             {
                 CancelPlacement();
             }
-
 
             if (
                 GameManager.Instance != null &&
@@ -3529,43 +3087,27 @@ else
                 return;
             }
 
-
             _activeTowerData =
                 data;
-
 
             _towerPrefab =
                 prefab;
 
-
             _isPlacing =
                 true;
-
-
-            if (_cachedPath == null)
-            {
-                _cachedPath =
-                    FindAnyObjectByType<
-                        WaypointPath
-                    >();
-            }
-
 
             _previewInstance =
                 Instantiate(
                     prefab
                 );
 
-
             _previewInstance.name =
                 "Tower_Placement_Preview";
-
 
             TowerController controller =
                 _previewInstance.GetComponent<
                     TowerController
                 >();
-
 
             if (controller != null)
             {
@@ -3573,12 +3115,10 @@ else
                     false;
             }
 
-
             Collider2D collider =
                 _previewInstance.GetComponent<
                     Collider2D
                 >();
-
 
             if (collider != null)
             {
@@ -3586,16 +3126,12 @@ else
                     false;
             }
 
-
             _previewRenderer =
                 _previewInstance.GetComponent<
                     SpriteRenderer
                 >();
 
-
-            UpdatePreviewVisuals(
-                false
-            );
+            UpdatePreviewVisuals(false);
         }
 
 
@@ -3604,7 +3140,8 @@ else
         // =========================================================
 
         public void UpdatePlacement(
-            Vector3 worldPosition)
+            Vector3 worldPosition
+        )
         {
             if (
                 !_isPlacing ||
@@ -3614,7 +3151,6 @@ else
                 return;
             }
 
-
             Vector3 finalPos =
                 new Vector3(
                     worldPosition.x,
@@ -3622,20 +3158,16 @@ else
                     0f
                 );
 
-
             BuildSite closestSite =
                 null;
 
-
             float minDistance =
                 1.2f;
-
 
             BuildSite[] sites =
                 FindObjectsByType<BuildSite>(
                     FindObjectsSortMode.None
                 );
-
 
             foreach (
                 BuildSite site
@@ -3645,15 +3177,16 @@ else
                 if (site == null)
                     continue;
 
-
                 float distance =
                     Vector2.Distance(
                         finalPos,
                         site.transform.position
                     );
 
-
-                if (distance < minDistance)
+                if (
+                    distance <
+                    minDistance
+                )
                 {
                     minDistance =
                         distance;
@@ -3663,10 +3196,8 @@ else
                 }
             }
 
-
             bool isValid =
                 false;
-
 
             if (
                 closestSite != null &&
@@ -3675,7 +3206,6 @@ else
             {
                 _previewInstance.transform.position =
                     closestSite.transform.position;
-
 
                 isValid =
                     GameManager.Instance == null ||
@@ -3691,7 +3221,6 @@ else
                     false;
             }
 
-
             UpdatePreviewVisuals(
                 isValid
             );
@@ -3703,11 +3232,11 @@ else
         // =========================================================
 
         public void CompletePlacement(
-            Vector3 worldPosition)
+            Vector3 worldPosition
+        )
         {
             if (!_isPlacing)
                 return;
-
 
             Vector3 finalPos =
                 new Vector3(
@@ -3716,20 +3245,16 @@ else
                     0f
                 );
 
-
             BuildSite targetSite =
                 null;
 
-
             float minDistance =
                 1.2f;
-
 
             BuildSite[] sites =
                 FindObjectsByType<BuildSite>(
                     FindObjectsSortMode.None
                 );
-
 
             foreach (
                 BuildSite site
@@ -3739,15 +3264,16 @@ else
                 if (site == null)
                     continue;
 
-
                 float distance =
                     Vector2.Distance(
                         finalPos,
                         site.transform.position
                     );
 
-
-                if (distance < minDistance)
+                if (
+                    distance <
+                    minDistance
+                )
                 {
                     minDistance =
                         distance;
@@ -3757,19 +3283,16 @@ else
                 }
             }
 
-
             if (targetSite == null)
             {
                 ShowWarningMessage(
                     "Can only build towers on sites"
                 );
 
-
                 Cleanup();
 
                 return;
             }
-
 
             if (targetSite.IsOccupied)
             {
@@ -3777,12 +3300,10 @@ else
                     "Build site is occupied!"
                 );
 
-
                 Cleanup();
 
                 return;
             }
-
 
             if (
                 GameManager.Instance != null &&
@@ -3794,12 +3315,10 @@ else
                     "Insufficient gold!"
                 );
 
-
                 Cleanup();
 
                 return;
             }
-
 
             bool paid =
                 GameManager.Instance == null ||
@@ -3807,31 +3326,23 @@ else
                     _activeTowerData.Cost
                 );
 
-
             if (!paid)
             {
                 ShowWarningMessage(
                     "Insufficient gold!"
                 );
 
-
                 Cleanup();
 
                 return;
             }
 
-
-            Vector3 snapPosition =
-                targetSite.transform.position;
-
-
             GameObject newTower =
                 Instantiate(
                     _towerPrefab,
-                    snapPosition,
+                    targetSite.transform.position,
                     Quaternion.identity
                 );
-
 
             newTower.name =
                 $"{_activeTowerData.TowerName}_" +
@@ -3842,22 +3353,18 @@ else
                         4
                     );
 
-
             _placedTowers.Add(
                 newTower
             );
-
 
             RegisterTowerInvestment(
                 newTower,
                 _activeTowerData.Cost
             );
 
-
             targetSite.SetOccupied(
                 newTower
             );
-
 
             TowerController controller =
                 GetOrCreateTowerController(
@@ -3865,19 +3372,12 @@ else
                     _activeTowerData
                 );
 
-
             CopyTowerSpriteColor(
                 newTower,
                 _towerPrefab
             );
 
-
             Cleanup();
-
-
-            // =====================================================
-            // SHOW INFO IMMEDIATELY
-            // =====================================================
 
             if (controller != null)
             {
@@ -3886,10 +3386,10 @@ else
                     controller
                 );
 
-
                 UIManager uiManager =
-                    FindAnyObjectByType<UIManager>();
-
+                    FindAnyObjectByType<
+                        UIManager
+                    >();
 
                 if (uiManager != null)
                 {
@@ -3910,7 +3410,6 @@ else
             if (!_isPlacing)
                 return;
 
-
             Cleanup();
         }
 
@@ -3927,23 +3426,18 @@ else
                     _previewInstance
                 );
 
-
                 _previewInstance =
                     null;
             }
 
-
             _activeTowerData =
                 null;
-
 
             _towerPrefab =
                 null;
 
-
             _previewRenderer =
                 null;
-
 
             _isPlacing =
                 false;
@@ -3955,11 +3449,11 @@ else
         // =========================================================
 
         public bool IsPositionValid(
-            Vector3 position)
+            Vector3 position
+        )
         {
             if (_activeTowerData == null)
                 return false;
-
 
             if (
                 GameManager.Instance != null &&
@@ -3970,26 +3464,21 @@ else
                 return false;
             }
 
-
             Collider2D hit =
                 Physics2D.OverlapPoint(
                     position
                 );
 
-
             if (hit == null)
                 return false;
-
 
             BuildSite site =
                 hit.GetComponent<
                     BuildSite
                 >();
 
-
             if (site == null)
                 return false;
-
 
             return !site.IsOccupied;
         }
@@ -4000,7 +3489,8 @@ else
         // =========================================================
 
         private void UpdatePreviewVisuals(
-            bool isValid)
+            bool isValid
+        )
         {
             if (
                 _previewRenderer == null ||
@@ -4010,24 +3500,20 @@ else
                 return;
             }
 
-
             SpriteRenderer prefabSR =
                 _towerPrefab.GetComponent<
                     SpriteRenderer
                 >();
-
 
             Color originalColor =
                 prefabSR != null
                     ? prefabSR.color
                     : Color.white;
 
-
             Color tint =
                 isValid
                     ? validColor
                     : invalidColor;
-
 
             _previewRenderer.color =
                 new Color(
@@ -4051,13 +3537,13 @@ else
         // =========================================================
 
         public void ShowWarningMessage(
-            string message)
+            string message
+        )
         {
             if (_warningTextInstance == null)
             {
                 Canvas canvas =
                     FindAnyObjectByType<Canvas>();
-
 
                 if (canvas != null)
                 {
@@ -4066,14 +3552,12 @@ else
                             "GameplayHUDPanel"
                         );
 
-
                     if (gameplayHUD != null)
                     {
                         Transform existing =
                             gameplayHUD.transform.Find(
                                 "PlacementWarningText"
                             );
-
 
                         if (existing != null)
                         {
@@ -4090,48 +3574,38 @@ else
                                     typeof(RectTransform)
                                 );
 
-
                             warningGO.transform.SetParent(
                                 gameplayHUD,
                                 false
                             );
-
 
                             _warningTextInstance =
                                 warningGO.AddComponent<
                                     TextMeshProUGUI
                                 >();
 
-
                             _warningTextInstance.fontSize =
                                 32f;
-
 
                             _warningTextInstance.fontStyle =
                                 FontStyles.Bold;
 
-
                             _warningTextInstance.color =
                                 Color.red;
-
 
                             _warningTextInstance.alignment =
                                 TextAlignmentOptions.Center;
 
-
                             _warningTextInstance.font =
                                 TMP_Settings.defaultFontAsset;
 
-
                             _warningTextInstance.raycastTarget =
                                 false;
-
 
                             RectTransform rect =
                                 warningGO.GetComponent<
                                     RectTransform
                                 >();
-
 
                             rect.anchorMin =
                                 new Vector2(
@@ -4167,25 +3641,19 @@ else
                 }
             }
 
-
             if (_warningTextInstance != null)
             {
                 _warningTextInstance.text =
                     message;
 
-
                 _warningTextInstance.gameObject
-                    .SetActive(
-                        true
-                    );
-
+                    .SetActive(true);
 
                 CancelInvoke(
                     nameof(
                         HideWarningMessage
                     )
                 );
-
 
                 Invoke(
                     nameof(
@@ -4206,9 +3674,7 @@ else
             if (_warningTextInstance != null)
             {
                 _warningTextInstance.gameObject
-                    .SetActive(
-                        false
-                    );
+                    .SetActive(false);
             }
         }
     }

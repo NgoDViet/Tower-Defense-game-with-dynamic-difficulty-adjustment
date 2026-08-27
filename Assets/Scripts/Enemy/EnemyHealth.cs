@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+
 using TowerDefense.Core;
 using TowerDefense.Data;
 using TowerDefense.Pooling;
@@ -12,16 +13,30 @@ namespace TowerDefense.Enemy
     /// </summary>
     public class EnemyHealth : MonoBehaviour
     {
+        // =========================================================
+        // REFERENCES
+        // =========================================================
+
         [Header("References")]
+
         [Tooltip("The EnemyData ScriptableObject containing max health and gold reward stats.")]
-        [SerializeField] protected EnemyData enemyData;
+        [SerializeField]
+        protected EnemyData enemyData;
 
         [Tooltip("Animator used for walk and death animations.")]
-        [SerializeField] private Animator animator;
+        [SerializeField]
+        private Animator animator;
+
+
+        // =========================================================
+        // ANIMATION
+        // =========================================================
 
         [Header("Animation")]
+
         [Tooltip("Time to wait before returning the enemy to the object pool.")]
-        [SerializeField] private float deathAnimationDuration = 0.5f;
+        [SerializeField]
+        private float deathAnimationDuration = 0.5f;
 
 
         // =========================================================
@@ -46,32 +61,67 @@ namespace TowerDefense.Enemy
         // PROPERTIES
         // =========================================================
 
-        public int Armor =>
-            _armor;
+        public int Armor
+        {
+            get
+            {
+                return _armor;
+            }
+        }
 
-        public int Attack =>
-            _attack;
+        public int Attack
+        {
+            get
+            {
+                return _attack;
+            }
+        }
 
-        public float MoveSpeed =>
-            _moveSpeed * _slowMultiplier;
+        public float MoveSpeed
+        {
+            get
+            {
+                return _moveSpeed * _slowMultiplier;
+            }
+        }
 
-        public int CurrentHealth =>
-            _currentHealth;
+        public int CurrentHealth
+        {
+            get
+            {
+                return _currentHealth;
+            }
+        }
 
-        public int MaxHealth =>
-            _maxHealth > 0
-                ? _maxHealth
-                : (
-                    enemyData != null
-                        ? enemyData.GetBaseHealthValue()
-                        : 10
-                );
+        public int MaxHealth
+        {
+            get
+            {
+                return _maxHealth > 0
+                    ? _maxHealth
+                    : (
+                        enemyData != null
+                            ? enemyData.GetBaseHealthValue()
+                            : 10
+                    );
+            }
+        }
 
-        public bool IsDead =>
-            _isDead;
+        public bool IsDead
+        {
+            get
+            {
+                return _isDead;
+            }
+        }
 
-        public EnemyData EnemyData =>
-            enemyData;
+        public EnemyData EnemyData
+        {
+            get
+            {
+                return enemyData;
+            }
+        }
 
 
         // =========================================================
@@ -121,9 +171,6 @@ namespace TowerDefense.Enemy
 
             _slowMultiplier = 1f;
             _slowTimer = 0f;
-
-            // Don't use old HP blindly here.
-            // Initialize() will set correct difficulty HP.
         }
 
 
@@ -314,6 +361,7 @@ namespace TowerDefense.Enemy
             if (_currentHealth <= 0)
             {
                 _currentHealth = 0;
+
                 Die();
             }
         }
@@ -353,6 +401,7 @@ namespace TowerDefense.Enemy
             if (_currentHealth <= 0)
             {
                 _currentHealth = 0;
+
                 Die();
             }
         }
@@ -485,6 +534,10 @@ namespace TowerDefense.Enemy
 
             _isDead = true;
 
+            // -----------------------------------------------------
+            // GOLD REWARD
+            // -----------------------------------------------------
+
             int goldReward =
                 enemyData != null
                     ? enemyData.GoldReward
@@ -536,7 +589,7 @@ namespace TowerDefense.Enemy
 
 
         // =========================================================
-        // RETURN TO POOL AFTER DEATH ANIMATION
+        // RETURN AFTER DEATH ANIMATION
         // =========================================================
 
         private IEnumerator ReturnToPoolAfterDeath()
@@ -553,10 +606,6 @@ namespace TowerDefense.Enemy
         // RETURN ENEMY TO POOL
         // =========================================================
 
-        /// <summary>
-        /// Returns the enemy to the object pool or destroys it
-        /// if no ObjectPooler exists.
-        /// </summary>
         private void ReturnEnemyToPool()
         {
             if (ObjectPooler.Instance != null)

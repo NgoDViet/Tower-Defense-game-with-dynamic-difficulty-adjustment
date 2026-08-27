@@ -8,19 +8,14 @@ namespace TowerDefense.Tower
         private EnemyHealth target;
 
         private int damage;
-
         private float speed;
 
         private bool ignoreArmor;
-
         private bool explosive;
-
         private float explosionRadius;
 
         private bool slowing;
-
         private float slowPercent;
-
         private float slowDuration;
 
         private bool initialized;
@@ -37,30 +32,22 @@ namespace TowerDefense.Tower
             float slowDuration)
         {
             this.target = target;
+            this.damage = Mathf.Max(0, damage);
+            this.speed = Mathf.Max(0f, speed);
 
-            this.damage = damage;
+            this.ignoreArmor = ignoreArmor;
+            this.explosive = explosive;
+            this.explosionRadius = Mathf.Max(0f, explosionRadius);
 
-            this.speed = speed;
-
-            this.ignoreArmor =
-                ignoreArmor;
-
-            this.explosive =
-                explosive;
-
-            this.explosionRadius =
-                explosionRadius;
-
-            this.slowing =
-                slowing;
-
-            this.slowPercent =
-                slowPercent;
-
-            this.slowDuration =
-                slowDuration;
+            this.slowing = slowing;
+            this.slowPercent = Mathf.Clamp01(slowPercent);
+            this.slowDuration = Mathf.Max(0f, slowDuration);
 
             initialized = true;
+
+            gameObject.SetActive(true);
+
+            EnableVisuals();
         }
 
         private void Update()
@@ -69,36 +56,25 @@ namespace TowerDefense.Tower
                 return;
 
             if (target == null ||
-                target.IsDead)
+                target.IsDead ||
+                !target.gameObject.activeSelf)
             {
-                Destroy(gameObject);
-
+                DestroyProjectile();
                 return;
             }
 
-            Vector3 targetPosition =
-                target.transform.position;
-
-            transform.position =
-                Vector3.MoveTowards(
-                    transform.position,
-                    targetPosition,
-                    speed * Time.deltaTime
-                );
+            Vector3 targetPosition = target.transform.position;
 
             Vector3 direction =
-                targetPosition -
-                transform.position;
+                targetPosition - transform.position;
 
-            if (direction.sqrMagnitude >
-                0.001f)
+            if (direction.sqrMagnitude > 0.001f)
             {
                 float angle =
                     Mathf.Atan2(
                         direction.y,
                         direction.x
-                    ) *
-                    Mathf.Rad2Deg;
+                    ) * Mathf.Rad2Deg;
 
                 transform.rotation =
                     Quaternion.Euler(
@@ -108,9 +84,17 @@ namespace TowerDefense.Tower
                     );
             }
 
-            if (Vector3.Distance(
+            transform.position =
+                Vector3.MoveTowards(
                     transform.position,
-                    targetPosition) <= 0.05f)
+                    targetPosition,
+                    speed * Time.deltaTime
+                );
+
+            if (Vector2.Distance(
+                    transform.position,
+                    targetPosition
+                ) <= 0.08f)
             {
                 HitTarget();
             }
@@ -118,10 +102,12 @@ namespace TowerDefense.Tower
 
         private void HitTarget()
         {
+            if (!initialized)
+                return;
+
             if (target == null)
             {
-                Destroy(gameObject);
-
+                DestroyProjectile();
                 return;
             }
 
@@ -132,42 +118,39 @@ namespace TowerDefense.Tower
             else
             {
                 DealDamage(target);
-
                 ApplySlow(target);
             }
 
-            Destroy(gameObject);
+            DestroyProjectile();
         }
 
-        // =========================================================
-        // DAMAGE
-        // =========================================================
-
-        private void DealDamage(
-            EnemyHealth enemy)
+        private void DealDamage(EnemyHealth enemy)
         {
+            if (enemy == null)
+                return;
+
             if (ignoreArmor)
             {
-                enemy.TakeDamageIgnoringArmor(
-                    damage
-                );
+                enemy.TakeDamageIgnoringArmor(damage);
             }
             else
             {
-                enemy.TakeDamage(
-                    damage
-                );
+                enemy.TakeDamage(damage);
             }
         }
 
-        // =========================================================
-        // SLOW
-        // =========================================================
-
-        private void ApplySlow(
-            EnemyHealth enemy)
+        private void ApplySlow(EnemyHealth enemy)
         {
             if (!slowing)
+                return;
+
+            if (enemy == null)
+                return;
+
+            if (slowPercent <= 0f)
+                return;
+
+            if (slowDuration <= 0f)
                 return;
 
             enemy.ApplySlow(
@@ -175,10 +158,6 @@ namespace TowerDefense.Tower
                 slowDuration
             );
         }
-
-        // =========================================================
-        // EXPLOSION
-        // =========================================================
 
         private void Explode()
         {
@@ -202,21 +181,69 @@ namespace TowerDefense.Tower
                 if (enemy.IsDead)
                     continue;
 
-                enemy.TakeDamage(
-                    damage
-                );
+                if (!enemy.gameObject.activeSelf)
+                    continue;
+
+                DealDamage(enemy);
             }
+        }
+
+        private void EnableVisuals()
+        {
+            SpriteRenderer[] sprites =
+                GetComponentsInChildren<SpriteRenderer>(true);
+
+            foreach (SpriteRenderer sprite in sprites)
+            {
+                if (sprite == null)
+                    continue;
+
+                sprite.enabled = true;
+            }
+
+            Renderer[] renderers =
+                GetComponentsInChildren<Renderer>(true);
+
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null)
+                    continue;
+
+                renderer.enabled = true;
+            }
+        }
+
+        private void DestroyProjectile()
+        {
+            initialized = false;
+            target = null;
+
+            damage = 0;
+            speed = 0f;
+
+            ignoreArmor = false;
+
+            explosive = false;
+            explosionRadius = 0f;
+
+            slowing = false;
+            slowPercent = 0f;
+            slowDuration = 0f;
+
+            Destroy(gameObject);
         }
 
         private void OnDrawGizmosSelected()
         {
-            if (explosive)
-            {
-                Gizmos.DrawWireSphere(
-                    transform.position,
-                    explosionRadius
-                );
-            }
+            if (!explosive)
+                return;
+
+            Gizmos.color = Color.red;
+
+            Gizmos.DrawWireSphere(
+                transform.position,
+                explosionRadius
+            );
         }
     }
 }
