@@ -1,4 +1,5 @@
 using UnityEngine;
+
 using TowerDefense.Core;
 using TowerDefense.Data;
 using TowerDefense.Enemy;
@@ -7,18 +8,6 @@ using TowerDefense.Projectile;
 
 namespace TowerDefense.Tower
 {
-    /// <summary>
-    /// Controls tower targeting, aiming, shooting, upgrading and selling.
-    ///
-    /// Maximum tower level = 3.
-    ///
-    /// Upgrade:
-    /// Level 1 -> Level 2 = base tower cost
-    /// Level 2 -> Level 3 = base tower cost * 2
-    ///
-    /// Sell:
-    /// Sell value = 75% of TOTAL money invested into THIS tower.
-    /// </summary>
     public class TowerController : MonoBehaviour
     {
         // =========================================================
@@ -39,21 +28,17 @@ namespace TowerDefense.Tower
 
         [Header("References")]
 
-        [Tooltip("The configuration data for this tower.")]
+        [Tooltip("TowerData configuration for this tower.")]
         [SerializeField]
         private TowerData towerData;
 
-        [Tooltip("Optional transform where projectiles are spawned.")]
+        [Tooltip("Optional point where projectile is spawned.")]
         [SerializeField]
         private Transform shootPoint;
 
-        [Tooltip("If checked, this tower exists in the level design.")]
+        [Tooltip("If enabled, this tower already exists in the level.")]
         [SerializeField]
         private bool isPreBuilt = false;
-
-        public bool IsPreBuilt => isPreBuilt;
-
-        private GameObject _visualTemplateParent;
 
 
         // =========================================================
@@ -69,7 +54,7 @@ namespace TowerDefense.Tower
         [SerializeField]
         private LayerMask enemyLayerMask;
 
-        [Tooltip("How frequently in seconds the target is re-evaluated.")]
+        [Tooltip("How often the tower searches for a target.")]
         [SerializeField]
         private float targetReevaluateInterval = 0.1f;
 
@@ -96,32 +81,20 @@ namespace TowerDefense.Tower
 
 
         // =========================================================
-        // RUNTIME STATE
-        // =========================================================
-
-        private EnemyHealth _targetEnemy;
-
-        private float _fireCooldownTimer = 0f;
-
-        private float _targetReevaluateTimer = 0f;
-
-
-        // =========================================================
         // LEVEL SYSTEM
         // =========================================================
 
-        private int _currentLevel = 1;
-
-        private const int MAX_LEVEL = 3;
-
-
-        [Header("Upgrade Prefabs")]
+        [Header("Upgrade Settings")]
 
         [SerializeField]
         private GameObject level2Prefab;
 
         [SerializeField]
         private GameObject level3Prefab;
+
+        private int _currentLevel = 1;
+
+        private const int MAX_LEVEL = 3;
 
 
         // =========================================================
@@ -130,15 +103,39 @@ namespace TowerDefense.Tower
 
         [Header("Sell Settings")]
 
-        [Tooltip("Percentage of total invested money returned when selling.")]
+        [Tooltip("Percentage returned when selling the tower.")]
         [Range(0f, 1f)]
         [SerializeField]
         private float sellReturnPercent = 0.75f;
 
 
         // =========================================================
+        // RUNTIME STATE
+        // =========================================================
+
+        private EnemyHealth _targetEnemy;
+
+        private float _fireCooldownTimer;
+
+        private float _targetReevaluateTimer;
+
+        private float _goldTimer;
+
+        private GameObject _visualTemplateParent;
+
+
+        // =========================================================
         // PUBLIC PROPERTIES
         // =========================================================
+
+        public bool IsPreBuilt
+        {
+            get
+            {
+                return isPreBuilt;
+            }
+        }
+
 
         public int CurrentLevel
         {
@@ -148,6 +145,7 @@ namespace TowerDefense.Tower
             }
         }
 
+
         public int MaxLevel
         {
             get
@@ -156,6 +154,7 @@ namespace TowerDefense.Tower
             }
         }
 
+
         public TowerData TowerData
         {
             get
@@ -163,6 +162,7 @@ namespace TowerDefense.Tower
                 return towerData;
             }
         }
+
 
         public EnemyHealth TargetEnemy
         {
@@ -177,14 +177,6 @@ namespace TowerDefense.Tower
         // BASE COST
         // =========================================================
 
-        /// <summary>
-        /// Original purchase price of THIS tower.
-        ///
-        /// Example:
-        /// Basic = 100
-        /// Fast = 130
-        /// Ice = 150
-        /// </summary>
         public int BaseCost
         {
             get
@@ -201,27 +193,6 @@ namespace TowerDefense.Tower
         // UPGRADE COST
         // =========================================================
 
-        /// <summary>
-        /// Cost of the NEXT upgrade for THIS tower.
-        ///
-        /// Level 1 -> Level 2 = BaseCost
-        /// Level 2 -> Level 3 = BaseCost * 2
-        /// Level 3 = 0
-        ///
-        /// Examples:
-        ///
-        /// Basic 100:
-        /// Lv1 -> Lv2 = 100
-        /// Lv2 -> Lv3 = 200
-        ///
-        /// Fast 130:
-        /// Lv1 -> Lv2 = 130
-        /// Lv2 -> Lv3 = 260
-        ///
-        /// Ice 150:
-        /// Lv1 -> Lv2 = 150
-        /// Lv2 -> Lv3 = 300
-        /// </summary>
         public int UpgradeCost
         {
             get
@@ -238,27 +209,9 @@ namespace TowerDefense.Tower
 
 
         // =========================================================
-        // TOTAL INVESTED COST
+        // TOTAL INVESTED
         // =========================================================
 
-        /// <summary>
-        /// Total amount of gold invested into THIS tower.
-        ///
-        /// Level 1:
-        /// Base cost
-        ///
-        /// Level 2:
-        /// Base cost + Level 1 upgrade
-        ///
-        /// Level 3:
-        /// Base cost + Level 1 upgrade + Level 2 upgrade
-        ///
-        /// Example Ice = 150:
-        ///
-        /// Lv1 = 150
-        /// Lv2 = 150 + 150 = 300
-        /// Lv3 = 150 + 150 + 300 = 600
-        /// </summary>
         public int TotalInvestedCost
         {
             get
@@ -266,13 +219,18 @@ namespace TowerDefense.Tower
                 if (towerData == null)
                     return 0;
 
-                int total = towerData.Cost;
+                int total =
+                    towerData.Cost;
 
-                for (int level = 1;
-                     level < _currentLevel;
-                     level++)
+                for (
+                    int level = 1;
+                    level < _currentLevel;
+                    level++
+                )
                 {
-                    total += towerData.Cost * level;
+                    total +=
+                        towerData.Cost *
+                        level;
                 }
 
                 return total;
@@ -284,31 +242,6 @@ namespace TowerDefense.Tower
         // SELL VALUE
         // =========================================================
 
-        /// <summary>
-        /// Amount of gold returned when selling THIS tower.
-        ///
-        /// Always calculated from this tower's own TowerData
-        /// and its own current level.
-        ///
-        /// 75% of total invested cost.
-        ///
-        /// Example:
-        ///
-        /// Basic 100:
-        /// Lv1 = 75
-        /// Lv2 = 187/188 depending on rounding
-        /// Lv3 = 300
-        ///
-        /// Fast 130:
-        /// Lv1 = 98
-        /// Lv2 = 244/245 depending on rounding
-        /// Lv3 = 390
-        ///
-        /// Ice 150:
-        /// Lv1 = 113
-        /// Lv2 = 225
-        /// Lv3 = 450
-        /// </summary>
         public int SellValue
         {
             get
@@ -335,8 +268,9 @@ namespace TowerDefense.Tower
                 if (towerData == null)
                     return 0;
 
-                return towerData.Damage +
-                       (_currentLevel - 1) * 2;
+                return
+                    towerData.Damage +
+                    ((_currentLevel - 1) * 2);
             }
         }
 
@@ -352,24 +286,97 @@ namespace TowerDefense.Tower
                 if (towerData == null)
                     return 0f;
 
-                return towerData.Range +
-                       (_currentLevel - 1) * 1.0f;
+                return
+                    towerData.Range +
+                    ((_currentLevel - 1) * 1f);
             }
         }
 
 
         // =========================================================
-        // UNITY - AWAKE
+        // CURRENT FIRE RATE
+        // =========================================================
+
+        public float CurrentFireRate
+        {
+            get
+            {
+                if (towerData == null)
+                    return 0f;
+
+                return towerData.FireRate;
+            }
+        }
+
+
+        // =========================================================
+        // GOLD TOWER
+        // =========================================================
+
+        public bool IsGoldTower
+        {
+            get
+            {
+                return
+                    towerData != null &&
+                    towerData.Type == TowerType.Gold;
+            }
+        }
+
+
+        public int CurrentGoldPerTick
+        {
+            get
+            {
+                if (!IsGoldTower)
+                    return 0;
+
+                return
+                    towerData.GetGoldPerTick(
+                        _currentLevel
+                    );
+            }
+        }
+
+
+        public float GoldInterval
+        {
+            get
+            {
+                if (!IsGoldTower)
+                    return 999f;
+
+                return
+                    towerData.GetGoldInterval(
+                        _currentLevel
+                    );
+            }
+        }
+
+
+        // =========================================================
+        // AWAKE
         // =========================================================
 
         private void Awake()
         {
             EnsureVisualTemplates();
+
+            if (shootPoint == null)
+            {
+                shootPoint = transform;
+            }
+
+            if (towerData != null)
+            {
+                _goldTimer =
+                    GoldInterval;
+            }
         }
 
 
         // =========================================================
-        // UNITY - START
+        // START
         // =========================================================
 
         private void Start()
@@ -379,15 +386,109 @@ namespace TowerDefense.Tower
                 shootPoint = transform;
             }
 
+
+            if (towerData == null)
+            {
+                Debug.LogError(
+                    $"[TowerController] " +
+                    $"{gameObject.name}: TowerData is NULL."
+                );
+
+                enabled = false;
+
+                return;
+            }
+
+
+            if (IsGoldTower)
+            {
+                _goldTimer =
+                    GoldInterval;
+
+                Debug.Log(
+                    $"[GoldTower] READY | " +
+                    $"Tower={gameObject.name} | " +
+                    $"Level={CurrentLevel} | " +
+                    $"Gold=+{CurrentGoldPerTick} | " +
+                    $"Interval={GoldInterval}s"
+                );
+
+                return;
+            }
+
+
             Debug.Log(
-                $"[TowerController Start] " +
-                $"{gameObject.name} initialized. " +
-                $"TowerData: " +
-                $"{(towerData != null ? towerData.name : "NULL")}, " +
-                $"BaseCost: {BaseCost}, " +
-                $"UpgradeCost: {UpgradeCost}, " +
-                $"SellValue: {SellValue}, " +
-                $"Level: {_currentLevel}"
+                $"[TowerController] READY | " +
+                $"Tower={gameObject.name} | " +
+                $"Type={towerData.Type} | " +
+                $"Damage={CurrentDamage} | " +
+                $"Range={CurrentRange:F1} | " +
+                $"FireRate={towerData.FireRate:F2} | " +
+                $"Projectile=" +
+                (
+                    towerData.ProjectilePrefab != null
+                        ? towerData.ProjectilePrefab.name
+                        : "NULL"
+                )
+            );
+        }
+
+
+        // =========================================================
+        // RUNTIME DATA INITIALIZATION
+        // =========================================================
+
+        public void InitializeTowerData(
+            TowerData data)
+        {
+            if (data == null)
+            {
+                Debug.LogError(
+                    $"[TowerController] " +
+                    $"{gameObject.name}: " +
+                    "Cannot initialize with NULL TowerData."
+                );
+
+                return;
+            }
+
+
+            towerData =
+                data;
+
+
+            if (shootPoint == null)
+            {
+                shootPoint =
+                    transform;
+            }
+
+
+            _targetEnemy =
+                null;
+
+            _fireCooldownTimer =
+                0f;
+
+            _targetReevaluateTimer =
+                0f;
+
+
+            if (data.Type == TowerType.Gold)
+            {
+                _goldTimer =
+                    data.GetGoldInterval(
+                        _currentLevel
+                    );
+            }
+
+
+            Debug.Log(
+                $"[TowerController] " +
+                $"Runtime initialized | " +
+                $"Tower={gameObject.name} | " +
+                $"Type={data.Type} | " +
+                $"Data={data.name}"
             );
         }
 
@@ -401,19 +502,47 @@ namespace TowerDefense.Tower
             if (_visualTemplateParent != null)
                 return;
 
+
             _visualTemplateParent =
-                new GameObject("TemplatesContainer");
+                new GameObject(
+                    "TemplatesContainer"
+                );
+
 
             _visualTemplateParent.transform.SetParent(
                 transform
             );
 
-            _visualTemplateParent.SetActive(false);
+
+            _visualTemplateParent.transform.localPosition =
+                Vector3.zero;
+
+
+            _visualTemplateParent.transform.localRotation =
+                Quaternion.identity;
+
+
+            _visualTemplateParent.transform.localScale =
+                Vector3.one;
+
+
+            _visualTemplateParent.SetActive(
+                false
+            );
+
 
             foreach (Transform child in transform)
             {
-                if (!child.name.StartsWith("Visual_"))
+                if (
+                    child == null ||
+                    !child.name.StartsWith(
+                        "Visual_"
+                    )
+                )
+                {
                     continue;
+                }
+
 
                 GameObject template =
                     Instantiate(
@@ -421,13 +550,18 @@ namespace TowerDefense.Tower
                         _visualTemplateParent.transform
                     );
 
-                template.name = child.name;
+
+                template.name =
+                    child.name;
+
 
                 template.transform.localPosition =
                     child.localPosition;
 
+
                 template.transform.localRotation =
                     child.localRotation;
+
 
                 template.transform.localScale =
                     child.localScale;
@@ -441,68 +575,97 @@ namespace TowerDefense.Tower
 
         private void Update()
         {
-            if (GameManager.Instance != null &&
+            // -----------------------------------------------------
+            // GAME STATE
+            // -----------------------------------------------------
+
+            if (
+                GameManager.Instance != null &&
                 GameManager.Instance.CurrentState !=
-                GameManager.GameState.Playing)
+                GameManager.GameState.Playing
+            )
             {
                 return;
             }
 
+
+            // -----------------------------------------------------
+            // DATA
+            // -----------------------------------------------------
+
             if (towerData == null)
                 return;
+
+
+            // -----------------------------------------------------
+            // GOLD
+            // -----------------------------------------------------
+
+            if (IsGoldTower)
+            {
+                UpdateGoldTower();
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // LASER
+            // -----------------------------------------------------
+
+            if (
+                towerData.Type ==
+                TowerType.Laser
+            )
+            {
+                return;
+            }
+
 
             // -----------------------------------------------------
             // TARGET RE-EVALUATION
             // -----------------------------------------------------
 
-            _targetReevaluateTimer -= Time.deltaTime;
+            _targetReevaluateTimer -=
+                Time.deltaTime;
 
-            if (_targetReevaluateTimer <= 0f)
+
+            if (
+                _targetReevaluateTimer <=
+                0f
+            )
             {
                 UpdateTarget();
 
+
                 _targetReevaluateTimer =
-                    targetReevaluateInterval;
-            }
-
-
-            // -----------------------------------------------------
-            // VALIDATE TARGET
-            // -----------------------------------------------------
-
-            if (!IsTargetValid(_targetEnemy))
-            {
-                _targetEnemy = null;
-            }
-
-
-            // -----------------------------------------------------
-            // AIM + SHOOT
-            // -----------------------------------------------------
-
-            if (_targetEnemy != null)
-            {
-                if (rotateTowardsTarget)
-                {
-                    AimAtTarget(
-                        _targetEnemy.transform.position
+                    Mathf.Max(
+                        0.01f,
+                        targetReevaluateInterval
                     );
-                }
-
-                _fireCooldownTimer -= Time.deltaTime;
-
-                if (_fireCooldownTimer <= 0f)
-                {
-                    Shoot();
-
-                    if (towerData.FireRate > 0f)
-                    {
-                        _fireCooldownTimer =
-                            1f / towerData.FireRate;
-                    }
-                }
             }
-            else
+
+
+            // -----------------------------------------------------
+            // TARGET VALIDATION
+            // -----------------------------------------------------
+
+            if (
+                !IsTargetValid(
+                    _targetEnemy
+                )
+            )
+            {
+                _targetEnemy =
+                    null;
+            }
+
+
+            // -----------------------------------------------------
+            // NO TARGET
+            // -----------------------------------------------------
+
+            if (_targetEnemy == null)
             {
                 _fireCooldownTimer =
                     Mathf.Max(
@@ -510,94 +673,195 @@ namespace TowerDefense.Tower
                         _fireCooldownTimer -
                         Time.deltaTime
                     );
+
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // AIM
+            // -----------------------------------------------------
+
+            if (rotateTowardsTarget)
+            {
+                AimAtTarget(
+                    _targetEnemy.transform.position
+                );
+            }
+
+
+            // -----------------------------------------------------
+            // FIRE TIMER
+            // -----------------------------------------------------
+
+            _fireCooldownTimer -=
+                Time.deltaTime;
+
+
+            if (_fireCooldownTimer <= 0f)
+            {
+                Shoot();
+
+
+                if (towerData.FireRate > 0f)
+                {
+                    _fireCooldownTimer =
+                        1f /
+                        towerData.FireRate;
+                }
+                else
+                {
+                    _fireCooldownTimer =
+                        999f;
+                }
             }
         }
 
 
         // =========================================================
-        // TARGETING
+        // GOLD UPDATE
+        // =========================================================
+
+        private void UpdateGoldTower()
+        {
+            if (GameManager.Instance == null)
+                return;
+
+
+            _goldTimer -=
+                Time.deltaTime;
+
+
+            if (_goldTimer > 0f)
+                return;
+
+
+            int goldAmount =
+                CurrentGoldPerTick;
+
+
+            if (goldAmount > 0)
+            {
+                GameManager.Instance.AddGold(
+                    goldAmount
+                );
+
+
+                Debug.Log(
+                    $"[GoldTower] " +
+                    $"{gameObject.name} +" +
+                    $"{goldAmount} G | " +
+                    $"Level={CurrentLevel} | " +
+                    $"Interval={GoldInterval}s"
+                );
+            }
+
+
+            _goldTimer =
+                GoldInterval;
+        }
+
+
+        // =========================================================
+        // FIND TARGET
         // =========================================================
 
         private void UpdateTarget()
         {
-            Collider2D[] colliders =
-                Physics2D.OverlapCircleAll(
-                    transform.position,
-                    CurrentRange,
-                    enemyLayerMask
+            EnemyHealth[] enemies =
+                FindObjectsByType<EnemyHealth>(
+                    FindObjectsSortMode.None
                 );
 
-            if (colliders.Length == 0)
+
+            EnemyHealth bestTarget =
+                null;
+
+
+            float bestMetric =
+                float.MinValue;
+
+
+            foreach (
+                EnemyHealth enemy
+                in enemies
+            )
             {
-                _targetEnemy = null;
-                return;
-            }
-
-            EnemyHealth bestTarget = null;
-
-            float bestMetric = float.MinValue;
-
-            foreach (Collider2D col in colliders)
-            {
-                if (col == null)
+                if (enemy == null)
                     continue;
 
-                EnemyHealth enemy =
-                    col.GetComponent<EnemyHealth>();
 
-                if (enemy == null ||
-                    enemy.IsDead)
-                {
+                if (enemy.IsDead)
                     continue;
-                }
 
-                float dist =
+
+                if (!enemy.gameObject.activeSelf)
+                    continue;
+
+
+                float distance =
                     Vector2.Distance(
                         transform.position,
                         enemy.transform.position
                     );
 
-                if (dist > CurrentRange)
-                    continue;
 
-                float metric = 0f;
+                if (
+                    distance >
+                    CurrentRange
+                )
+                {
+                    continue;
+                }
+
+
+                float metric =
+                    0f;
+
 
                 EnemyMovement movement =
-                    col.GetComponent<EnemyMovement>();
+                    enemy.GetComponent<
+                        EnemyMovement
+                    >();
+
 
                 switch (targetingMode)
                 {
                     case TargetingMode.First:
 
-                        if (movement != null &&
-                            movement.ActivePath != null)
+                        if (
+                            movement != null &&
+                            movement.ActivePath != null
+                        )
                         {
-                            int wpIndex =
+                            int index =
                                 movement.CurrentWaypointIndex;
 
-                            Transform targetWp =
-                                movement.ActivePath
-                                    .GetWaypoint(wpIndex);
 
-                            float distToWp =
-                                targetWp != null
+                            Transform waypoint =
+                                movement.ActivePath.GetWaypoint(
+                                    index
+                                );
+
+
+                            float distanceToWaypoint =
+                                waypoint != null
                                     ? Vector2.Distance(
-                                        movement.transform.position,
-                                        targetWp.position
+                                        enemy.transform.position,
+                                        waypoint.position
                                     )
                                     : 0f;
 
+
                             metric =
-                                (wpIndex * 1000f) -
-                                distToWp;
+                                index *
+                                1000f -
+                                distanceToWaypoint;
                         }
                         else
                         {
                             metric =
-                                -Vector2.Distance(
-                                    transform.position,
-                                    col.transform.position
-                                );
+                                -distance;
                         }
 
                         break;
@@ -606,10 +870,7 @@ namespace TowerDefense.Tower
                     case TargetingMode.Closest:
 
                         metric =
-                            -Vector2.Distance(
-                                transform.position,
-                                col.transform.position
-                            );
+                            -distance;
 
                         break;
 
@@ -622,14 +883,24 @@ namespace TowerDefense.Tower
                         break;
                 }
 
-                if (metric > bestMetric)
+
+                if (
+                    bestTarget == null ||
+                    metric > bestMetric
+                )
                 {
-                    bestMetric = metric;
-                    bestTarget = enemy;
+                    bestTarget =
+                        enemy;
+
+
+                    bestMetric =
+                        metric;
                 }
             }
 
-            _targetEnemy = bestTarget;
+
+            _targetEnemy =
+                bestTarget;
         }
 
 
@@ -643,19 +914,23 @@ namespace TowerDefense.Tower
             if (enemy == null)
                 return false;
 
+
             if (enemy.IsDead)
                 return false;
+
 
             if (!enemy.gameObject.activeSelf)
                 return false;
 
-            float dist =
+
+            float distance =
                 Vector2.Distance(
                     transform.position,
                     enemy.transform.position
                 );
 
-            return dist <= CurrentRange;
+
+            return distance <= CurrentRange;
         }
 
 
@@ -663,30 +938,50 @@ namespace TowerDefense.Tower
         // AIM
         // =========================================================
 
-        private void AimAtTarget(Vector3 targetPosition)
+        private void AimAtTarget(
+            Vector3 targetPosition)
         {
             if (rotatingVisual == null)
                 return;
 
-            Vector3 direction = targetPosition - rotatingVisual.position;
 
-            if (direction.sqrMagnitude <= 0.001f)
+            Vector3 direction =
+                targetPosition -
+                rotatingVisual.position;
+
+
+            if (
+                direction.sqrMagnitude <=
+                0.001f
+            )
+            {
                 return;
+            }
+
 
             float targetAngle =
-                Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                Mathf.Atan2(
+                    direction.y,
+                    direction.x
+                ) *
+                Mathf.Rad2Deg;
+
 
             Quaternion targetRotation =
                 Quaternion.AngleAxis(
-                    targetAngle + spriteAngleOffset,
+                    targetAngle +
+                    spriteAngleOffset,
                     Vector3.forward
                 );
 
-            rotatingVisual.rotation = Quaternion.Slerp(
-                rotatingVisual.rotation,
-                targetRotation,
-                rotationSpeed * Time.deltaTime
-            );
+
+            rotatingVisual.rotation =
+                Quaternion.Slerp(
+                    rotatingVisual.rotation,
+                    targetRotation,
+                    rotationSpeed *
+                    Time.deltaTime
+                );
         }
 
 
@@ -696,68 +991,262 @@ namespace TowerDefense.Tower
 
         private void Shoot()
         {
-            if (towerData.ProjectilePrefab == null)
+            if (towerData == null)
+                return;
+
+
+            if (
+                towerData.Type ==
+                TowerType.Gold
+            )
             {
-                Debug.LogError(
-                    $"[TowerController] " +
-                    $"{gameObject.name} " +
-                    "is missing a Projectile Prefab configuration!"
+                return;
+            }
+
+
+            if (
+                towerData.Type ==
+                TowerType.Laser
+            )
+            {
+                return;
+            }
+
+
+            if (_targetEnemy == null)
+                return;
+
+
+            if (_targetEnemy.IsDead)
+                return;
+
+
+            if (
+                !_targetEnemy.gameObject.activeSelf
+            )
+            {
+                return;
+            }
+
+
+            if (shootPoint == null)
+            {
+                shootPoint =
+                    transform;
+            }
+
+
+            // =====================================================
+            // CANNON
+            // =====================================================
+
+            if (
+                towerData.Type ==
+                TowerType.Cannon
+            )
+            {
+                ShootCannon();
+
+                return;
+            }
+
+
+            // =====================================================
+            // NORMAL / ICE / FAST / ARCHER
+            // =====================================================
+
+            ShootNormal();
+        }
+
+
+        // =========================================================
+        // CANNON SHOOT
+        // =========================================================
+
+        private void ShootCannon()
+        {
+            if (
+                towerData.ProjectilePrefab ==
+                null
+            )
+            {
+                Debug.LogWarning(
+                    $"[Cannon] " +
+                    $"{gameObject.name}: " +
+                    "ProjectilePrefab is NULL."
                 );
 
                 return;
             }
 
-            if (_targetEnemy == null ||
-                _targetEnemy.IsDead)
-            {
-                return;
-            }
 
-            GameObject projectileObj =
-                ObjectPooler.Instance.GetPooledObject(
+            GameObject projectileObject =
+                Instantiate(
                     towerData.ProjectilePrefab,
                     shootPoint.position,
                     shootPoint.rotation
                 );
 
-            if (projectileObj == null)
+
+            if (projectileObject == null)
             {
                 Debug.LogError(
-                    $"[TowerController] " +
-                    $"Failed to get projectile " +
-                    $"for {gameObject.name}"
+                    "[Cannon] " +
+                    "Failed to instantiate projectile."
                 );
 
                 return;
             }
 
-            ProjectileController projectile =
-                projectileObj.GetComponent<
-                    ProjectileController
+
+            ExplosiveProjectileController projectile =
+                projectileObject.GetComponent<
+                    ExplosiveProjectileController
                 >();
+
 
             if (projectile == null)
             {
-                Debug.LogWarning(
-                    $"[TowerController] Spawned projectile " +
-                    $"{projectileObj.name} does not have " +
-                    "a ProjectileController attached."
+                Debug.LogError(
+                    "[Cannon] " +
+                    $"Prefab " +
+                    $"{towerData.ProjectilePrefab.name} " +
+                    "does not contain " +
+                    "ExplosiveProjectileController."
+                );
+
+
+                Destroy(
+                    projectileObject
+                );
+
+
+                return;
+            }
+
+
+            projectile.Initialize(
+                _targetEnemy,
+                CurrentDamage,
+                towerData.ProjectileSpeed
+            );
+
+
+            Debug.Log(
+                $"[Cannon] FIRE | " +
+                $"Tower={gameObject.name} | " +
+                $"Target={_targetEnemy.gameObject.name} | " +
+                $"Damage={CurrentDamage} | " +
+                $"Speed={towerData.ProjectileSpeed}"
+            );
+        }
+
+
+        // =========================================================
+        // NORMAL SHOOT
+        // =========================================================
+
+        private void ShootNormal()
+        {
+            if (
+                towerData.ProjectilePrefab ==
+                null
+            )
+            {
+                _targetEnemy.TakeDamage(
+                    CurrentDamage
                 );
 
                 return;
             }
 
-            bool isIceTower =
+
+            GameObject projectileObject;
+
+
+            if (ObjectPooler.Instance != null)
+            {
+                projectileObject =
+                    ObjectPooler.Instance.GetPooledObject(
+                        towerData.ProjectilePrefab,
+                        shootPoint.position,
+                        shootPoint.rotation
+                    );
+            }
+            else
+            {
+                projectileObject =
+                    Instantiate(
+                        towerData.ProjectilePrefab,
+                        shootPoint.position,
+                        shootPoint.rotation
+                    );
+            }
+
+
+            if (projectileObject == null)
+                return;
+
+
+            ProjectileController projectile =
+                projectileObject.GetComponent<
+                    ProjectileController
+                >();
+
+
+            if (projectile == null)
+            {
+                Debug.LogError(
+                    "[TowerController] " +
+                    $"Prefab " +
+                    $"{towerData.ProjectilePrefab.name} " +
+                    "does not contain " +
+                    "ProjectileController."
+                );
+
+
+                if (ObjectPooler.Instance != null)
+                {
+                    ObjectPooler.Instance.ReturnToPool(
+                        projectileObject
+                    );
+                }
+                else
+                {
+                    Destroy(
+                        projectileObject
+                    );
+                }
+
+
+                return;
+            }
+
+
+            bool isIce =
                 towerData.Type ==
                 TowerType.Ice;
+
+
+            float slowPercent =
+                isIce
+                    ? towerData.SlowPercent
+                    : 0f;
+
+
+            float slowDuration =
+                isIce
+                    ? towerData.SlowDuration
+                    : 0f;
+
 
             projectile.Initialize(
                 _targetEnemy,
                 CurrentDamage,
                 towerData.ProjectileSpeed,
-                isIceTower,
-                towerData.SlowPercent,
-                towerData.SlowDuration
+                isIce,
+                slowPercent,
+                slowDuration
             );
         }
 
@@ -768,30 +1257,26 @@ namespace TowerDefense.Tower
 
         public void LevelUp()
         {
-            // -----------------------------------------------------
-            // MAX LEVEL CHECK
-            // -----------------------------------------------------
-
-            if (_currentLevel >= MAX_LEVEL)
+            if (
+                _currentLevel >=
+                MAX_LEVEL
+            )
             {
                 Debug.Log(
                     $"[TowerController] " +
-                    $"{gameObject.name} is already MAX LEVEL."
+                    $"{gameObject.name} " +
+                    "is already Level 3."
                 );
 
                 return;
             }
 
 
-            // -----------------------------------------------------
-            // DATA CHECK
-            // -----------------------------------------------------
-
             if (towerData == null)
             {
                 Debug.LogError(
                     $"[TowerController] " +
-                    $"{gameObject.name} cannot upgrade because " +
+                    $"{gameObject.name}: " +
                     "TowerData is NULL."
                 );
 
@@ -803,10 +1288,6 @@ namespace TowerDefense.Tower
                 _currentLevel;
 
 
-            // -----------------------------------------------------
-            // UPGRADE
-            // -----------------------------------------------------
-
             _currentLevel++;
 
 
@@ -814,20 +1295,16 @@ namespace TowerDefense.Tower
             // REMOVE OLD VISUALS
             // -----------------------------------------------------
 
-            foreach (Transform child in transform)
-            {
-                if (child.name.StartsWith("Visual_"))
-                {
-                    Destroy(child.gameObject);
-                }
-            }
+            RemoveCurrentVisuals();
 
 
             // -----------------------------------------------------
-            // GET NEW PREFAB
+            // SELECT PREFAB
             // -----------------------------------------------------
 
-            GameObject prefabToUse = null;
+            GameObject prefabToUse =
+                null;
+
 
             if (_currentLevel == 2)
             {
@@ -842,43 +1319,158 @@ namespace TowerDefense.Tower
 
 
             // -----------------------------------------------------
-            // APPLY NEW VISUAL
+            // APPLY VISUAL
             // -----------------------------------------------------
 
             if (prefabToUse != null)
             {
-                foreach (Transform child in prefabToUse.transform)
-                {
-                    if (!child.name.StartsWith("Visual_"))
-                        continue;
-
-                    GameObject instantiated =
-                        Instantiate(
-                            child.gameObject,
-                            transform
-                        );
-
-                    instantiated.name =
-                        child.name;
-                }
+                ApplyVisualFromPrefab(
+                    prefabToUse
+                );
+            }
+            else
+            {
+                Debug.LogWarning(
+                    $"[TowerController] " +
+                    $"{gameObject.name}: " +
+                    $"No visual prefab for Level " +
+                    $"{_currentLevel}."
+                );
             }
 
 
             // -----------------------------------------------------
-            // DEBUG
+            // RESET COMBAT TARGET
             // -----------------------------------------------------
 
-            Debug.Log(
-                $"[TowerController] " +
-                $"{gameObject.name} upgraded " +
-                $"Level {oldLevel} -> {_currentLevel}. " +
-                $"Base Cost: {BaseCost} G, " +
-                $"Upgrade Cost: {UpgradeCost} G, " +
-                $"Total Invested: {TotalInvestedCost} G, " +
-                $"Sell Value: {SellValue} G, " +
-                $"Damage: {CurrentDamage}, " +
-                $"Range: {CurrentRange}"
-            );
+            _targetEnemy =
+                null;
+
+
+            _targetReevaluateTimer =
+                0f;
+
+
+            _fireCooldownTimer =
+                0f;
+
+
+            // -----------------------------------------------------
+            // RESET GOLD TIMER AFTER UPGRADE
+            // -----------------------------------------------------
+
+            if (IsGoldTower)
+            {
+                _goldTimer =
+                    GoldInterval;
+
+
+                Debug.Log(
+                    $"[GoldTower] " +
+                    $"{gameObject.name} " +
+                    $"Level {oldLevel} -> " +
+                    $"{_currentLevel} | " +
+                    $"Gold=+{CurrentGoldPerTick} | " +
+                    $"Interval={GoldInterval}s"
+                );
+            }
+            else
+            {
+                Debug.Log(
+                    $"[TowerController] " +
+                    $"{gameObject.name} " +
+                    $"Level {oldLevel} -> " +
+                    $"{_currentLevel} | " +
+                    $"Damage={CurrentDamage} | " +
+                    $"Range={CurrentRange:F1}"
+                );
+            }
+        }
+
+
+        // =========================================================
+        // REMOVE CURRENT VISUALS
+        // =========================================================
+
+        private void RemoveCurrentVisuals()
+        {
+            for (
+                int i = transform.childCount - 1;
+                i >= 0;
+                i--
+            )
+            {
+                Transform child =
+                    transform.GetChild(i);
+
+
+                if (
+                    child == null ||
+                    !child.name.StartsWith(
+                        "Visual_"
+                    )
+                )
+                {
+                    continue;
+                }
+
+
+                Destroy(
+                    child.gameObject
+                );
+            }
+        }
+
+
+        // =========================================================
+        // APPLY VISUAL FROM PREFAB
+        // =========================================================
+
+        private void ApplyVisualFromPrefab(
+            GameObject prefab)
+        {
+            if (prefab == null)
+                return;
+
+
+            foreach (
+                Transform child
+                in prefab.transform
+            )
+            {
+                if (
+                    child == null ||
+                    !child.name.StartsWith(
+                        "Visual_"
+                    )
+                )
+                {
+                    continue;
+                }
+
+
+                GameObject visual =
+                    Instantiate(
+                        child.gameObject,
+                        transform
+                    );
+
+
+                visual.name =
+                    child.name;
+
+
+                visual.transform.localPosition =
+                    child.localPosition;
+
+
+                visual.transform.localRotation =
+                    child.localRotation;
+
+
+                visual.transform.localScale =
+                    child.localScale;
+            }
         }
 
 
@@ -890,69 +1482,112 @@ namespace TowerDefense.Tower
         {
             EnsureVisualTemplates();
 
+
             if (_currentLevel > 1)
             {
-                _currentLevel = 1;
+                _currentLevel =
+                    1;
+
 
                 RestoreInitialVisuals();
             }
 
-            _fireCooldownTimer = 0f;
 
-            _targetReevaluateTimer = 0f;
+            _targetEnemy =
+                null;
 
-            _targetEnemy = null;
 
-            Debug.Log(
-                $"[TowerController] " +
-                $"{gameObject.name} reset to Level 1. " +
-                $"BaseCost: {BaseCost}, " +
-                $"SellValue: {SellValue}"
-            );
+            _fireCooldownTimer =
+                0f;
+
+
+            _targetReevaluateTimer =
+                0f;
+
+
+            if (IsGoldTower)
+            {
+                _goldTimer =
+                    GoldInterval;
+            }
         }
 
 
         // =========================================================
-        // RESTORE VISUALS
+        // RESTORE INITIAL VISUALS
         // =========================================================
 
         private void RestoreInitialVisuals()
         {
-            foreach (Transform child in transform)
-            {
-                if (child.name.StartsWith("Visual_"))
-                {
-                    Destroy(child.gameObject);
-                }
-            }
+            RemoveCurrentVisuals();
+
 
             if (_visualTemplateParent == null)
                 return;
 
+
             foreach (
                 Transform templateChild
-                in _visualTemplateParent.transform)
+                in _visualTemplateParent.transform
+            )
             {
+                if (templateChild == null)
+                    continue;
+
+
                 GameObject restoredVisual =
                     Instantiate(
                         templateChild.gameObject,
                         transform
                     );
 
+
                 restoredVisual.name =
                     templateChild.name;
+
 
                 restoredVisual.transform.localPosition =
                     templateChild.localPosition;
 
+
                 restoredVisual.transform.localRotation =
                     templateChild.localRotation;
+
 
                 restoredVisual.transform.localScale =
                     templateChild.localScale;
 
-                restoredVisual.SetActive(true);
+
+                restoredVisual.SetActive(
+                    true
+                );
             }
+        }
+
+
+        // =========================================================
+        // TARGETING MODE
+        // =========================================================
+
+        public void SetTargetingMode(
+            TargetingMode mode)
+        {
+            targetingMode =
+                mode;
+
+
+            _targetEnemy =
+                null;
+
+
+            _targetReevaluateTimer =
+                0f;
+        }
+
+
+        public TargetingMode GetTargetingMode()
+        {
+            return targetingMode;
         }
 
 
@@ -967,6 +1602,7 @@ namespace TowerDefense.Tower
                     ? CurrentRange
                     : 5f;
 
+
             Gizmos.color =
                 new Color(
                     0f,
@@ -975,13 +1611,16 @@ namespace TowerDefense.Tower
                     0.15f
                 );
 
+
             Gizmos.DrawSphere(
                 transform.position,
                 range
             );
 
+
             Gizmos.color =
                 Color.green;
+
 
             Gizmos.DrawWireSphere(
                 transform.position,

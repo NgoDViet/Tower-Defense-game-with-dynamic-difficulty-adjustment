@@ -105,7 +105,7 @@ namespace TowerDefense.UI
         private bool _timeLimitEnabled;
         private bool _oneLifeEnabled;
         private bool _endlessModeEnabled;
-
+        private bool _passiveGoldEnabled = true;
         // Values are remembered even when the corresponding option is
         // temporarily disabled.
         private int _selectedEnemyMultiplier = 2;
@@ -115,6 +115,7 @@ namespace TowerDefense.UI
         private Toggle _timeLimitToggle;
         private Toggle _oneLifeToggle;
         private Toggle _endlessModeToggle;
+        private Toggle _passiveGoldToggle;
 
         private Button[] _enemyCountButtons;
         private Button[] _timeButtons;
@@ -126,6 +127,7 @@ namespace TowerDefense.UI
         private TextMeshProUGUI _oneLifeStatusText;
         private TextMeshProUGUI _endlessModeStatusText;
         private TextMeshProUGUI _challengeSummaryText;
+        private TextMeshProUGUI _passiveGoldStatusText;
 
         private readonly Dictionary<LevelData, TextMeshProUGUI>
     _levelStatsTextByLevel =
@@ -584,14 +586,14 @@ namespace TowerDefense.UI
             _timeLimitEnabled = false;
             _oneLifeEnabled = false;
             _endlessModeEnabled = false;
-
+            _passiveGoldEnabled = true;
             _selectedEnemyMultiplier = 2;
             _selectedTimeLimitMinutes = 3f;
 
             DifficultyManager.SetEnemyCountMultiplier(1);
             DifficultyManager.SetTimeLimitMinutes(0f);
             DifficultyManager.SetOneLifeMode(false);
-
+            DifficultyManager.SetPassiveGoldEnabled(true);
             // Explicitly clear the saved Endless state.
             IsEndlessModeEnabled = false;
             PlayerPrefs.SetInt("TowerDefense_EndlessMode", 0);
@@ -711,6 +713,7 @@ namespace TowerDefense.UI
             CreateTimeLimitCard(cards.transform);
             CreateOneLifeCard(cards.transform);
             CreateEndlessModeCard(cards.transform);
+            CreatePassiveGoldCard(cards.transform);
 
             // -----------------------------------------------------
             // BOTTOM BUTTONS
@@ -1278,7 +1281,103 @@ namespace TowerDefense.UI
                 OnEndlessModeToggleChanged
             );
         }
+private void CreatePassiveGoldCard(
+    Transform parent)
+{
+    GameObject card =
+        CreateModifierCard(
+            parent,
+            "PassiveGoldCard"
+        );
 
+
+    // =====================================================
+    // TOGGLE
+    // =====================================================
+
+    _passiveGoldToggle =
+        CreateToggle(
+            card.transform,
+            "EnablePassiveGold",
+            "GOLD OVER TIME",
+            new Vector2(0f, 0.82f),
+            new Vector2(1f, 0.98f)
+        );
+
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+
+    _passiveGoldStatusText =
+        CreateText(
+            card.transform,
+            "Status",
+            "ON • +10 G every 10 seconds",
+            15,
+            FontStyles.Normal,
+            new Color(
+                0.65f,
+                0.65f,
+                0.72f
+            ),
+            new Vector2(
+                0.05f,
+                0.60f
+            ),
+            new Vector2(
+                0.95f,
+                0.76f
+            ),
+            Vector2.zero
+        );
+
+
+    // =====================================================
+    // DESCRIPTION
+    // =====================================================
+
+    CreateText(
+        card.transform,
+        "Description",
+        "+10 G every 10 seconds\n" +
+        "Turn OFF for harder economy",
+        15,
+        FontStyles.Normal,
+        new Color(
+            0.82f,
+            0.82f,
+            0.88f
+        ),
+        new Vector2(
+            0.08f,
+            0.27f
+        ),
+        new Vector2(
+            0.92f,
+            0.54f
+        ),
+        Vector2.zero
+    );
+
+
+    // =====================================================
+    // EVENT
+    // =====================================================
+
+    _passiveGoldToggle.onValueChanged.AddListener(
+        OnPassiveGoldToggleChanged
+    );
+
+
+    // =====================================================
+    // DEFAULT
+    // =====================================================
+
+    _passiveGoldToggle.SetIsOnWithoutNotify(
+        true
+    );
+}
         // =========================================================
         // MODIFIER CARD
         // =========================================================
@@ -1638,7 +1737,30 @@ namespace TowerDefense.UI
                 $"[UIManager] Endless mode: {(enabled ? "ON" : "OFF")}"
             );
         }
+// =========================================================
+// PASSIVE GOLD TOGGLE
+// =========================================================
 
+private void OnPassiveGoldToggleChanged(
+    bool enabled)
+{
+    _passiveGoldEnabled =
+        enabled;
+
+
+    DifficultyManager.SetPassiveGoldEnabled(
+        enabled
+    );
+
+
+    RefreshChallengeUI();
+
+
+    Debug.Log(
+        $"[UIManager] Passive Gold: " +
+        $"{(enabled ? "ON" : "OFF")}"
+    );
+}
         private void SelectEnemyMultiplier(int multiplier)
         {
             _selectedEnemyMultiplier = multiplier;
@@ -1797,6 +1919,10 @@ private void RefreshLevelCards()
         _endlessModeToggle.SetIsOnWithoutNotify(
             _endlessModeEnabled
         );
+        if (_passiveGoldToggle != null)
+    _passiveGoldToggle.SetIsOnWithoutNotify(
+        _passiveGoldEnabled
+    );
 
     // =========================================================
     // STATUS TEXT
@@ -1833,6 +1959,13 @@ private void RefreshLevelCards()
                 ? "ON  •  Infinite waves"
                 : "OFF  •  Fixed wave count";
     }
+    if (_passiveGoldStatusText != null)
+{
+    _passiveGoldStatusText.text =
+        _passiveGoldEnabled
+            ? "ON  •  +10 G every 10 seconds"
+            : "OFF  •  No passive gold";
+}
 
     if (_challengeSummaryText != null)
     {
@@ -1848,12 +1981,24 @@ private void RefreshLevelCards()
             ? "ONE LIFE"
             : "NORMAL HEALTH";
 
-        string endlessSummary = _endlessModeEnabled
-            ? "ENDLESS WAVES"
-            : "FIXED WAVES";
+       string endlessSummary =
+    _endlessModeEnabled
+        ? "ENDLESS WAVES"
+        : "FIXED WAVES";
 
-        _challengeSummaryText.text =
-            $"{enemySummary}   •   {timeSummary}   •   {lifeSummary}   •   {endlessSummary}";
+
+string passiveGoldSummary =
+    _passiveGoldEnabled
+        ? "PASSIVE GOLD ON"
+        : "PASSIVE GOLD OFF";
+
+
+_challengeSummaryText.text =
+    $"{enemySummary}   •   " +
+    $"{timeSummary}   •   " +
+    $"{lifeSummary}   •   " +
+    $"{endlessSummary}   •   " +
+    $"{passiveGoldSummary}";
     }
 
     // =========================================================
@@ -1941,6 +2086,10 @@ private void RefreshLevelCards()
             DifficultyManager.SetOneLifeMode(
                 _oneLifeEnabled
             );
+
+            DifficultyManager.SetPassiveGoldEnabled(
+    _passiveGoldEnabled
+);
 
             // IMPORTANT:
             // The Endless setting is independent from the selected level.
@@ -2766,108 +2915,332 @@ private void SelectAndPlayLevel(LevelData levelData)
             Vector2 worldPos2D =
                 new Vector2(worldPos.x, worldPos.y);
 
-            Collider2D[] hits =
-                Physics2D.OverlapCircleAll(
-                    worldPos2D,
-                    0.6f
-                );
+           // =========================================================
+// FIND OBJECT UNDER MOUSE
+// =========================================================
 
-            Collider2D closestHit = null;
-            float closestDist = float.MaxValue;
+Collider2D[] hits =
+    Physics2D.OverlapCircleAll(
+        worldPos2D,
+        0.25f
+    );
 
-            TowerDefense.Tower.TowerController targetTower = null;
-            TowerDefense.Enemy.EnemyHealth targetEnemy = null;
+TowerDefense.Tower.TowerController nearestTower = null;
+TowerDefense.Enemy.EnemyHealth nearestEnemy = null;
 
-            foreach (var hit in hits)
-            {
-                if (hit == null)
-                    continue;
+float nearestTowerDistance =
+    float.MaxValue;
 
-                TowerDefense.Tower.TowerController tower =
-                    hit.GetComponent<
-                        TowerDefense.Tower.TowerController>();
+float nearestEnemyDistance =
+    float.MaxValue;
 
-                TowerDefense.Enemy.EnemyHealth enemy =
-                    hit.GetComponent<
-                        TowerDefense.Enemy.EnemyHealth>();
 
-                if (tower != null || enemy != null)
-                {
-                    float dist =
-                        Vector2.Distance(
-                            worldPos2D,
-                            hit.transform.position
-                        );
+// =========================================================
+// SEARCH TOWER / ENEMY
+// =========================================================
 
-                    if (dist < closestDist)
-                    {
-                        closestDist = dist;
-                        closestHit = hit;
-                        targetTower = tower;
-                        targetEnemy = enemy;
-                    }
-                }
-            }
+foreach (Collider2D hit in hits)
+{
+    if (hit == null)
+        continue;
 
-            if (closestHit != null)
-            {
-                if (targetTower != null)
-                    SelectTower(targetTower);
-                else if (targetEnemy != null)
-                    SelectEnemy(targetEnemy);
-            }
-            else
-            {
-                Deselect();
-            }
+
+    // -----------------------------------------------------
+    // TOWER
+    // -----------------------------------------------------
+
+    TowerDefense.Tower.TowerController tower =
+        hit.GetComponent<
+            TowerDefense.Tower.TowerController
+        >();
+
+    if (tower == null)
+    {
+        tower =
+            hit.GetComponentInParent<
+                TowerDefense.Tower.TowerController
+            >();
+    }
+
+
+    if (tower != null)
+    {
+        float distance =
+            Vector2.Distance(
+                worldPos2D,
+                tower.transform.position
+            );
+
+
+        if (distance < nearestTowerDistance)
+        {
+            nearestTowerDistance =
+                distance;
+
+            nearestTower =
+                tower;
+        }
+
+        continue;
+    }
+
+
+    // -----------------------------------------------------
+    // ENEMY
+    // -----------------------------------------------------
+
+    TowerDefense.Enemy.EnemyHealth enemy =
+        hit.GetComponent<
+            TowerDefense.Enemy.EnemyHealth
+        >();
+
+    if (enemy == null)
+    {
+        enemy =
+            hit.GetComponentInParent<
+                TowerDefense.Enemy.EnemyHealth
+            >();
+    }
+
+
+    if (enemy != null)
+    {
+        if (enemy.IsDead)
+            continue;
+
+        if (!enemy.gameObject.activeInHierarchy)
+            continue;
+
+
+        float distance =
+            Vector2.Distance(
+                worldPos2D,
+                enemy.transform.position
+            );
+
+
+        if (distance < nearestEnemyDistance)
+        {
+            nearestEnemyDistance =
+                distance;
+
+            nearestEnemy =
+                enemy;
+        }
+    }
+}
+
+
+// =========================================================
+// PRIORITY: TOWER
+// =========================================================
+
+if (nearestTower != null)
+{
+    SelectTower(
+        nearestTower
+    );
+
+    return;
+}
+
+
+// =========================================================
+// THEN ENEMY
+// =========================================================
+
+if (nearestEnemy != null)
+{
+    SelectEnemy(
+        nearestEnemy
+    );
+
+    return;
+}
+
+
+// =========================================================
+// NOTHING
+// =========================================================
+
+Deselect();
         }
 
         // =========================================================
         // SELECT TOWER
         // =========================================================
 
-        private void SelectTower(
-            TowerDefense.Tower.TowerController tower)
-        {
-            _selectedTower = tower;
-            _selectedEnemy = null;
+      private void SelectTower(
+    TowerDefense.Tower.TowerController tower)
+{
+    if (tower == null)
+    {
+        Deselect();
+        return;
+    }
 
-            EnsureInfoPanel();
 
-            _infoPanel.SetActive(true);
+    if (!tower.gameObject.activeInHierarchy)
+    {
+        Deselect();
+        return;
+    }
 
-            UpdateSelectedStatsDisplay();
-        }
+
+    // =====================================================
+    // XÓA ENEMY ĐANG CHỌN
+    // =====================================================
+
+    _selectedEnemy = null;
+
+
+    // =====================================================
+    // CHỈ GIỮ 1 TOWER ĐƯỢC CHỌN
+    // =====================================================
+
+    _selectedTower =
+        tower;
+
+
+    EnsureInfoPanel();
+
+
+    if (_infoPanel == null)
+        return;
+
+
+    // =====================================================
+    // TOWER CÓ THỂ HIỆN NÚT UPGRADE + SELL
+    // =====================================================
+
+    SetSellButtonVisible(true);
+
+
+    if (_lvlUpBtnGO != null)
+    {
+        _lvlUpBtnGO.SetActive(true);
+    }
+
+
+    _infoPanel.SetActive(true);
+
+
+    UpdateSelectedStatsDisplay();
+}
+
+public void ShowPurchasedTower(
+    TowerDefense.Tower.TowerController tower)
+{
+    if (tower == null)
+        return;
+
+    _selectedTower = tower;
+    _selectedEnemy = null;
+
+    EnsureInfoPanel();
+
+    if (_infoPanel == null)
+        return;
+
+    _infoPanel.SetActive(true);
+
+    // Update ngay lập tức thay vì chờ Update()
+    UpdateSelectedStatsDisplay();
+
+    Debug.Log(
+        "[UIManager] Purchased tower selected immediately: " +
+        tower.gameObject.name
+    );
+}
 
         // =========================================================
         // SELECT ENEMY
         // =========================================================
 
-        private void SelectEnemy(
-            TowerDefense.Enemy.EnemyHealth enemy)
-        {
-            _selectedEnemy = enemy;
-            _selectedTower = null;
+    private void SelectEnemy(
+    TowerDefense.Enemy.EnemyHealth enemy)
+{
+    if (enemy == null)
+    {
+        Deselect();
+        return;
+    }
 
-            EnsureInfoPanel();
 
-            _infoPanel.SetActive(true);
+    if (
+        enemy.IsDead ||
+        !enemy.gameObject.activeInHierarchy
+    )
+    {
+        Deselect();
+        return;
+    }
 
-            UpdateSelectedStatsDisplay();
-        }
+
+    // =====================================================
+    // XÓA TOWER ĐANG CHỌN
+    // =====================================================
+
+    _selectedTower = null;
+
+
+    // =====================================================
+    // CHỈ GIỮ 1 ENEMY ĐƯỢC CHỌN
+    // =====================================================
+
+    _selectedEnemy =
+        enemy;
+
+
+    EnsureInfoPanel();
+
+
+    if (_infoPanel == null)
+        return;
+
+
+    // Enemy không có Sell
+    SetSellButtonVisible(false);
+
+
+    // Enemy không có Upgrade
+    if (_lvlUpBtnGO != null)
+    {
+        _lvlUpBtnGO.SetActive(false);
+    }
+
+
+    _infoPanel.SetActive(true);
+
+
+    UpdateSelectedStatsDisplay();
+}
 
         // =========================================================
         // DESELECT
         // =========================================================
 
-        private void Deselect()
-        {
-            _selectedTower = null;
-            _selectedEnemy = null;
+private void Deselect()
+{
+    _selectedTower = null;
 
-            if (_infoPanel != null)
-                _infoPanel.SetActive(false);
-        }
+    _selectedEnemy = null;
+
+
+    SetSellButtonVisible(false);
+
+
+    if (_lvlUpBtnGO != null)
+    {
+        _lvlUpBtnGO.SetActive(false);
+    }
+
+
+    if (_infoPanel != null)
+    {
+        _infoPanel.SetActive(false);
+    }
+}
 
         // =========================================================
         // UPDATE SELECTED STATS
@@ -2887,6 +3260,7 @@ private void SelectAndPlayLevel(LevelData levelData)
 
             if (_selectedTower != null)
             {
+                SetSellButtonVisible(true);
                 if (_selectedTower.gameObject == null)
                 {
                     Deselect();
@@ -2957,252 +3331,440 @@ private void SelectAndPlayLevel(LevelData levelData)
             // ENEMY
             // =====================================================
 
-            else if (_selectedEnemy != null)
-            {
-                if (_selectedEnemy.gameObject == null ||
-                    _selectedEnemy.IsDead)
-                {
-                    Deselect();
-                    return;
-                }
+           else if (_selectedEnemy != null)
+{
+    // =====================================================
+    // ENEMY KHÔNG ĐƯỢC BÁN
+    // =====================================================
 
-                string name =
-                    _selectedEnemy.EnemyData != null
-                        ? _selectedEnemy.EnemyData.EnemyName
-                        : "Enemy";
+    SetSellButtonVisible(false);
 
-                int hp = _selectedEnemy.CurrentHealth;
-                int maxHp = _selectedEnemy.MaxHealth;
-                float speed = _selectedEnemy.MoveSpeed;
-                int armor = _selectedEnemy.Armor;
-                int attack = _selectedEnemy.Attack;
 
-                if (_infoTitleText != null)
-                    _infoTitleText.text = name.ToUpper();
+    if (_selectedEnemy.gameObject == null ||
+        _selectedEnemy.IsDead)
+    {
+        Deselect();
+        return;
+    }
 
-                if (_infoStatsText != null)
-                {
-                    _infoStatsText.text =
-                        $"HP: <color=#FF5555>" +
-                        $"{hp}/{maxHp}</color>\n\n" +
 
-                        $"SPEED: <color=#55FF55>" +
-                        $"{speed:F1}</color>\n\n" +
+    string name =
+        _selectedEnemy.EnemyData != null
+            ? _selectedEnemy.EnemyData.EnemyName
+            : "Enemy";
 
-                        $"ARMOR: <color=#AAAAAA>" +
-                        $"{armor}</color>\n\n" +
 
-                        $"DAMAGE TO BASE: <color=#FF5555>" +
-                        $"{attack}</color>";
-                }
+    int hp =
+        _selectedEnemy.CurrentHealth;
 
-                if (_lvlUpBtnGO != null)
-                    _lvlUpBtnGO.SetActive(false);
-            }
-            else
-            {
-                Deselect();
-            }
+    int maxHp =
+        _selectedEnemy.MaxHealth;
+
+    float speed =
+        _selectedEnemy.MoveSpeed;
+
+    int armor =
+        _selectedEnemy.Armor;
+
+    int attack =
+        _selectedEnemy.Attack;
+
+
+    if (_infoTitleText != null)
+    {
+        _infoTitleText.text =
+            name.ToUpper();
+    }
+
+
+    if (_infoStatsText != null)
+    {
+        _infoStatsText.text =
+            $"HP: <color=#FF5555>" +
+            $"{hp}/{maxHp}</color>\n\n" +
+
+            $"SPEED: <color=#55FF55>" +
+            $"{speed:F1}</color>\n\n" +
+
+            $"ARMOR: <color=#AAAAAA>" +
+            $"{armor}</color>\n\n" +
+
+            $"DAMAGE TO BASE: <color=#FF5555>" +
+            $"{attack}</color>";
+    }
+
+
+    // Enemy không có Upgrade
+    if (_lvlUpBtnGO != null)
+    {
+        _lvlUpBtnGO.SetActive(false);
+    }
+}
         }
 
         // =========================================================
         // INFO PANEL
         // =========================================================
 
-        public void EnsureInfoPanel()
-        {
-            if (_infoPanel != null)
-                return;
+private void SetSellButtonVisible(bool visible)
+{
+    if (_infoPanel == null)
+        return;
 
-            Transform parent =
-                gameplayHUDPanel != null
-                    ? gameplayHUDPanel.transform
-                    : transform;
+    Transform sellButton =
+        _infoPanel.transform.Find("SellButton");
 
-            _infoPanel = new GameObject(
-                "InfoPanel",
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(Image)
-            );
+    if (sellButton != null)
+    {
+        sellButton.gameObject.SetActive(
+            visible
+        );
+    }
+}
+       public void EnsureInfoPanel()
+{
+    if (_infoPanel != null)
+        return;
 
-            _infoPanel.transform.SetParent(parent, false);
+    Transform parent =
+        gameplayHUDPanel != null
+            ? gameplayHUDPanel.transform
+            : transform;
 
-            RectTransform rect =
-                _infoPanel.GetComponent<RectTransform>();
+    // =========================================================
+    // INFO PANEL
+    // =========================================================
 
-            rect.anchorMin = new Vector2(1f, 0.5f);
-            rect.anchorMax = new Vector2(1f, 0.5f);
-            rect.pivot = new Vector2(1f, 0.5f);
-            rect.anchoredPosition = new Vector2(-20f, 0f);
-            rect.sizeDelta = new Vector2(280f, 250f);
+    _infoPanel = new GameObject(
+        "InfoPanel",
+        typeof(RectTransform),
+        typeof(CanvasRenderer),
+        typeof(Image)
+    );
 
-            Image bg =
-                _infoPanel.GetComponent<Image>();
+    _infoPanel.transform.SetParent(
+        parent,
+        false
+    );
 
-            bg.color =
-                new Color(0.08f, 0.09f, 0.15f, 0.92f);
+    RectTransform panelRect =
+        _infoPanel.GetComponent<RectTransform>();
 
-            GameObject title =
-                new GameObject(
-                    "Title",
-                    typeof(RectTransform)
-                );
+    // Panel nằm bên phải màn hình
+    panelRect.anchorMin =
+        new Vector2(1f, 0.5f);
 
-            title.transform.SetParent(
-                _infoPanel.transform,
-                false
-            );
+    panelRect.anchorMax =
+        new Vector2(1f, 0.5f);
 
-            RectTransform titleRect =
-                title.GetComponent<RectTransform>();
+    panelRect.pivot =
+        new Vector2(1f, 0.5f);
 
-            titleRect.anchorMin = new Vector2(0f, 1f);
-            titleRect.anchorMax = new Vector2(1f, 1f);
-            titleRect.pivot = new Vector2(0f, 1f);
-            titleRect.anchoredPosition = new Vector2(15f, -15f);
-            titleRect.sizeDelta = new Vector2(-50f, 35f);
+    panelRect.anchoredPosition =
+        new Vector2(-25f, 0f);
 
-            _infoTitleText =
-                title.AddComponent<TextMeshProUGUI>();
+    panelRect.sizeDelta =
+        new Vector2(360f, 330f);
 
-            _infoTitleText.fontSize = 18f;
-            _infoTitleText.fontStyle = FontStyles.Bold;
-            _infoTitleText.color = Color.white;
-            _infoTitleText.alignment =
-                TextAlignmentOptions.Left;
 
-            GameObject stats =
-                new GameObject(
-                    "Stats",
-                    typeof(RectTransform)
-                );
+    // =========================================================
+    // BACKGROUND
+    // =========================================================
 
-            stats.transform.SetParent(
-                _infoPanel.transform,
-                false
-            );
+    Image bg =
+        _infoPanel.GetComponent<Image>();
 
-            RectTransform statsRect =
-                stats.GetComponent<RectTransform>();
+    bg.color =
+        new Color(
+            0.04f,
+            0.06f,
+            0.10f,
+            0.97f
+        );
 
-            statsRect.anchorMin = new Vector2(0f, 0f);
-            statsRect.anchorMax = new Vector2(1f, 1f);
-            statsRect.anchoredPosition = new Vector2(0f, -30f);
-            statsRect.sizeDelta = new Vector2(-30f, -80f);
+    bg.raycastTarget = true;
 
-            _infoStatsText =
-                stats.AddComponent<TextMeshProUGUI>();
 
-            _infoStatsText.fontSize = 14f;
-            _infoStatsText.color =
-                new Color(0.85f, 0.85f, 0.9f, 1f);
-            _infoStatsText.alignment =
-                TextAlignmentOptions.TopLeft;
+    // =========================================================
+    // TITLE
+    // =========================================================
 
-            GameObject close =
-                new GameObject(
-                    "CloseButton",
-                    typeof(RectTransform),
-                    typeof(CanvasRenderer),
-                    typeof(Image),
-                    typeof(Button)
-                );
+    GameObject title =
+        new GameObject(
+            "Title",
+            typeof(RectTransform)
+        );
 
-            close.transform.SetParent(
-                _infoPanel.transform,
-                false
-            );
+    title.transform.SetParent(
+        _infoPanel.transform,
+        false
+    );
 
-            RectTransform closeRect =
-                close.GetComponent<RectTransform>();
+    RectTransform titleRect =
+        title.GetComponent<RectTransform>();
 
-            closeRect.anchorMin = new Vector2(1f, 1f);
-            closeRect.anchorMax = new Vector2(1f, 1f);
-            closeRect.pivot = new Vector2(1f, 1f);
-            closeRect.anchoredPosition =
-                new Vector2(-10f, -10f);
-            closeRect.sizeDelta =
-                new Vector2(25f, 25f);
+    titleRect.anchorMin =
+        new Vector2(0f, 1f);
 
-            Image closeImage =
-                close.GetComponent<Image>();
+    titleRect.anchorMax =
+        new Vector2(1f, 1f);
 
-            closeImage.color =
-                new Color(0.8f, 0.2f, 0.2f, 0.8f);
+    titleRect.pivot =
+        new Vector2(0.5f, 1f);
 
-            close.GetComponent<Button>()
-                .onClick.AddListener(Deselect);
+    titleRect.offsetMin =
+        new Vector2(20f, -55f);
 
-            _lvlUpBtnGO = new GameObject(
-                "UpgradeButton",
-                typeof(RectTransform),
-                typeof(CanvasRenderer),
-                typeof(Image),
-                typeof(Button)
-            );
+    titleRect.offsetMax =
+        new Vector2(-20f, -15f);
 
-            _lvlUpBtnGO.transform.SetParent(
-                _infoPanel.transform,
-                false
-            );
+    _infoTitleText =
+        title.AddComponent<TextMeshProUGUI>();
 
-            RectTransform upgradeRect =
-                _lvlUpBtnGO.GetComponent<RectTransform>();
+    _infoTitleText.fontSize =
+        20f;
 
-            upgradeRect.anchorMin = new Vector2(0.5f, 0f);
-            upgradeRect.anchorMax = new Vector2(0.5f, 0f);
-            upgradeRect.pivot = new Vector2(0.5f, 0f);
-            upgradeRect.anchoredPosition =
-                new Vector2(0f, 15f);
-            upgradeRect.sizeDelta =
-                new Vector2(240f, 40f);
+    _infoTitleText.fontStyle =
+        FontStyles.Bold;
 
-            Image upgradeImage =
-                _lvlUpBtnGO.GetComponent<Image>();
+    _infoTitleText.color =
+        Color.white;
 
-            upgradeImage.color =
-                new Color(0.12f, 0.75f, 0.38f, 1f);
+    _infoTitleText.alignment =
+        TextAlignmentOptions.Center;
 
-            _lvlUpBtn =
-                _lvlUpBtnGO.GetComponent<Button>();
+    _infoTitleText.enableWordWrapping =
+        false;
 
-            _lvlUpBtn.onClick.AddListener(
-                OnUpgradeButtonClicked
-            );
+    _infoTitleText.overflowMode =
+        TextOverflowModes.Ellipsis;
 
-            GameObject upgradeText =
-                new GameObject(
-                    "Text",
-                    typeof(RectTransform)
-                );
+    _infoTitleText.raycastTarget =
+        false;
 
-            upgradeText.transform.SetParent(
-                _lvlUpBtnGO.transform,
-                false
-            );
 
-            RectTransform upgradeTextRect =
-                upgradeText.GetComponent<RectTransform>();
+    // =========================================================
+    // STATS
+    // =========================================================
 
-            upgradeTextRect.anchorMin = Vector2.zero;
-            upgradeTextRect.anchorMax = Vector2.one;
-            upgradeTextRect.offsetMin = Vector2.zero;
-            upgradeTextRect.offsetMax = Vector2.zero;
+    GameObject stats =
+        new GameObject(
+            "Stats",
+            typeof(RectTransform)
+        );
 
-            _lvlUpBtnText =
-                upgradeText.AddComponent<TextMeshProUGUI>();
+    stats.transform.SetParent(
+        _infoPanel.transform,
+        false
+    );
 
-            _lvlUpBtnText.text = "UPGRADE";
-            _lvlUpBtnText.fontSize = 14f;
-            _lvlUpBtnText.fontStyle = FontStyles.Bold;
-            _lvlUpBtnText.color = Color.white;
-            _lvlUpBtnText.alignment =
-                TextAlignmentOptions.Center;
+    RectTransform statsRect =
+        stats.GetComponent<RectTransform>();
 
-            _lvlUpBtnGO.SetActive(false);
-        }
+    statsRect.anchorMin =
+        new Vector2(0f, 0.35f);
 
+    statsRect.anchorMax =
+        new Vector2(1f, 0.82f);
+
+    statsRect.offsetMin =
+        new Vector2(25f, 0f);
+
+    statsRect.offsetMax =
+        new Vector2(-25f, 0f);
+
+    _infoStatsText =
+        stats.AddComponent<TextMeshProUGUI>();
+
+    _infoStatsText.fontSize =
+        17f;
+
+    _infoStatsText.fontStyle =
+        FontStyles.Bold;
+
+    _infoStatsText.color =
+        Color.white;
+
+    _infoStatsText.alignment =
+        TextAlignmentOptions.TopLeft;
+
+    _infoStatsText.enableWordWrapping =
+        false;
+
+    _infoStatsText.overflowMode =
+        TextOverflowModes.Ellipsis;
+
+    _infoStatsText.lineSpacing =
+        8f;
+
+    _infoStatsText.raycastTarget =
+        false;
+
+
+    // =========================================================
+    // CLOSE BUTTON
+    // =========================================================
+
+    GameObject close =
+        new GameObject(
+            "CloseButton",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button)
+        );
+
+    close.transform.SetParent(
+        _infoPanel.transform,
+        false
+    );
+
+    RectTransform closeRect =
+        close.GetComponent<RectTransform>();
+
+    closeRect.anchorMin =
+        new Vector2(1f, 1f);
+
+    closeRect.anchorMax =
+        new Vector2(1f, 1f);
+
+    closeRect.pivot =
+        new Vector2(1f, 1f);
+
+    closeRect.anchoredPosition =
+        new Vector2(-10f, -10f);
+
+    closeRect.sizeDelta =
+        new Vector2(28f, 28f);
+
+    Image closeImage =
+        close.GetComponent<Image>();
+
+    closeImage.color =
+        new Color(
+            0.85f,
+            0.15f,
+            0.15f,
+            1f
+        );
+
+    close.GetComponent<Button>()
+        .onClick.AddListener(
+            Deselect
+        );
+
+
+    // =========================================================
+    // UPGRADE BUTTON
+    // =========================================================
+
+    _lvlUpBtnGO =
+        new GameObject(
+            "UpgradeButton",
+            typeof(RectTransform),
+            typeof(CanvasRenderer),
+            typeof(Image),
+            typeof(Button)
+        );
+
+    _lvlUpBtnGO.transform.SetParent(
+        _infoPanel.transform,
+        false
+    );
+
+    RectTransform upgradeRect =
+        _lvlUpBtnGO.GetComponent<RectTransform>();
+
+    upgradeRect.anchorMin =
+        new Vector2(0.5f, 0f);
+
+    upgradeRect.anchorMax =
+        new Vector2(0.5f, 0f);
+
+    upgradeRect.pivot =
+        new Vector2(0.5f, 0f);
+
+    upgradeRect.anchoredPosition =
+        new Vector2(0f, 60f);
+
+    upgradeRect.sizeDelta =
+        new Vector2(310f, 48f);
+
+    Image upgradeImage =
+        _lvlUpBtnGO.GetComponent<Image>();
+
+    upgradeImage.color =
+        new Color(
+            0.05f,
+            0.65f,
+            0.30f,
+            1f
+        );
+
+    _lvlUpBtn =
+        _lvlUpBtnGO.GetComponent<Button>();
+
+    _lvlUpBtn.onClick.AddListener(
+        OnUpgradeButtonClicked
+    );
+
+
+    GameObject upgradeText =
+        new GameObject(
+            "Text",
+            typeof(RectTransform)
+        );
+
+    upgradeText.transform.SetParent(
+        _lvlUpBtnGO.transform,
+        false
+    );
+
+    RectTransform upgradeTextRect =
+        upgradeText.GetComponent<RectTransform>();
+
+    upgradeTextRect.anchorMin =
+        Vector2.zero;
+
+    upgradeTextRect.anchorMax =
+        Vector2.one;
+
+    upgradeTextRect.offsetMin =
+        Vector2.zero;
+
+    upgradeTextRect.offsetMax =
+        Vector2.zero;
+
+    _lvlUpBtnText =
+        upgradeText.AddComponent<TextMeshProUGUI>();
+
+    _lvlUpBtnText.text =
+        "UPGRADE";
+
+    _lvlUpBtnText.fontSize =
+        16f;
+
+    _lvlUpBtnText.fontStyle =
+        FontStyles.Bold;
+
+    _lvlUpBtnText.color =
+        Color.white;
+
+    _lvlUpBtnText.alignment =
+        TextAlignmentOptions.Center;
+
+    _lvlUpBtnText.raycastTarget =
+        false;
+
+
+    // =========================================================
+    // START HIDDEN
+    // =========================================================
+
+    _lvlUpBtnGO.SetActive(false);
+
+    _infoPanel.SetActive(false);
+}
         // =========================================================
         // UPGRADE CLICK
         // =========================================================

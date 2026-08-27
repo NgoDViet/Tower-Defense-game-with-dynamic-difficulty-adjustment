@@ -5,19 +5,29 @@ using TowerDefense.Pooling;
 namespace TowerDefense.Projectile
 {
     /// <summary>
-    /// Component managing a projectile's movement towards a target enemy.
-    /// Deals damage to the enemy on impact and optionally applies a slow effect.
-    /// Recycles itself back to the ObjectPooler after impact.
+    /// Controls projectile movement, target tracking,
+    /// damage, slow effect and object pooling.
     /// </summary>
     public class ProjectileController : MonoBehaviour
     {
+        // =========================================================
+        // MOVEMENT SETTINGS
+        // =========================================================
+
         [Header("Movement Settings")]
-        [Tooltip("Distance threshold from target to trigger impact.")]
-        [SerializeField] private float impactDistanceThreshold = 0.1f;
 
-        [SerializeField] private bool rotateTowardsTarget = true;
+        [Tooltip("Distance from destination required to trigger impact.")]
+        [SerializeField]
+        private float impactDistanceThreshold = 0.1f;
 
-        [SerializeField] private float spriteAngleOffset = 0f;
+        [Tooltip("Should projectile rotate towards its destination?")]
+        [SerializeField]
+        private bool rotateTowardsTarget = true;
+
+        [Tooltip("Rotation offset for projectile sprite.")]
+        [SerializeField]
+        private float spriteAngleOffset = 0f;
+
 
         // =========================================================
         // TARGET
@@ -25,11 +35,13 @@ namespace TowerDefense.Projectile
 
         private EnemyHealth _target;
 
+
         // =========================================================
         // DAMAGE
         // =========================================================
 
         private int _damage;
+
 
         // =========================================================
         // MOVEMENT
@@ -39,24 +51,32 @@ namespace TowerDefense.Projectile
 
         private Vector3 _targetDestination;
 
-        private bool _isInitialized = false;
 
         // =========================================================
-        // SLOW SETTINGS
+        // STATE
         // =========================================================
 
-        private bool _applySlow = false;
+        private bool _isInitialized;
 
-        private float _slowPercent = 0f;
 
-        private float _slowDuration = 0f;
+        // =========================================================
+        // SLOW
+        // =========================================================
+
+        private bool _applySlow;
+
+        private float _slowPercent;
+
+        private float _slowDuration;
+
 
         // =========================================================
         // INITIALIZE
         // =========================================================
 
         /// <summary>
-        /// Initializes the projectile.
+        /// Initializes projectile with target, damage,
+        /// movement speed and optional slow effect.
         /// </summary>
         public void Initialize(
             EnemyHealth target,
@@ -66,187 +86,226 @@ namespace TowerDefense.Projectile
             float slowPercent = 0f,
             float slowDuration = 0f)
         {
+            // -----------------------------------------------------
+            // RESET OLD STATE
+            // -----------------------------------------------------
+
             _target = target;
 
-            _damage = damage;
+            _damage = Mathf.Max(0, damage);
 
-            _speed = speed;
+            _speed = Mathf.Max(0f, speed);
 
             _applySlow = applySlow;
 
-            _slowPercent = Mathf.Clamp01(slowPercent);
+            _slowPercent =
+                Mathf.Clamp01(slowPercent);
 
-            _slowDuration = Mathf.Max(0f, slowDuration);
+            _slowDuration =
+                Mathf.Max(0f, slowDuration);
 
             _isInitialized = true;
 
-            // =====================================================
+
+            // -----------------------------------------------------
             // CALCULATE TARGET DESTINATION
-            // =====================================================
+            // -----------------------------------------------------
 
-            if (_target != null)
+            if (_target == null)
             {
-                Vector3 targetPos =
-                    _target.transform.position;
-
-                Vector3 projectilePos =
+                _targetDestination =
                     transform.position;
 
-                Vector3 relativePos =
-                    targetPos - projectilePos;
+                return;
+            }
 
-                // -------------------------------------------------
-                // Calculate target velocity
-                // -------------------------------------------------
 
-                Vector3 targetVel =
-                    Vector3.zero;
+            Vector3 targetPosition =
+                _target.transform.position;
 
-                EnemyMovement movement =
-                    _target.GetComponent<EnemyMovement>();
 
-                if (movement != null &&
-                    movement.ActivePath != null)
+            // -----------------------------------------------------
+            // PREDICT ENEMY MOVEMENT
+            // -----------------------------------------------------
+
+            Vector3 targetVelocity =
+                Vector3.zero;
+
+            EnemyMovement movement =
+                _target.GetComponent<EnemyMovement>();
+
+
+            if (movement != null &&
+                movement.ActivePath != null)
+            {
+                int waypointIndex =
+                    movement.CurrentWaypointIndex;
+
+
+                if (waypointIndex <
+                    movement.ActivePath.WaypointCount)
                 {
-                    int wpIndex =
-                        movement.CurrentWaypointIndex;
+                    Transform waypoint =
+                        movement.ActivePath.GetWaypoint(
+                            waypointIndex
+                        );
 
-                    if (wpIndex <
-                        movement.ActivePath.WaypointCount)
+
+                    if (waypoint != null)
                     {
-                        Transform targetWp =
-                            movement.ActivePath
-                            .GetWaypoint(wpIndex);
+                        Vector3 direction =
+                            (
+                                waypoint.position -
+                                targetPosition
+                            ).normalized;
 
-                        if (targetWp != null)
-                        {
-                            Vector3 dir =
-                                (targetWp.position -
-                                 targetPos).normalized;
 
-                            targetVel =
-                                dir *
-                                _target.MoveSpeed;
-                        }
+                        targetVelocity =
+                            direction *
+                            _target.MoveSpeed;
                     }
                 }
+            }
 
-                // -------------------------------------------------
-                // Solve quadratic equation
-                // -------------------------------------------------
 
-                float a =
-                    targetVel.sqrMagnitude -
-                    _speed * _speed;
+            // -----------------------------------------------------
+            // INTERCEPT CALCULATION
+            // -----------------------------------------------------
 
-                float b =
-                    2f *
-                    Vector3.Dot(
-                        relativePos,
-                        targetVel
-                    );
+            Vector3 relativePosition =
+                targetPosition -
+                transform.position;
 
-                float c =
-                    relativePos.sqrMagnitude;
 
-                float t = -1f;
+            float projectileSpeed =
+                _speed;
 
-                // -------------------------------------------------
-                // Prevent division by zero when a is very small
-                // -------------------------------------------------
 
-                if (Mathf.Abs(a) < 0.0001f)
+            float a =
+                targetVelocity.sqrMagnitude -
+                projectileSpeed * projectileSpeed;
+
+
+            float b =
+                2f *
+                Vector3.Dot(
+                    relativePosition,
+                    targetVelocity
+                );
+
+
+            float c =
+                relativePosition.sqrMagnitude;
+
+
+            float interceptTime = -1f;
+
+
+            // -----------------------------------------------------
+            // CASE: A IS ALMOST ZERO
+            // -----------------------------------------------------
+
+            if (Mathf.Abs(a) < 0.0001f)
+            {
+                if (Mathf.Abs(b) > 0.0001f)
                 {
-                    if (Mathf.Abs(b) > 0.0001f)
-                    {
-                        float linearT =
-                            -c / b;
+                    float t =
+                        -c / b;
 
-                        if (linearT > 0f)
-                        {
-                            t = linearT;
-                        }
+
+                    if (t > 0f)
+                    {
+                        interceptTime = t;
                     }
                 }
-                else
-                {
-                    float discriminant =
-                        b * b -
-                        4f * a * c;
+            }
 
-                    if (discriminant >= 0f)
+
+            // -----------------------------------------------------
+            // NORMAL QUADRATIC SOLUTION
+            // -----------------------------------------------------
+
+            else
+            {
+                float discriminant =
+                    b * b -
+                    4f * a * c;
+
+
+                if (discriminant >= 0f)
+                {
+                    float sqrtDiscriminant =
+                        Mathf.Sqrt(
+                            discriminant
+                        );
+
+
+                    float t1 =
+                        (-b - sqrtDiscriminant) /
+                        (2f * a);
+
+
+                    float t2 =
+                        (-b + sqrtDiscriminant) /
+                        (2f * a);
+
+
+                    if (t1 > 0f &&
+                        t2 > 0f)
                     {
-                        float sqrtDiscriminant =
-                            Mathf.Sqrt(
-                                discriminant
+                        interceptTime =
+                            Mathf.Min(
+                                t1,
+                                t2
                             );
-
-                        float t1 =
-                            (-b -
-                             sqrtDiscriminant) /
-                            (2f * a);
-
-                        float t2 =
-                            (-b +
-                             sqrtDiscriminant) /
-                            (2f * a);
-
-                        if (t1 > 0f &&
-                            t2 > 0f)
-                        {
-                            t =
-                                Mathf.Min(
-                                    t1,
-                                    t2
-                                );
-                        }
-                        else if (t1 > 0f)
-                        {
-                            t = t1;
-                        }
-                        else if (t2 > 0f)
-                        {
-                            t = t2;
-                        }
+                    }
+                    else if (t1 > 0f)
+                    {
+                        interceptTime = t1;
+                    }
+                    else if (t2 > 0f)
+                    {
+                        interceptTime = t2;
                     }
                 }
+            }
 
-                // -------------------------------------------------
-                // Calculate predicted destination
-                // -------------------------------------------------
 
-                if (t > 0f && t < 5f)
-                {
-                    _targetDestination =
-                        targetPos +
-                        targetVel * t;
-                }
-                else
-                {
-                    _targetDestination =
-                        targetPos;
-                }
+            // -----------------------------------------------------
+            // LIMIT PREDICTION
+            // -----------------------------------------------------
+
+            if (interceptTime > 0f &&
+                interceptTime < 5f)
+            {
+                _targetDestination =
+                    targetPosition +
+                    targetVelocity *
+                    interceptTime;
             }
             else
             {
                 _targetDestination =
-                    transform.position;
+                    targetPosition;
             }
 
-            // =====================================================
+
+            // -----------------------------------------------------
             // DEBUG
-            // =====================================================
+            // -----------------------------------------------------
 
             Debug.Log(
                 $"[ProjectileController] " +
                 $"{gameObject.name} initialized | " +
-                $"Damage: {_damage} | " +
-                $"Speed: {_speed} | " +
-                $"Slow: {_applySlow} | " +
-                $"SlowPercent: {_slowPercent} | " +
-                $"SlowDuration: {_slowDuration}"
+                $"Target={_target.gameObject.name} | " +
+                $"Damage={_damage} | " +
+                $"Speed={_speed:F2} | " +
+                $"Slow={_applySlow} | " +
+                $"SlowPercent={_slowPercent * 100f:F0}% | " +
+                $"SlowDuration={_slowDuration:F2}s"
             );
         }
+
 
         // =========================================================
         // UPDATE
@@ -257,29 +316,57 @@ namespace TowerDefense.Projectile
             if (!_isInitialized)
                 return;
 
-            Vector3 currentPos =
+
+            // -----------------------------------------------------
+            // TARGET CHECK
+            // -----------------------------------------------------
+
+            if (_target == null)
+            {
+                Recycle();
+                return;
+            }
+
+
+            if (_target.IsDead ||
+                !_target.gameObject.activeSelf)
+            {
+                Recycle();
+                return;
+            }
+
+
+            // -----------------------------------------------------
+            // MOVE
+            // -----------------------------------------------------
+
+            Vector3 currentPosition =
                 transform.position;
 
-            // =====================================================
-            // MOVE
-            // =====================================================
+
+            float movementStep =
+                _speed *
+                Time.deltaTime;
+
 
             transform.position =
                 Vector3.MoveTowards(
-                    currentPos,
+                    currentPosition,
                     _targetDestination,
-                    _speed * Time.deltaTime
+                    movementStep
                 );
 
-            // =====================================================
+
+            // -----------------------------------------------------
             // ROTATION
-            // =====================================================
+            // -----------------------------------------------------
 
             if (rotateTowardsTarget)
             {
                 Vector3 direction =
-                    (_targetDestination -
-                     currentPos).normalized;
+                    _targetDestination -
+                    currentPosition;
+
 
                 if (direction.sqrMagnitude >
                     0.001f)
@@ -291,6 +378,7 @@ namespace TowerDefense.Projectile
                         ) *
                         Mathf.Rad2Deg;
 
+
                     transform.rotation =
                         Quaternion.AngleAxis(
                             angle +
@@ -300,18 +388,25 @@ namespace TowerDefense.Projectile
                 }
             }
 
-            // =====================================================
-            // HIT CHECK
-            // =====================================================
 
-            if (Vector2.Distance(
+            // -----------------------------------------------------
+            // IMPACT CHECK
+            // -----------------------------------------------------
+
+            float distance =
+                Vector2.Distance(
                     transform.position,
                     _targetDestination
-                ) <= impactDistanceThreshold)
+                );
+
+
+            if (distance <=
+                impactDistanceThreshold)
             {
                 HitTarget();
             }
         }
+
 
         // =========================================================
         // HIT TARGET
@@ -319,56 +414,94 @@ namespace TowerDefense.Projectile
 
         private void HitTarget()
         {
-            // =====================================================
-            // ORIGINAL TARGET
-            // =====================================================
+            if (!_isInitialized)
+                return;
+
+
+            // -----------------------------------------------------
+            // TRY ORIGINAL TARGET
+            // -----------------------------------------------------
 
             if (_target != null &&
                 !_target.IsDead &&
-                _target.gameObject.activeSelf &&
-                Vector2.Distance(
-                    transform.position,
-                    _target.transform.position
-                ) <= 1.0f)
+                _target.gameObject.activeSelf)
             {
-                ApplyDamageAndEffects(_target);
-            }
-            else
-            {
-                // =================================================
-                // FALLBACK SEARCH
-                // =================================================
-
-                Collider2D[] colliders =
-                    Physics2D.OverlapCircleAll(
+                float distanceToTarget =
+                    Vector2.Distance(
                         transform.position,
-                        1.0f
+                        _target.transform.position
                     );
 
-                foreach (Collider2D col in colliders)
+
+                if (distanceToTarget <= 1f)
                 {
-                    EnemyHealth enemy =
-                        col.GetComponent<EnemyHealth>();
+                    ApplyDamageAndEffects(
+                        _target
+                    );
 
-                    if (enemy != null &&
-                        !enemy.IsDead &&
-                        enemy.gameObject.activeSelf)
-                    {
-                        ApplyDamageAndEffects(
-                            enemy
-                        );
+                    Recycle();
 
-                        break;
-                    }
+                    return;
                 }
             }
 
-            // =====================================================
+
+            // -----------------------------------------------------
+            // FALLBACK SEARCH
+            // -----------------------------------------------------
+
+            Collider2D[] colliders =
+                Physics2D.OverlapCircleAll(
+                    transform.position,
+                    1f
+                );
+
+
+            foreach (Collider2D collider in colliders)
+            {
+                if (collider == null)
+                    continue;
+
+
+                EnemyHealth enemy =
+                    collider.GetComponent<EnemyHealth>();
+
+
+                if (enemy == null)
+                {
+                    enemy =
+                        collider.GetComponentInParent<EnemyHealth>();
+                }
+
+
+                if (enemy == null)
+                    continue;
+
+
+                if (enemy.IsDead)
+                    continue;
+
+
+                if (!enemy.gameObject.activeSelf)
+                    continue;
+
+
+                ApplyDamageAndEffects(
+                    enemy
+                );
+
+
+                break;
+            }
+
+
+            // -----------------------------------------------------
             // RECYCLE
-            // =====================================================
+            // -----------------------------------------------------
 
             Recycle();
         }
+
 
         // =========================================================
         // DAMAGE + EFFECTS
@@ -377,21 +510,29 @@ namespace TowerDefense.Projectile
         private void ApplyDamageAndEffects(
             EnemyHealth enemy)
         {
-            if (enemy == null ||
-                enemy.IsDead)
-            {
+            if (enemy == null)
                 return;
+
+
+            if (enemy.IsDead)
+                return;
+
+
+            // -----------------------------------------------------
+            // DAMAGE
+            // -----------------------------------------------------
+
+            if (_damage > 0)
+            {
+                enemy.TakeDamage(
+                    _damage
+                );
             }
 
-            // =====================================================
-            // DAMAGE
-            // =====================================================
 
-            enemy.TakeDamage(_damage);
-
-            // =====================================================
+            // -----------------------------------------------------
             // SLOW
-            // =====================================================
+            // -----------------------------------------------------
 
             if (_applySlow &&
                 _slowPercent > 0f &&
@@ -401,6 +542,7 @@ namespace TowerDefense.Projectile
                     _slowPercent,
                     _slowDuration
                 );
+
 
                 Debug.Log(
                     $"[ProjectileController] " +
@@ -412,13 +554,27 @@ namespace TowerDefense.Projectile
             }
         }
 
+
         // =========================================================
         // RECYCLE
         // =========================================================
 
         private void Recycle()
         {
+            // -----------------------------------------------------
+            // PREVENT DOUBLE RECYCLE
+            // -----------------------------------------------------
+
+            if (!_isInitialized)
+                return;
+
+
             _isInitialized = false;
+
+
+            // -----------------------------------------------------
+            // RESET STATE
+            // -----------------------------------------------------
 
             _target = null;
 
@@ -435,6 +591,11 @@ namespace TowerDefense.Projectile
 
             _slowDuration = 0f;
 
+
+            // -----------------------------------------------------
+            // RETURN TO OBJECT POOL
+            // -----------------------------------------------------
+
             if (ObjectPooler.Instance != null)
             {
                 ObjectPooler.Instance.ReturnToPool(
@@ -445,6 +606,48 @@ namespace TowerDefense.Projectile
             {
                 Destroy(gameObject);
             }
+        }
+
+
+        // =========================================================
+        // ENABLE
+        // =========================================================
+
+        private void OnEnable()
+        {
+            _isInitialized = false;
+
+            _target = null;
+
+            _damage = 0;
+
+            _speed = 0f;
+
+            _targetDestination =
+                transform.position;
+
+            _applySlow = false;
+
+            _slowPercent = 0f;
+
+            _slowDuration = 0f;
+        }
+
+
+        // =========================================================
+        // GIZMOS
+        // =========================================================
+
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.color =
+                Color.yellow;
+
+
+            Gizmos.DrawWireSphere(
+                transform.position,
+                impactDistanceThreshold
+            );
         }
     }
 }

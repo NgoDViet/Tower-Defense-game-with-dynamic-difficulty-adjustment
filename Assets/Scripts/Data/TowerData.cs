@@ -6,7 +6,7 @@ namespace TowerDefense.Data
     {
         Archer,
         Fast,
-        Mage,
+        Gold,
         Cannon,
         Ice,
         Laser
@@ -115,6 +115,54 @@ namespace TowerDefense.Data
         [Tooltip("Laser beam width.")]
         [SerializeField]
         private float laserWidth = 0.08f;
+
+
+        // =========================================================
+        // GOLD TOWER SETTINGS
+        // =========================================================
+        //
+        // ĐÚNG THEO BẢNG:
+        //
+        // Lv1:
+        // +5 G / 5 giây
+        //
+        // Lv2:
+        // +10 G / 4 giây
+        //
+        // Lv3:
+        // +20 G / 3 giây
+        //
+        // Giá:
+        // Lv1 = 250 G
+        // Lv1 -> Lv2 = 250 G
+        // Lv2 -> Lv3 = 500 G
+        // =========================================================
+
+        [Header("Gold Tower Settings")]
+
+        [Tooltip("Gold generated at Level 1.")]
+        [SerializeField]
+        private int goldLevel1 = 5;
+
+        [Tooltip("Gold generated at Level 2.")]
+        [SerializeField]
+        private int goldLevel2 = 10;
+
+        [Tooltip("Gold generated at Level 3.")]
+        [SerializeField]
+        private int goldLevel3 = 20;
+
+        [Tooltip("Gold interval at Level 1.")]
+        [SerializeField]
+        private float goldIntervalLevel1 = 5f;
+
+        [Tooltip("Gold interval at Level 2.")]
+        [SerializeField]
+        private float goldIntervalLevel2 = 4f;
+
+        [Tooltip("Gold interval at Level 3.")]
+        [SerializeField]
+        private float goldIntervalLevel3 = 3f;
 
 
         // =========================================================
@@ -230,6 +278,65 @@ namespace TowerDefense.Data
             get
             {
                 return laserWidth;
+            }
+        }
+
+
+        // =========================================================
+        // GOLD GETTERS
+        // =========================================================
+
+        public int GetGoldPerTick(int level)
+        {
+            switch (Mathf.Clamp(level, 1, 3))
+            {
+                case 1:
+                    return Mathf.Max(
+                        0,
+                        goldLevel1
+                    );
+
+                case 2:
+                    return Mathf.Max(
+                        0,
+                        goldLevel2
+                    );
+
+                case 3:
+                    return Mathf.Max(
+                        0,
+                        goldLevel3
+                    );
+
+                default:
+                    return 0;
+            }
+        }
+
+        public float GetGoldInterval(int level)
+        {
+            switch (Mathf.Clamp(level, 1, 3))
+            {
+                case 1:
+                    return Mathf.Max(
+                        0.1f,
+                        goldIntervalLevel1
+                    );
+
+                case 2:
+                    return Mathf.Max(
+                        0.1f,
+                        goldIntervalLevel2
+                    );
+
+                case 3:
+                    return Mathf.Max(
+                        0.1f,
+                        goldIntervalLevel3
+                    );
+
+                default:
+                    return 5f;
             }
         }
     }
