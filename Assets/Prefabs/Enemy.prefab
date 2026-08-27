@@ -39,7 +39,7 @@ Transform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &4796448859724966783
 SpriteRenderer:
-  serializedVersion: 2
+  serializedVersion: 3
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -96,6 +96,7 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+  m_BlendShapeWeights: []
 --- !u!58 &4037414740046732241
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -172,6 +173,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Enemy.EnemyHealth
   enemyData: {fileID: 11400000, guid: c3be4e1136ba10f4190e643d9c7105af, type: 2}
+  animator: {fileID: 0}
+  deathAnimationDuration: 0.5
 --- !u!114 &4952117886955751534
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -202,3 +205,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Enemy.EnemyHealth
   enemyData: {fileID: 0}
+  animator: {fileID: 0}
+  deathAnimationDuration: 0.5
