@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: TestEnemyData
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Data.EnemyData
   enemyType: 0
-  goldReward: 20
+  goldReward: 10

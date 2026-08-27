@@ -2050,7 +2050,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 9
+  orthographic size: 6
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
@@ -5142,7 +5142,7 @@ MonoBehaviour:
     size: 5
   - prefab: {fileID: 7539093121017106743, guid: 183bb27401bc42b4f8d7ec4893fa5c20, type: 3}
     size: 10
-  - prefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
+  - prefab: {fileID: 4948792025732038923, guid: 01f8b9c887e866f4b9e5daaa83772d3d, type: 3}
     size: 20
 --- !u!4 &948504336
 Transform:
@@ -13536,58 +13536,42 @@ MonoBehaviour:
   fastEnemyData: {fileID: 11400000, guid: 796f64eced0c9a54c9c39924c95fad82, type: 2}
   tankEnemyData: {fileID: 11400000, guid: 11a6d7fa25269114e9f2c870b41d5d85, type: 2}
   armorEnemyData: {fileID: 11400000, guid: 16cab071a0a9ebf4691b18fdbef266f5, type: 2}
-  autoStartNextWave: 0
+  autoStartNextWave: 1
   waveInterval: 4
   firstWaveDelay: 3
   waves:
-  - basicCount: 8
-    basicSpawnInterval: 4
-    fastCount: 0
-    fastSpawnInterval: 0
-    tankCount: 0
-    tankSpawnInterval: 0
-    armorCount: 0
-    armorSpawnInterval: 0
-  - basicCount: 10
+  - basicCount: 3
     basicSpawnInterval: 4
     fastCount: 4
     fastSpawnInterval: 3
-    tankCount: 0
-    tankSpawnInterval: 0
+    tankCount: 2
+    tankSpawnInterval: 6
+    armorCount: 2
+    armorSpawnInterval: 5
+  - basicCount: 4
+    basicSpawnInterval: 4
+    fastCount: 5
+    fastSpawnInterval: 3
+    tankCount: 3
+    tankSpawnInterval: 6
     armorCount: 0
-    armorSpawnInterval: 0
-  - basicCount: 8
+    armorSpawnInterval: 5
+  - basicCount: 5
     basicSpawnInterval: 3.5
-    fastCount: 0
-    fastSpawnInterval: 0
+    fastCount: 6
+    fastSpawnInterval: 2.5
     tankCount: 4
     tankSpawnInterval: 5.5
-    armorCount: 0
-    armorSpawnInterval: 0
+    armorCount: 1
+    armorSpawnInterval: 4.5
   - basicCount: 6
     basicSpawnInterval: 3
     fastCount: 8
-    fastSpawnInterval: 2
-    tankCount: 3
-    tankSpawnInterval: 5
-    armorCount: 0
-    armorSpawnInterval: 0
-  - basicCount: 0
-    basicSpawnInterval: 0
-    fastCount: 6
     fastSpawnInterval: 2
     tankCount: 5
     tankSpawnInterval: 5
     armorCount: 3
     armorSpawnInterval: 4
-  - basicCount: 8
-    basicSpawnInterval: 3
-    fastCount: 4
-    fastSpawnInterval: 2
-    tankCount: 0
-    tankSpawnInterval: 0
-    armorCount: 0
-    armorSpawnInterval: 0
 --- !u!4 &1664909475
 Transform:
   m_ObjectHideFlags: 0

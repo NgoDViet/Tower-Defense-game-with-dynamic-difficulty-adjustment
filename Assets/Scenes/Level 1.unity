@@ -903,6 +903,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Core.GameManager
   defaultLevelData: {fileID: 11400000, guid: 884bbccb594887545b4e90fb482d123b, type: 2}
+  _waveManager: {fileID: 0}
 --- !u!4 &298772018
 Transform:
   m_ObjectHideFlags: 0
@@ -3586,6 +3587,40 @@ MonoBehaviour:
   armorEnemyData: {fileID: 11400000, guid: 16cab071a0a9ebf4691b18fdbef266f5, type: 2}
   autoStartNextWave: 1
   waveInterval: 4
+  firstWaveDelay: 3
+  waves:
+  - basicCount: 3
+    basicSpawnInterval: 4
+    fastCount: 4
+    fastSpawnInterval: 3
+    tankCount: 2
+    tankSpawnInterval: 6
+    armorCount: 2
+    armorSpawnInterval: 5
+  - basicCount: 4
+    basicSpawnInterval: 4
+    fastCount: 5
+    fastSpawnInterval: 3
+    tankCount: 3
+    tankSpawnInterval: 6
+    armorCount: 0
+    armorSpawnInterval: 5
+  - basicCount: 5
+    basicSpawnInterval: 3.5
+    fastCount: 6
+    fastSpawnInterval: 2.5
+    tankCount: 4
+    tankSpawnInterval: 5.5
+    armorCount: 1
+    armorSpawnInterval: 4.5
+  - basicCount: 6
+    basicSpawnInterval: 3
+    fastCount: 8
+    fastSpawnInterval: 2
+    tankCount: 5
+    tankSpawnInterval: 5
+    armorCount: 3
+    armorSpawnInterval: 4
 --- !u!4 &1438991883
 Transform:
   m_ObjectHideFlags: 0
@@ -3756,6 +3791,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -4193,6 +4229,15 @@ MonoBehaviour:
   healthText: {fileID: 1474240415}
   goldText: {fileID: 1508182076}
   waveText: {fileID: 400503540}
+  timeText: {fileID: 0}
+  goldPrefab: {fileID: 0}
+  healthPrefab: {fileID: 0}
+  pausePrefab: {fileID: 0}
+  waveSprite: {fileID: 0}
+  victoryTimeText: {fileID: 0}
+  victoryDamageText: {fileID: 0}
+  defeatTimeText: {fileID: 0}
+  defeatDamageText: {fileID: 0}
   levelDataToPlay: {fileID: 11400000, guid: 884bbccb594887545b4e90fb482d123b, type: 2}
   levels:
   - {fileID: 11400000, guid: 884bbccb594887545b4e90fb482d123b, type: 2}
@@ -5601,10 +5646,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TowerDefense.Tower.TowerPlacementManager
   validColor: {r: 0, g: 1, b: 0.8, a: 0.5}
   invalidColor: {r: 1, g: 0.1, b: 0.1, a: 0.5}
-  pathClearanceRadius: 0.8
-  towerOverlapRadius: 0.4
+  radialMenuRadius: 105
+  radialButtonSize: 70
+  radialButtonColor: {r: 0.12, g: 0.15, b: 0.22, a: 0.95}
+  radialButtonHighlightColor: {r: 0.2, g: 0.55, b: 0.85, a: 1}
+  infoPanel: {fileID: 0}
+  sellButtonColor: {r: 0.65, g: 0.1, b: 0.1, a: 1}
+  sellButtonHighlightColor: {r: 0.9, g: 0.18, b: 0.18, a: 1}
+  sellRefundRate: 0.75
   defaultTowerData: {fileID: 0}
   defaultTowerPrefab: {fileID: 7029269772980000698, guid: c987e34ef1722aa4ba5424efd1cfcff4, type: 3}
+  fastTowerData: {fileID: 0}
+  fastTowerPrefab: {fileID: 0}
+  iceTowerData: {fileID: 0}
+  iceTowerPrefab: {fileID: 0}
+  laserTowerData: {fileID: 0}
+  laserTowerPrefab: {fileID: 0}
 --- !u!4 &2039223425
 Transform:
   m_ObjectHideFlags: 0
@@ -6069,7 +6126,7 @@ MonoBehaviour:
     size: 5
   - prefab: {fileID: 7539093121017106743, guid: 183bb27401bc42b4f8d7ec4893fa5c20, type: 3}
     size: 10
-  - prefab: {fileID: 7978381930888403112, guid: 7812aeac41f4ff44e95d77a1c5a78f59, type: 3}
+  - prefab: {fileID: 4948792025732038923, guid: 01f8b9c887e866f4b9e5daaa83772d3d, type: 3}
     size: 20
 --- !u!4 &2137362052
 Transform:

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using TowerDefense.Core;
 using TowerDefense.Data;
@@ -12,8 +13,16 @@ namespace TowerDefense.Enemy
     public class EnemyHealth : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField]
-        protected EnemyData enemyData;
+        [Tooltip("The EnemyData ScriptableObject containing max health and gold reward stats.")]
+        [SerializeField] protected EnemyData enemyData;
+
+        [Tooltip("Animator used for walk and death animations.")]
+        [SerializeField] private Animator animator;
+
+        [Header("Animation")]
+        [Tooltip("Time to wait before returning the enemy to the object pool.")]
+        [SerializeField] private float deathAnimationDuration = 0.5f;
+
 
         // =========================================================
         // INTERNAL
@@ -31,6 +40,7 @@ namespace TowerDefense.Enemy
 
         protected float _slowMultiplier = 1f;
         protected float _slowTimer = 0f;
+
 
         // =========================================================
         // PROPERTIES
@@ -63,6 +73,7 @@ namespace TowerDefense.Enemy
         public EnemyData EnemyData =>
             enemyData;
 
+
         // =========================================================
         // START
         // =========================================================
@@ -79,6 +90,7 @@ namespace TowerDefense.Enemy
                 );
             }
         }
+
 
         // =========================================================
         // UPDATE
@@ -98,6 +110,7 @@ namespace TowerDefense.Enemy
             }
         }
 
+
         // =========================================================
         // ON ENABLE
         // =========================================================
@@ -112,6 +125,7 @@ namespace TowerDefense.Enemy
             // Don't use old HP blindly here.
             // Initialize() will set correct difficulty HP.
         }
+
 
         // =========================================================
         // INITIALIZE CURRENT DIFFICULTY
@@ -135,6 +149,7 @@ namespace TowerDefense.Enemy
                 DifficultyManager.SpeedMultiplier
             );
         }
+
 
         // =========================================================
         // MAIN INITIALIZE
@@ -214,6 +229,7 @@ namespace TowerDefense.Enemy
             );
         }
 
+
         // =========================================================
         // COMPATIBILITY INITIALIZE
         // =========================================================
@@ -235,6 +251,7 @@ namespace TowerDefense.Enemy
             );
         }
 
+
         // =========================================================
         // SET HP
         // =========================================================
@@ -249,6 +266,7 @@ namespace TowerDefense.Enemy
                     _maxHealth
                 );
         }
+
 
         // =========================================================
         // NORMAL DAMAGE
@@ -300,6 +318,7 @@ namespace TowerDefense.Enemy
             }
         }
 
+
         // =========================================================
         // DAMAGE IGNORING ARMOR
         // =========================================================
@@ -338,6 +357,7 @@ namespace TowerDefense.Enemy
             }
         }
 
+
         // =========================================================
         // SLOW
         // =========================================================
@@ -372,6 +392,7 @@ namespace TowerDefense.Enemy
                 );
         }
 
+
         // =========================================================
         // SLOW RESISTANCE
         // =========================================================
@@ -381,6 +402,7 @@ namespace TowerDefense.Enemy
         {
             // Reserved.
         }
+
 
         // =========================================================
         // MODIFY HEALTH
@@ -399,6 +421,7 @@ namespace TowerDefense.Enemy
                 _maxHealth;
         }
 
+
         // =========================================================
         // MODIFY ARMOR
         // =========================================================
@@ -416,6 +439,7 @@ namespace TowerDefense.Enemy
                 );
         }
 
+
         // =========================================================
         // MODIFY ATTACK
         // =========================================================
@@ -429,6 +453,7 @@ namespace TowerDefense.Enemy
                     multiplier
                 );
         }
+
 
         // =========================================================
         // MODIFY SPEED
@@ -448,73 +473,104 @@ namespace TowerDefense.Enemy
                 );
         }
 
+
         // =========================================================
         // DEATH
         // =========================================================
 
-   protected virtual void Die()
-{
-    if (_isDead)
-        return;
+        protected virtual void Die()
+        {
+            if (_isDead)
+                return;
+
+            _isDead = true;
+
+            int goldReward =
+                enemyData != null
+                    ? enemyData.GoldReward
+                    : 10;
+
+            goldReward =
+                Mathf.Max(
+                    0,
+                    goldReward
+                );
+
+            // -----------------------------------------------------
+            // EVENT
+            // -----------------------------------------------------
+
+            EventBus<EnemyDiedEvent>.Raise(
+                new EnemyDiedEvent(
+                    gameObject,
+                    goldReward
+                )
+            );
+
+            // -----------------------------------------------------
+            // DEBUG
+            // -----------------------------------------------------
+
+            Debug.Log(
+                $"[EnemyHealth] {gameObject.name} died | " +
+                $"Base Reward={goldReward} G"
+            );
+
+            // -----------------------------------------------------
+            // DEATH ANIMATION
+            // -----------------------------------------------------
+
+            if (animator != null)
+            {
+                animator.SetTrigger("Die");
+
+                StartCoroutine(
+                    ReturnToPoolAfterDeath()
+                );
+            }
+            else
+            {
+                ReturnEnemyToPool();
+            }
+        }
 
 
-    _isDead = true;
+        // =========================================================
+        // RETURN TO POOL AFTER DEATH ANIMATION
+        // =========================================================
+
+        private IEnumerator ReturnToPoolAfterDeath()
+        {
+            yield return new WaitForSeconds(
+                deathAnimationDuration
+            );
+
+            ReturnEnemyToPool();
+        }
 
 
-    int goldReward =
-        enemyData != null
-            ? enemyData.GoldReward
-            : 10;
+        // =========================================================
+        // RETURN ENEMY TO POOL
+        // =========================================================
 
-
-    goldReward =
-        Mathf.Max(
-            0,
-            goldReward
-        );
-
-
-    // ---------------------------------------------------------
-    // EVENT
-    // ---------------------------------------------------------
-
-    EventBus<EnemyDiedEvent>.Raise(
-        new EnemyDiedEvent(
-            gameObject,
-            goldReward
-        )
-    );
-
-
-    // ---------------------------------------------------------
-    // DEBUG
-    // ---------------------------------------------------------
-
-    Debug.Log(
-        $"[EnemyHealth] " +
-        $"{gameObject.name} died | " +
-        $"Base Reward={goldReward} G"
-    );
-
-
-    // ---------------------------------------------------------
-    // RETURN TO POOL
-    // ---------------------------------------------------------
-
-    if (
-        ObjectPooler.Instance != null
-    )
-    {
-        ObjectPooler.Instance.ReturnToPool(
-            gameObject
-        );
-    }
-    else
-    {
-        Destroy(
-            gameObject
-        );
-    }
-}
+        /// <summary>
+        /// Returns the enemy to the object pool or destroys it
+        /// if no ObjectPooler exists.
+        /// </summary>
+        private void ReturnEnemyToPool()
+        {
+            if (ObjectPooler.Instance != null)
+            {
+                ObjectPooler.Instance.ReturnToPool(
+                    gameObject
+                );
+            }
+            else
+            {
+                Destroy(
+                    gameObject
+                );
+            }
+        }
     }
 }

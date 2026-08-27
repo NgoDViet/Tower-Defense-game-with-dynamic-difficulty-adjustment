@@ -63,9 +63,13 @@ namespace TowerDefense.Tower
         // ROTATION
         // =========================================================
 
-        [Header("Rotation Settings")]
+        [Header("Rotation")]
 
-        [Tooltip("Rotate tower towards target.")]
+        [Tooltip("The visual part of the tower that rotates toward enemies.")]
+        [SerializeField]
+        private Transform rotatingVisual;
+
+        [Tooltip("Should the tower rotate towards the target?")]
         [SerializeField]
         private bool rotateTowardsTarget = true;
 
@@ -608,10 +612,6 @@ namespace TowerDefense.Tower
             // -----------------------------------------------------
             // LASER
             // -----------------------------------------------------
-            //
-            // Laser dùng script laser riêng.
-            // Không để TowerController bắn projectile.
-            // -----------------------------------------------------
 
             if (
                 towerData.Type ==
@@ -930,8 +930,7 @@ namespace TowerDefense.Tower
                 );
 
 
-            return distance <=
-                   CurrentRange;
+            return distance <= CurrentRange;
         }
 
 
@@ -942,9 +941,13 @@ namespace TowerDefense.Tower
         private void AimAtTarget(
             Vector3 targetPosition)
         {
+            if (rotatingVisual == null)
+                return;
+
+
             Vector3 direction =
                 targetPosition -
-                transform.position;
+                rotatingVisual.position;
 
 
             if (
@@ -956,7 +959,7 @@ namespace TowerDefense.Tower
             }
 
 
-            float angle =
+            float targetAngle =
                 Mathf.Atan2(
                     direction.y,
                     direction.x
@@ -966,15 +969,15 @@ namespace TowerDefense.Tower
 
             Quaternion targetRotation =
                 Quaternion.AngleAxis(
-                    angle +
+                    targetAngle +
                     spriteAngleOffset,
                     Vector3.forward
                 );
 
 
-            transform.rotation =
+            rotatingVisual.rotation =
                 Quaternion.Slerp(
-                    transform.rotation,
+                    rotatingVisual.rotation,
                     targetRotation,
                     rotationSpeed *
                     Time.deltaTime
